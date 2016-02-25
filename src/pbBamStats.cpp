@@ -19,6 +19,11 @@
 #include <htslib/kseq.h>
 #include <htslib/sam.h>
 
+#ifdef PROFILE
+#include "gperftools/profiler.h"
+#endif
+
+
 KSEQ_INIT(gzFile, gzread)
 
 struct Config {
