@@ -31,6 +31,8 @@ struct Config {
   boost::filesystem::path referenceFile;
   boost::filesystem::path regionFile;
   boost::filesystem::path bamFile;
+  boost::filesystem::path outfile;
+  boost::filesystem::path coverage;
 };
 
 
@@ -65,6 +67,8 @@ int main(int argc, char **argv) {
     ("help,?", "show help message")
     ("reference,r", boost::program_options::value<boost::filesystem::path>(&c.referenceFile), "reference fasta file (required)")
     ("bed,b", boost::program_options::value<boost::filesystem::path>(&c.regionFile), "BED file with regions to analyze (optional)")
+    ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("stats.txt"), "output statistics file")
+    ("coverage,c", boost::program_options::value<boost::filesystem::path>(&c.coverage)->default_value("coverage.txt"), "output coverage histogram file")
     ;
 
   boost::program_options::options_description hidden("Hidden options");
@@ -114,6 +118,7 @@ int main(int argc, char **argv) {
   std::cout << std::endl;
 
   // Load bam file
+  std::string sampleName(c.bamFile.stem().string());
   samFile* samfile = sam_open(c.bamFile.string().c_str(), "r");
   if (samfile == NULL) {
     std::cerr << "Fail to open file " << c.bamFile.string() << std::endl;
@@ -176,12 +181,15 @@ int main(int argc, char **argv) {
   //}
 
   // Counters
-  uint32_t matchCount = 0;
-  uint32_t mismatchCount = 0;
-  uint32_t delCount = 0;
-  uint32_t insCount = 0;
-  uint32_t softClipCount = 0;
-  uint32_t hardClipCount = 0;
+  uint64_t matchCount = 0;
+  uint64_t mismatchCount = 0;
+  uint64_t delCount = 0;
+  uint64_t insCount = 0;
+  uint64_t softClipCount = 0;
+  uint64_t hardClipCount = 0;
+  uint64_t referencebp = 0;
+  typedef std::vector<uint64_t> TCoverage;
+  TCoverage bpWithCoverage(256, 0);
 
   // Parse reference and BAM file
   now = boost::posix_time::second_clock::local_time();
@@ -196,7 +204,9 @@ int main(int argc, char **argv) {
     for(int32_t refIndex=0; refIndex < hdr->n_targets; ++refIndex) {
       if (std::string(seq->name.s) == std::string(hdr->target_name[refIndex])) {
 	++show_progress;
+	referencebp += seq->seq.l;
 
+	std::vector<uint8_t> cov(seq->seq.l, 0);
 	// Parse all alignments in regions of that chromosome
 	for(TChromosomeRegions::const_iterator itC = gRegions[refIndex].begin(); itC != gRegions[refIndex].end(); ++itC) {
 	  hts_itr_t* iter = sam_itr_queryi(idx, refIndex, itC->start, itC->end);
@@ -230,20 +240,22 @@ int main(int argc, char **argv) {
 		for(std::size_t k = 0; k<bam_cigar_oplen(cigar[i]);++k) {
 		  if (sequence[sp] == refslice[rp]) ++matchCount;
 		  else ++mismatchCount;
+		  // Count bp-level coverage
+		  if (cov[rec->core.pos + rp] < 255) ++cov[rec->core.pos + rp];
 		  ++sp;
 		  ++rp;
 		}
 	      } else if (bam_cigar_op(cigar[i]) == BAM_CDEL) {
-		delCount += bam_cigar_oplen(cigar[i]);
+		delCount += 1;
 		rp += bam_cigar_oplen(cigar[i]);
 	      } else if (bam_cigar_op(cigar[i]) == BAM_CINS) {
-		insCount += bam_cigar_oplen(cigar[i]);
+		insCount += 1;
 		sp += bam_cigar_oplen(cigar[i]);
 	      } else if (bam_cigar_op(cigar[i]) == BAM_CSOFT_CLIP) {
-		softClipCount += bam_cigar_oplen(cigar[i]);
+		softClipCount += 1;
 		sp += bam_cigar_oplen(cigar[i]);
 	      } else if(bam_cigar_op(cigar[i]) == BAM_CHARD_CLIP) {
-		hardClipCount += bam_cigar_oplen(cigar[i]);
+		hardClipCount += 1;
 	      } else {
 		std::cerr << "Unknown Cigar options" << std::endl;
 		return 1;
@@ -253,7 +265,8 @@ int main(int argc, char **argv) {
 	  bam_destroy1(rec);
 	  hts_itr_destroy(iter);
 	}
-      }        
+	for(uint32_t i = 0; i<seq->seq.l; ++i) ++bpWithCoverage[cov[i]];
+      }      
     }
   }
   // clea-up for reference
@@ -268,21 +281,22 @@ int main(int argc, char **argv) {
   now = boost::posix_time::second_clock::local_time();
   std::cout << '[' << boost::posix_time::to_simple_string(now) << "] Done." << std::endl;
 
-  // Output statistics
-
 #ifdef PROFILE
   ProfilerStop();
 #endif
 
-  // Counts
-  std::cout << "Counts" << std::endl;
-  std::cout << "#Matched bases=" << matchCount << std::endl;
-  std::cout << "#Mismatched bases=" << mismatchCount << std::endl;
-  std::cout << "#Deleted bases=" << delCount << std::endl;
-  std::cout << "#Inserted bases=" << insCount << std::endl;
-  std::cout << "#SoftClipped bases=" << softClipCount << std::endl;
-  std::cout << "#HardClipped bases=" << hardClipCount << std::endl;
+  // Output statistics
+  std::ofstream ofile(c.outfile.string().c_str());
+  uint64_t alignedbases = matchCount+mismatchCount;
+  ofile << "Sample\t#ReferenceBases\t#AlignedBases\t#Coverage\t#MatchedBases\tMatchRate\t#MismatchedBases\tMismatchRate\t#DeletionsCigarD\tDeletionRate\t#InsertionsCigarI\tInsertionRate\t#SoftClippedBases\tSoftClipRate\t#HardClippedBases\tHardClipRate\tErrorRate" << std::endl;
+  ofile << sampleName << "\t" << referencebp << "\t" << alignedbases << "\t" << (double) alignedbases / (double) referencebp << "\t" << matchCount << "\t" << (double) matchCount / (double) alignedbases << "\t" << mismatchCount << "\t" << (double) mismatchCount / (double) alignedbases << "\t" << delCount << "\t" << (double) delCount / (double) alignedbases << "\t" << insCount << "\t" << (double) insCount / (double) alignedbases << "\t" << softClipCount << "\t" << (double) softClipCount / (double) alignedbases << "\t" << hardClipCount << "\t" << (double) hardClipCount / (double) alignedbases << "\t" << (double) (mismatchCount + delCount + insCount + softClipCount + hardClipCount) / (double) alignedbases  << std::endl;
+  ofile.close();
 
+  // Output histogram
+  std::ofstream cfile(c.coverage.string().c_str());
+  cfile << "sample\tcoverage\tcount" << std::endl;
+  for(uint32_t i = 0; i < bpWithCoverage.size(); ++i) cfile << sampleName << "\t" << i << "\t" << bpWithCoverage[i] << std::endl;
+  cfile.close();
 
   return 0;
 }
