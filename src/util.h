@@ -9,6 +9,32 @@
 namespace bamstats
 {
 
+
+  // F+ 0
+  // F- 1
+  // R+ 2
+  // R- 3
+  inline uint8_t layout(bam1_t const* rec) {
+    if (rec->core.flag & BAM_FREAD1) {
+      if (!(rec->core.flag & BAM_FREVERSE)) {
+	if (!(rec->core.flag & BAM_FMREVERSE)) return (rec->core.pos < rec->core.mpos) ? 0 : 1;
+	else return (rec->core.pos < rec->core.mpos) ? 2 : 3;
+      } else {
+	if (!(rec->core.flag & BAM_FMREVERSE)) return (rec->core.pos > rec->core.mpos) ? 2 : 3;
+	else return (rec->core.pos > rec->core.mpos) ? 0 : 1;
+      }
+    } else {
+      if (!(rec->core.flag & BAM_FREVERSE)) {
+	if (!(rec->core.flag & BAM_FMREVERSE)) return (rec->core.pos < rec->core.mpos) ? 1 : 0;
+	else return (rec->core.pos < rec->core.mpos) ? 2 : 3;
+      } else {
+	if (!(rec->core.flag & BAM_FMREVERSE)) return (rec->core.pos > rec->core.mpos) ? 2 : 3;
+	else return (rec->core.pos > rec->core.mpos) ? 1 : 0;
+      }
+    }
+  }
+
+  
   inline uint32_t alignmentLength(bam1_t const* rec) {
     uint32_t* cigar = bam_get_cigar(rec);
     uint32_t alen = 0;

@@ -23,7 +23,7 @@ namespace bamstats
     Interval(int32_t s, int32_t e) : start(s), end(e) {}
   };
 
-  struct ReadGroupStats {
+  struct BaseCounts {
     typedef std::vector<uint64_t> TCoverageBp;
     typedef uint8_t TBpCovInt;
     typedef std::vector<TBpCovInt> TBpCoverage;
@@ -37,11 +37,66 @@ namespace bamstats
     uint64_t hardClipCount;
     TCoverageBp bpWithCoverage;
     TBpCoverage cov;
-    
-    ReadGroupStats() : maxBpCov(std::numeric_limits<TBpCovInt>::max()), matchCount(0), mismatchCount(0), delCount(0), insCount(0), softClipCount(0), hardClipCount(0) {
+
+    BaseCounts() : maxBpCov(std::numeric_limits<TBpCovInt>::max()), matchCount(0), mismatchCount(0), delCount(0), insCount(0), softClipCount(0), hardClipCount(0) {
       bpWithCoverage.resize(maxBpCov + 1, 0);
       cov.clear();
     }
+  };
+
+  struct ReadCounts {
+    typedef uint16_t TMaxReadLength;
+    typedef std::vector<TMaxReadLength> TLengthReadCount;
+
+    int32_t maxReadLength;
+    int64_t secondary;
+    int64_t qcfail;
+    int64_t dup;
+    int64_t supplementary;
+    int64_t unmap;
+    int64_t mapped1;
+    int64_t mapped2;
+    TLengthReadCount lRc;
+
+    ReadCounts() : maxReadLength(std::numeric_limits<TMaxReadLength>::max()), secondary(0), qcfail(0), dup(0), supplementary(0), unmap(0), mapped1(0), mapped2(0) {
+      lRc.resize(maxReadLength + 1, 0);
+    }
+  };
+
+
+  struct PairCounts {
+    typedef uint16_t TMaxInsertSize;
+    typedef std::vector<TMaxInsertSize> TISizePairCount;
+    int32_t maxInsertSize;
+    int64_t paired;
+    int64_t mapped;
+    int64_t mappedSameChr;
+    int64_t orient[4];
+    int64_t totalISizeCount;
+    TISizePairCount fPlus;
+    TISizePairCount rPlus;
+    TISizePairCount fMinus;
+    TISizePairCount rMinus;
+    
+    
+    PairCounts() : maxInsertSize(std::numeric_limits<TMaxInsertSize>::max()), paired(0), mapped(0), mappedSameChr(0) {
+      orient[0] = 0;
+      orient[1] = 0;
+      orient[2] = 0;
+      orient[3] = 0;
+      fPlus.resize(maxInsertSize + 1, 0);
+      rPlus.resize(maxInsertSize + 1, 0);
+      fMinus.resize(maxInsertSize + 1, 0);
+      rMinus.resize(maxInsertSize + 1, 0);
+    }
+  };
+  
+  struct ReadGroupStats {
+    BaseCounts bc;
+    ReadCounts rc;
+    PairCounts pc;
+    
+  ReadGroupStats() : bc(BaseCounts()), rc(ReadCounts()), pc(PairCounts()) {}
   };
 
   
@@ -50,7 +105,6 @@ namespace bamstats
   bamStatsRun(TConfig const& c) {
     // Load bam file
     samFile* samfile = sam_open(c.bamFile.string().c_str(), "r");
-    hts_idx_t* idx = sam_index_load(samfile, c.bamFile.string().c_str());
     bam_hdr_t* hdr = sam_hdr_read(samfile);
 
     // One list of regions for every chromosome
@@ -115,103 +169,159 @@ namespace bamstats
     boost::progress_display show_progress( hdr->n_targets );
 
     // Parse genome
+    int32_t refIndex = -1;
+    char* seq = NULL;
     faidx_t* fai = fai_load(c.genome.string().c_str());
-    for(int32_t refIndex=0; refIndex < (int32_t) hdr->n_targets; ++refIndex) {
-      ++show_progress;
-
-      // Load chromosome
-      char* seq = NULL;
-      int32_t seqlen = -1;
-      std::string tname(hdr->target_name[refIndex]);
-      seq = faidx_fetch_seq(fai, tname.c_str(), 0, hdr->target_len[refIndex], &seqlen);
-      referencebp += hdr->target_len[refIndex];
-
-      // Resize coverage vectors
-      for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) itRg->second.cov.resize(hdr->target_len[refIndex], 0);
-
-      // Iterate chromosome
-      hts_itr_t* iter = sam_itr_queryi(idx, refIndex, 0, hdr->target_len[refIndex]);
-      bam1_t* rec = bam_init1();
-      while (sam_itr_next(samfile, iter, rec) >= 0) {
-	// We may want to count these (secondary alignments, duplicates, supplementary alignments)
-	if (rec->core.flag & (BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP | BAM_FSUPPLEMENTARY | BAM_FUNMAP)) continue;
-
-	// Get the library information
-	std::string rG = "DefaultLib";
-	uint8_t *rgptr = bam_aux_get(rec, "RG");
-	if (rgptr) {
-	  char* rg = (char*) (rgptr + 1);
-	  rG = std::string(rg);
+    bam1_t* rec = bam_init1();
+    while (sam_read1(samfile, hdr, rec) >= 0) {
+      // New chromosome?
+      if ((!(rec->core.flag & BAM_FUNMAP)) && (rec->core.tid != refIndex)) {
+	++show_progress;
+	
+	// Summarize bp-level coverage
+	if (refIndex != -1) {
+	  for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+	    for(uint32_t i = 0; i < hdr->target_len[refIndex]; ++i) ++itRg->second.bc.bpWithCoverage[itRg->second.bc.cov[i]];
+	    itRg->second.bc.cov.clear();
+	  }
+	  if (seq != NULL) free(seq);
 	}
-	typename TRGMap::iterator itRg = rgMap.find(rG);
-	if (itRg == rgMap.end()) {
-	  std::cerr << "Missing read group: " << rG << std::endl;
-	  return 1;
-	}
+	refIndex = rec->core.tid;
 	
-	// Get the read sequence
-	std::string sequence;
-	sequence.resize(rec->core.l_qseq);
-	uint8_t* seqptr = bam_get_seq(rec);
-	for (int32_t i = 0; i < rec->core.l_qseq; ++i) sequence[i] = "=ACMGRSVTWYHKDBN"[bam_seqi(seqptr, i)];
+	// Load chromosome
+	int32_t seqlen = -1;
+	std::string tname(hdr->target_name[refIndex]);
+	seq = faidx_fetch_seq(fai, tname.c_str(), 0, hdr->target_len[refIndex], &seqlen);
+	referencebp += hdr->target_len[refIndex];
 	
-	// Get the reference slice
-	std::string refslice = boost::to_upper_copy(std::string(seq + rec->core.pos, seq + lastAlignedPosition(rec)));
-	
-	// Debug 
-	//std::cout << matchCount << ',' << mismatchCount << ',' << delCount << ',' << insCount << ',' << softClipCount << ',' << hardClipCount << std::endl;
-	//std::cout << refslice << std::endl;
-	//std::cout << sequence << std::endl;
-	
-	uint32_t rp = 0; // reference pointer
-	uint32_t sp = 0; // sequence pointer
-	
-	// Parse the CIGAR
-	uint32_t* cigar = bam_get_cigar(rec);
-	for (std::size_t i = 0; i < rec->core.n_cigar; ++i) {
-	  if (bam_cigar_op(cigar[i]) == BAM_CMATCH) {
-	    // match or mismatch
-	    for(std::size_t k = 0; k<bam_cigar_oplen(cigar[i]);++k) {
-	      if (sequence[sp] == refslice[rp]) ++itRg->second.matchCount;
-	      else ++itRg->second.mismatchCount;
-	      // Count bp-level coverage
-	      if (itRg->second.cov[rec->core.pos + rp] < itRg->second.maxBpCov) ++itRg->second.cov[rec->core.pos + rp];
-	      ++sp;
-	      ++rp;
+	// Resize coverage vectors
+	for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) itRg->second.bc.cov.resize(hdr->target_len[refIndex], 0);
+      }
+
+      // Get the library information
+      std::string rG = "DefaultLib";
+      uint8_t *rgptr = bam_aux_get(rec, "RG");
+      if (rgptr) {
+	char* rg = (char*) (rgptr + 1);
+	rG = std::string(rg);
+      }
+      typename TRGMap::iterator itRg = rgMap.find(rG);
+      if (itRg == rgMap.end()) {
+	std::cerr << "Missing read group: " << rG << std::endl;
+	return 1;
+      }
+      
+      // Paired counts
+      if (rec->core.flag & BAM_FPAIRED) {
+	++itRg->second.pc.paired;
+	if (!((rec->core.flag & BAM_FUNMAP) || (rec->core.flag & BAM_FMUNMAP))) {
+	  ++itRg->second.pc.mapped;
+	  if (rec->core.tid == rec->core.mtid) ++itRg->second.pc.mappedSameChr;
+	  if (rec->core.pos > rec->core.mpos) {
+	    ++itRg->second.pc.totalISizeCount;
+	    int32_t outerISize = rec->core.pos - rec->core.mpos + alignmentLength(rec);
+	    switch(layout(rec)) {
+	    case 0:
+	      ++itRg->second.pc.orient[0];
+	      if (outerISize < itRg->second.pc.maxInsertSize) ++itRg->second.pc.fPlus[outerISize];
+	      else ++itRg->second.pc.fPlus[itRg->second.pc.maxInsertSize];
+	      break;
+	    case 1:
+	      ++itRg->second.pc.orient[1];
+	      if (outerISize < itRg->second.pc.maxInsertSize) ++itRg->second.pc.fMinus[outerISize];
+	      else ++itRg->second.pc.fMinus[itRg->second.pc.maxInsertSize];
+	      break;
+	    case 2:
+	      ++itRg->second.pc.orient[2];
+	      if (outerISize < itRg->second.pc.maxInsertSize) ++itRg->second.pc.rMinus[outerISize];
+	      else ++itRg->second.pc.rMinus[itRg->second.pc.maxInsertSize];
+	      break;
+	    case 3:
+	      ++itRg->second.pc.orient[3];
+	      if (outerISize < itRg->second.pc.maxInsertSize) ++itRg->second.pc.rPlus[outerISize];
+	      else ++itRg->second.pc.rPlus[itRg->second.pc.maxInsertSize];
+	      break;
+	    default:
+	      break;
 	    }
-	  } else if (bam_cigar_op(cigar[i]) == BAM_CDEL) {
-	    ++itRg->second.delCount;
-	    rp += bam_cigar_oplen(cigar[i]);
-	  } else if (bam_cigar_op(cigar[i]) == BAM_CINS) {
-	    ++itRg->second.insCount;
-	    sp += bam_cigar_oplen(cigar[i]);
-	  } else if (bam_cigar_op(cigar[i]) == BAM_CSOFT_CLIP) {
-	    ++itRg->second.softClipCount;
-	    sp += bam_cigar_oplen(cigar[i]);
-	  } else if(bam_cigar_op(cigar[i]) == BAM_CHARD_CLIP) {
-	    ++itRg->second.hardClipCount;
-	  } else {
-	    std::cerr << "Unknown Cigar options" << std::endl;
-	    return 1;
 	  }
 	}
       }
-      // clean-up
-      bam_destroy1(rec);
-      hts_itr_destroy(iter);
-
-      // Summarize bp-level coverage
+      
+      // Read counts
+      if (rec->core.flag & (BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP | BAM_FSUPPLEMENTARY | BAM_FUNMAP)) {
+	if (rec->core.flag & BAM_FSECONDARY) ++itRg->second.rc.secondary;
+	if (rec->core.flag & BAM_FQCFAIL) ++itRg->second.rc.qcfail;
+	if (rec->core.flag & BAM_FDUP) ++itRg->second.rc.dup;
+	if (rec->core.flag & BAM_FSUPPLEMENTARY) ++itRg->second.rc.supplementary;
+	if (rec->core.flag & BAM_FUNMAP) ++itRg->second.rc.unmap;
+	continue;
+      }
+      if (rec->core.flag & BAM_FREAD2) ++itRg->second.rc.mapped2;
+      else ++itRg->second.rc.mapped1;
+      if (rec->core.l_qseq < itRg->second.rc.maxReadLength) ++itRg->second.rc.lRc[rec->core.l_qseq];
+      else ++itRg->second.rc.lRc[itRg->second.rc.maxReadLength];
+      
+      // Get the read sequence
+      std::string sequence;
+      sequence.resize(rec->core.l_qseq);
+      uint8_t* seqptr = bam_get_seq(rec);
+      for (int32_t i = 0; i < rec->core.l_qseq; ++i) sequence[i] = "=ACMGRSVTWYHKDBN"[bam_seqi(seqptr, i)];
+      
+      // Get the reference slice
+      std::string refslice = boost::to_upper_copy(std::string(seq + rec->core.pos, seq + lastAlignedPosition(rec)));
+      
+      // Debug 
+      //std::cout << matchCount << ',' << mismatchCount << ',' << delCount << ',' << insCount << ',' << softClipCount << ',' << hardClipCount << std::endl;
+      //std::cout << refslice << std::endl;
+      //std::cout << sequence << std::endl;
+	
+      uint32_t rp = 0; // reference pointer
+      uint32_t sp = 0; // sequence pointer
+      
+      // Parse the CIGAR
+      uint32_t* cigar = bam_get_cigar(rec);
+      for (std::size_t i = 0; i < rec->core.n_cigar; ++i) {
+	if (bam_cigar_op(cigar[i]) == BAM_CMATCH) {
+	  // match or mismatch
+	  for(std::size_t k = 0; k<bam_cigar_oplen(cigar[i]);++k) {
+	    if (sequence[sp] == refslice[rp]) ++itRg->second.bc.matchCount;
+	    else ++itRg->second.bc.mismatchCount;
+	    // Count bp-level coverage
+	    if (itRg->second.bc.cov[rec->core.pos + rp] < itRg->second.bc.maxBpCov) ++itRg->second.bc.cov[rec->core.pos + rp];
+	    ++sp;
+	    ++rp;
+	  }
+	} else if (bam_cigar_op(cigar[i]) == BAM_CDEL) {
+	  ++itRg->second.bc.delCount;
+	  rp += bam_cigar_oplen(cigar[i]);
+	} else if (bam_cigar_op(cigar[i]) == BAM_CINS) {
+	  ++itRg->second.bc.insCount;
+	  sp += bam_cigar_oplen(cigar[i]);
+	} else if (bam_cigar_op(cigar[i]) == BAM_CSOFT_CLIP) {
+	  ++itRg->second.bc.softClipCount;
+	  sp += bam_cigar_oplen(cigar[i]);
+	} else if(bam_cigar_op(cigar[i]) == BAM_CHARD_CLIP) {
+	  ++itRg->second.bc.hardClipCount;
+	} else {
+	  std::cerr << "Unknown Cigar options" << std::endl;
+	  return 1;
+	}
+      }
+    }
+    // Summarize bp-level coverage
+    if (refIndex != -1) {
       for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
-	for(uint32_t i = 0; i < hdr->target_len[refIndex]; ++i) ++itRg->second.bpWithCoverage[itRg->second.cov[i]];
-	itRg->second.cov.clear();
+	for(uint32_t i = 0; i < hdr->target_len[refIndex]; ++i) ++itRg->second.bc.bpWithCoverage[itRg->second.bc.cov[i]];
+	itRg->second.bc.cov.clear();
       }
       if (seq != NULL) free(seq);
     }
     
     // clean-up
+    bam_destroy1(rec);
     fai_destroy(fai);
     bam_hdr_destroy(hdr);
-    hts_idx_destroy(idx);
     sam_close(samfile);
     
     now = boost::posix_time::second_clock::local_time();
@@ -221,24 +331,78 @@ namespace bamstats
     ProfilerStop();
 #endif
 
-    // Output statistics
-    std::string statFileName = c.outprefix + "." + c.sampleName + ".tsv";
-    std::ofstream ofile(statFileName.c_str());
+    // Output read counts
+    std::string statFileName = c.outprefix + ".readcounts.tsv";
+    std::ofstream rcfile(statFileName.c_str());
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
-      uint64_t alignedbases = itRg->second.matchCount + itRg->second.mismatchCount;
-      ofile << "Sample\tLibrary\t#ReferenceBases\t#AlignedBases\t#Coverage\t#MatchedBases\tMatchRate\t#MismatchedBases\tMismatchRate\t#DeletionsCigarD\tDeletionRate\t#InsertionsCigarI\tInsertionRate\t#SoftClippedBases\tSoftClipRate\t#HardClippedBases\tHardClipRate\tErrorRate" << std::endl;
-    ofile << c.sampleName << "\t" << itRg->first << "\t" << referencebp << "\t" << alignedbases << "\t" << (double) alignedbases / (double) referencebp << "\t" << itRg->second.matchCount << "\t" << (double) itRg->second.matchCount / (double) alignedbases << "\t" << itRg->second.mismatchCount << "\t" << (double) itRg->second.mismatchCount / (double) alignedbases << "\t" << itRg->second.delCount << "\t" << (double) itRg->second.delCount / (double) alignedbases << "\t" << itRg->second.insCount << "\t" << (double) itRg->second.insCount / (double) alignedbases << "\t" << itRg->second.softClipCount << "\t" << (double) itRg->second.softClipCount / (double) alignedbases << "\t" << itRg->second.hardClipCount << "\t" << (double) itRg->second.hardClipCount / (double) alignedbases << "\t" << (double) (itRg->second.mismatchCount + itRg->second.delCount + itRg->second.insCount + itRg->second.softClipCount + itRg->second.hardClipCount) / (double) alignedbases  << std::endl;
+      uint64_t totalReadCount = itRg->second.rc.qcfail + itRg->second.rc.dup + itRg->second.rc.unmap + itRg->second.rc.mapped1 + itRg->second.rc.mapped2;
+      uint64_t mappedCount = itRg->second.rc.mapped1 + itRg->second.rc.mapped2;
+      rcfile << "Sample\tLibrary\t#QCFail\tQCFailFraction\t#DuplicateMarked\tDuplicateFraction\t#Unmapped\tUnmappedFraction\t#Mapped\tMappedFraction\t#MappedRead1\t#MappedRead2\tRatioMapped2vsMapped1\t#SecondaryAlignments\tSecondaryAlignmentFraction\t#SupplementaryAlignments\tSupplementaryAlignmentFraction" << std::endl;
+      rcfile << c.sampleName << "\t" << itRg->first << "\t" << itRg->second.rc.qcfail << "\t" << (double) itRg->second.rc.qcfail / (double) totalReadCount << "\t" << itRg->second.rc.dup << "\t" << (double) itRg->second.rc.dup / (double) totalReadCount << "\t" << itRg->second.rc.unmap << "\t" << (double) itRg->second.rc.unmap / (double) totalReadCount << "\t" << mappedCount << "\t" << (double) mappedCount / (double) totalReadCount << "\t" << itRg->second.rc.mapped1 << "\t" << itRg->second.rc.mapped2 << "\t" << (double) itRg->second.rc.mapped2 / (double) itRg->second.rc.mapped1 << "\t" << itRg->second.rc.secondary << "\t" << (double) itRg->second.rc.secondary / (double) mappedCount << "\t" << itRg->second.rc.supplementary << "\t" << (double) itRg->second.rc.supplementary / (double) mappedCount  << std::endl;
     }
-    ofile.close();
+    rcfile.close();
+
+    // Output read length histogram
+    statFileName = c.outprefix + ".readlength.tsv";
+    std::ofstream rlfile(statFileName.c_str());
+    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+      rlfile << "Sample\tReadlength\tCount\tLibrary" << std::endl;
+      for(uint32_t i = 0; i < itRg->second.rc.lRc.size(); ++i) rlfile << c.sampleName << "\t" << i << "\t" << itRg->second.rc.lRc[i] << "\t" << itRg->first << std::endl;
+    }
+    rlfile.close();
+
+    // Output paired counts
+    statFileName = c.outprefix + ".pairedcounts.tsv";
+    std::ofstream pcfile(statFileName.c_str());
+    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+      int64_t paired = itRg->second.pc.paired / 2;
+      int64_t mapped = itRg->second.pc.mapped / 2;
+      int64_t mappedSameChr = itRg->second.pc.mappedSameChr / 2;
+      int32_t deflayout = 0;
+      int32_t maxcount = itRg->second.pc.orient[0];
+      for(int32_t i = 1; i<4; ++i) {
+	if (itRg->second.pc.orient[i] > maxcount) {
+	  maxcount = itRg->second.pc.orient[i];
+	  deflayout = i;
+	}
+      }
+      pcfile << "Sample\tLibrary\t#Pairs\t#MappedPairs\tMappedFraction\t#MappedSameChr\tMappedSameChrFraction\tDefaultLibraryLayout" << std::endl;
+      pcfile << c.sampleName << "\t" << itRg->first << "\t" << paired << "\t" << mapped << "\t" << (double) mapped / (double) paired << "\t" << mappedSameChr << "\t" << (double) mappedSameChr / (double) paired << "\t" << deflayout << std::endl;
+    }
+    pcfile.close();
+    
+    // Output error rates
+    statFileName = c.outprefix + ".errorrates.tsv";
+    std::ofstream erfile(statFileName.c_str());
+    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+      uint64_t alignedbases = itRg->second.bc.matchCount + itRg->second.bc.mismatchCount;
+      erfile << "Sample\tLibrary\t#ReferenceBases\t#AlignedBases\t#Coverage\t#MatchedBases\tMatchRate\t#MismatchedBases\tMismatchRate\t#DeletionsCigarD\tDeletionRate\t#InsertionsCigarI\tInsertionRate\t#SoftClippedBases\tSoftClipRate\t#HardClippedBases\tHardClipRate\tErrorRate" << std::endl;
+      erfile << c.sampleName << "\t" << itRg->first << "\t" << referencebp << "\t" << alignedbases << "\t" << (double) alignedbases / (double) referencebp << "\t" << itRg->second.bc.matchCount << "\t" << (double) itRg->second.bc.matchCount / (double) alignedbases << "\t" << itRg->second.bc.mismatchCount << "\t" << (double) itRg->second.bc.mismatchCount / (double) alignedbases << "\t" << itRg->second.bc.delCount << "\t" << (double) itRg->second.bc.delCount / (double) alignedbases << "\t" << itRg->second.bc.insCount << "\t" << (double) itRg->second.bc.insCount / (double) alignedbases << "\t" << itRg->second.bc.softClipCount << "\t" << (double) itRg->second.bc.softClipCount / (double) alignedbases << "\t" << itRg->second.bc.hardClipCount << "\t" << (double) itRg->second.bc.hardClipCount / (double) alignedbases << "\t" << (double) (itRg->second.bc.mismatchCount + itRg->second.bc.delCount + itRg->second.bc.insCount + itRg->second.bc.softClipCount + itRg->second.bc.hardClipCount) / (double) alignedbases  << std::endl;
+    }
+    erfile.close();
     
     // Output coverage histograms
+    statFileName = c.outprefix + ".coverage.tsv";
+    std::ofstream cofile(statFileName.c_str());
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
-      std::string statFileName = c.outprefix + "." + c.sampleName + "." + itRg->first + ".coverage.tsv";
-      std::ofstream cfile(statFileName.c_str());
-      cfile << "sample\tcoverage\tcount" << std::endl;
-      for(uint32_t i = 0; i < itRg->second.bpWithCoverage.size(); ++i) cfile << c.sampleName << "\t" << i << "\t" << itRg->second.bpWithCoverage[i] << std::endl;
-      cfile.close();
+      cofile << "Sample\tCoverage\tCount\tLibrary" << std::endl;
+      for(uint32_t i = 0; i < itRg->second.bc.bpWithCoverage.size(); ++i) cofile << c.sampleName << "\t" << i << "\t" << itRg->second.bc.bpWithCoverage[i] << "\t" << itRg->first << std::endl;
     }
+    cofile.close();
+
+    // Output insert size histograms
+    statFileName = c.outprefix + ".isize.tsv";
+    std::ofstream isfile(statFileName.c_str());
+    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+      isfile << "Sample\tInsertSize\tCount\tLayout\tLibrary" << std::endl;
+      for(uint32_t i = 0; i < itRg->second.pc.fPlus.size(); ++i) {
+	isfile << c.sampleName << "\t" << i << "\t" << itRg->second.pc.fPlus[i] << "\tF+\t" << itRg->first << std::endl;
+	isfile << c.sampleName << "\t" << i << "\t" << itRg->second.pc.fMinus[i] << "\tF-\t" << itRg->first << std::endl;
+	isfile << c.sampleName << "\t" << i << "\t" << itRg->second.pc.rPlus[i] << "\tR+\t" << itRg->first << std::endl;
+	isfile << c.sampleName << "\t" << i << "\t" << itRg->second.pc.rMinus[i] << "\tR-\t" << itRg->first << std::endl;
+      }
+    }
+    isfile.close();
     
     return 0;
   }
