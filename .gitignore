@@ -1,6 +1,6 @@
 .boost
 .htslib
-src/pbBamStats
+src/bamStats
 
 # Compiled Object files
 *.slo

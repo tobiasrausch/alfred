@@ -1,13 +1,13 @@
-pbBamStats installation (using recursive clone)
+bamStats installation (using recursive clone)
 ------------------------------------------
 
-`git clone --recursive https://github.com/tobiasrausch/pbBamStats.git`
+`git clone --recursive https://github.com/tobiasrausch/bamStats.git`
 
-`cd pbBamStats/`
+`cd bamStats/`
 
 `make all`
 
-pbBamStats installation (using package manager)
+bamStats installation (using package manager)
 -------------------------------------------
 
 Install Linux packages:
@@ -28,16 +28,16 @@ Set environment variables for boost libraries and htslib:
 
 `export SEQTK_ROOT=<htslib_path>`
 
-Build pbBamStats (no recursive clone required):
+Build bamStats (no recursive clone required):
 
-`git clone https://github.com/tobiasrausch/pbBamStats.git`
+`git clone https://github.com/tobiasrausch/bamStats.git`
 
-`cd pbBamStats/ && touch .htslib .boost && make all && cd ..`
+`cd bamStats/ && touch .htslib .boost && make all && cd ..`
 
 
-Running pbBamStats
+Running bamStats
 ------------------
 
-`./src/pbBamStats -r example/ref.fa example/align.bam`
+`./src/bamStats -r example/ref.fa example/align.bam`
 
 

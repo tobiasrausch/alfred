@@ -8,7 +8,7 @@ BOOST_ROOT ?= ${PWD}/src/modular-boost/
 
 # Flags
 CXX=g++
-CXXFLAGS += -isystem ${SEQTK_ROOT} -isystem ${BOOST_ROOT} -pedantic -W -Wall -Wno-unknown-pragmas -D__STDC_LIMIT_MACROS
+CXXFLAGS += -isystem ${SEQTK_ROOT} -isystem ${BOOST_ROOT} -pedantic -W -Wall -Wno-unknown-pragmas -D__STDC_LIMIT_MACROS -fno-strict-aliasing
 LDFLAGS += -L${SEQTK_ROOT} -L${BOOST_ROOT}/stage/lib -lboost_iostreams -lboost_filesystem -lboost_system -lboost_program_options -lboost_date_time
 
 # Additional flags for release/debug
@@ -23,8 +23,9 @@ else ifeq (${DEBUG}, 2)
 	CXXFLAGS += -g -O0 -fno-inline -DPROFILE
 	LDFLAGS += -lprofiler -ltcmalloc
 else
-	CXXFLAGS += -O3 -DNDEBUG
+	CXXFLAGS += -O3 -fno-tree-vectorize -DNDEBUG
 endif
+
 
 # External sources
 BOOSTSOURCES = $(wildcard src/modular-boost/libs/iostreams/include/boost/iostreams/*.hpp)
@@ -32,7 +33,7 @@ HTSLIBSOURCES = $(wildcard src/htslib/*.c) $(wildcard src/htslib/*.h)
 SOURCES = $(wildcard src/*.h) $(wildcard src/*.cpp)
 
 # Targets
-TARGETS = .htslib .boost src/pbBamStats
+TARGETS = .htslib .boost src/bamStats
 
 all:   	$(TARGETS)
 
@@ -42,7 +43,7 @@ all:   	$(TARGETS)
 .boost: $(BOOSTSOURCES)
 	cd src/modular-boost && ./bootstrap.sh --prefix=${PWD}/src/modular-boost --without-icu --with-libraries=iostreams,filesystem,system,program_options,date_time && ./b2 && ./b2 headers && cd ../../ && touch .boost
 
-src/pbBamStats: .htslib .boost $(SOURCES)
+src/bamStats: .htslib .boost $(SOURCES)
 	$(CXX) $(CXXFLAGS) $@.cpp -o $@ $(LDFLAGS)
 
 clean:
