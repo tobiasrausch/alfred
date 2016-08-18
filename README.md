@@ -38,6 +38,11 @@ Build bamStats (no recursive clone required):
 Running bamStats
 ------------------
 
-`./src/bamStats -r example/ref.fa example/align.bam`
+`./src/bamStats -r <ref.fa> -o outprefix <align.bam>`
+
+`Rscript R/isize.R outprefix.isize.tsv`
+
+`Rscript R/coverage.R outprefix.coverage.tsv`
+	
 
 
