@@ -24,11 +24,13 @@ namespace bamstats
   };
 
   struct BaseCounts {
-    typedef std::vector<uint64_t> TCoverageBp;
-    typedef uint8_t TBpCovInt;
-    typedef std::vector<TBpCovInt> TBpCoverage;
+    typedef uint32_t TCountType;
+    typedef std::vector<TCountType> TCoverageBp;
     
-    uint32_t maxBpCov;
+    typedef uint8_t TMaxCoverage;
+    typedef std::vector<TMaxCoverage> TBpCoverage;
+
+    uint32_t maxCoverage;
     uint64_t matchCount;
     uint64_t mismatchCount;
     uint64_t delCount;
@@ -38,15 +40,16 @@ namespace bamstats
     TCoverageBp bpWithCoverage;
     TBpCoverage cov;
 
-    BaseCounts() : maxBpCov(std::numeric_limits<TBpCovInt>::max()), matchCount(0), mismatchCount(0), delCount(0), insCount(0), softClipCount(0), hardClipCount(0) {
-      bpWithCoverage.resize(maxBpCov + 1, 0);
+    BaseCounts() : maxCoverage(std::numeric_limits<TMaxCoverage>::max()), matchCount(0), mismatchCount(0), delCount(0), insCount(0), softClipCount(0), hardClipCount(0) {
+      bpWithCoverage.resize(maxCoverage + 1, 0);
       cov.clear();
     }
   };
 
   struct ReadCounts {
     typedef uint16_t TMaxReadLength;
-    typedef std::vector<TMaxReadLength> TLengthReadCount;
+    typedef uint32_t TCountType;
+    typedef std::vector<TCountType> TLengthReadCount;
 
     int32_t maxReadLength;
     int64_t secondary;
@@ -66,7 +69,8 @@ namespace bamstats
 
   struct PairCounts {
     typedef uint16_t TMaxInsertSize;
-    typedef std::vector<TMaxInsertSize> TISizePairCount;
+    typedef uint32_t TCountType;
+    typedef std::vector<TCountType> TISizePairCount;
     int32_t maxInsertSize;
     int64_t paired;
     int64_t mapped;
@@ -227,7 +231,6 @@ namespace bamstats
 	      else ++itRg->second.pc.fPlus[itRg->second.pc.maxInsertSize];
 	      break;
 	    case 1:
-	      ++itRg->second.pc.orient[1];
 	      if (outerISize < itRg->second.pc.maxInsertSize) ++itRg->second.pc.fMinus[outerISize];
 	      else ++itRg->second.pc.fMinus[itRg->second.pc.maxInsertSize];
 	      break;
@@ -288,7 +291,7 @@ namespace bamstats
 	    if (sequence[sp] == refslice[rp]) ++itRg->second.bc.matchCount;
 	    else ++itRg->second.bc.mismatchCount;
 	    // Count bp-level coverage
-	    if (itRg->second.bc.cov[rec->core.pos + rp] < itRg->second.bc.maxBpCov) ++itRg->second.bc.cov[rec->core.pos + rp];
+	    if (itRg->second.bc.cov[rec->core.pos + rp] < itRg->second.bc.maxCoverage) ++itRg->second.bc.cov[rec->core.pos + rp];
 	    ++sp;
 	    ++rp;
 	  }
@@ -334,10 +337,10 @@ namespace bamstats
     // Output read counts
     std::string statFileName = c.outprefix + ".readcounts.tsv";
     std::ofstream rcfile(statFileName.c_str());
+    rcfile << "Sample\tLibrary\t#QCFail\tQCFailFraction\t#DuplicateMarked\tDuplicateFraction\t#Unmapped\tUnmappedFraction\t#Mapped\tMappedFraction\t#MappedRead1\t#MappedRead2\tRatioMapped2vsMapped1\t#SecondaryAlignments\tSecondaryAlignmentFraction\t#SupplementaryAlignments\tSupplementaryAlignmentFraction" << std::endl;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       uint64_t totalReadCount = itRg->second.rc.qcfail + itRg->second.rc.dup + itRg->second.rc.unmap + itRg->second.rc.mapped1 + itRg->second.rc.mapped2;
       uint64_t mappedCount = itRg->second.rc.mapped1 + itRg->second.rc.mapped2;
-      rcfile << "Sample\tLibrary\t#QCFail\tQCFailFraction\t#DuplicateMarked\tDuplicateFraction\t#Unmapped\tUnmappedFraction\t#Mapped\tMappedFraction\t#MappedRead1\t#MappedRead2\tRatioMapped2vsMapped1\t#SecondaryAlignments\tSecondaryAlignmentFraction\t#SupplementaryAlignments\tSupplementaryAlignmentFraction" << std::endl;
       rcfile << c.sampleName << "\t" << itRg->first << "\t" << itRg->second.rc.qcfail << "\t" << (double) itRg->second.rc.qcfail / (double) totalReadCount << "\t" << itRg->second.rc.dup << "\t" << (double) itRg->second.rc.dup / (double) totalReadCount << "\t" << itRg->second.rc.unmap << "\t" << (double) itRg->second.rc.unmap / (double) totalReadCount << "\t" << mappedCount << "\t" << (double) mappedCount / (double) totalReadCount << "\t" << itRg->second.rc.mapped1 << "\t" << itRg->second.rc.mapped2 << "\t" << (double) itRg->second.rc.mapped2 / (double) itRg->second.rc.mapped1 << "\t" << itRg->second.rc.secondary << "\t" << (double) itRg->second.rc.secondary / (double) mappedCount << "\t" << itRg->second.rc.supplementary << "\t" << (double) itRg->second.rc.supplementary / (double) mappedCount  << std::endl;
     }
     rcfile.close();
@@ -345,8 +348,8 @@ namespace bamstats
     // Output read length histogram
     statFileName = c.outprefix + ".readlength.tsv";
     std::ofstream rlfile(statFileName.c_str());
+    rlfile << "Sample\tReadlength\tCount\tLibrary" << std::endl;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
-      rlfile << "Sample\tReadlength\tCount\tLibrary" << std::endl;
       for(uint32_t i = 0; i < itRg->second.rc.lRc.size(); ++i) rlfile << c.sampleName << "\t" << i << "\t" << itRg->second.rc.lRc[i] << "\t" << itRg->first << std::endl;
     }
     rlfile.close();
@@ -354,6 +357,7 @@ namespace bamstats
     // Output paired counts
     statFileName = c.outprefix + ".pairedcounts.tsv";
     std::ofstream pcfile(statFileName.c_str());
+    pcfile << "Sample\tLibrary\t#Pairs\t#MappedPairs\tMappedFraction\t#MappedSameChr\tMappedSameChrFraction\tDefaultLibraryLayout" << std::endl;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       int64_t paired = itRg->second.pc.paired / 2;
       int64_t mapped = itRg->second.pc.mapped / 2;
@@ -366,7 +370,6 @@ namespace bamstats
 	  deflayout = i;
 	}
       }
-      pcfile << "Sample\tLibrary\t#Pairs\t#MappedPairs\tMappedFraction\t#MappedSameChr\tMappedSameChrFraction\tDefaultLibraryLayout" << std::endl;
       pcfile << c.sampleName << "\t" << itRg->first << "\t" << paired << "\t" << mapped << "\t" << (double) mapped / (double) paired << "\t" << mappedSameChr << "\t" << (double) mappedSameChr / (double) paired << "\t" << deflayout << std::endl;
     }
     pcfile.close();
@@ -374,9 +377,9 @@ namespace bamstats
     // Output error rates
     statFileName = c.outprefix + ".errorrates.tsv";
     std::ofstream erfile(statFileName.c_str());
+    erfile << "Sample\tLibrary\t#ReferenceBases\t#AlignedBases\t#Coverage\t#MatchedBases\tMatchRate\t#MismatchedBases\tMismatchRate\t#DeletionsCigarD\tDeletionRate\t#InsertionsCigarI\tInsertionRate\t#SoftClippedBases\tSoftClipRate\t#HardClippedBases\tHardClipRate\tErrorRate" << std::endl;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       uint64_t alignedbases = itRg->second.bc.matchCount + itRg->second.bc.mismatchCount;
-      erfile << "Sample\tLibrary\t#ReferenceBases\t#AlignedBases\t#Coverage\t#MatchedBases\tMatchRate\t#MismatchedBases\tMismatchRate\t#DeletionsCigarD\tDeletionRate\t#InsertionsCigarI\tInsertionRate\t#SoftClippedBases\tSoftClipRate\t#HardClippedBases\tHardClipRate\tErrorRate" << std::endl;
       erfile << c.sampleName << "\t" << itRg->first << "\t" << referencebp << "\t" << alignedbases << "\t" << (double) alignedbases / (double) referencebp << "\t" << itRg->second.bc.matchCount << "\t" << (double) itRg->second.bc.matchCount / (double) alignedbases << "\t" << itRg->second.bc.mismatchCount << "\t" << (double) itRg->second.bc.mismatchCount / (double) alignedbases << "\t" << itRg->second.bc.delCount << "\t" << (double) itRg->second.bc.delCount / (double) alignedbases << "\t" << itRg->second.bc.insCount << "\t" << (double) itRg->second.bc.insCount / (double) alignedbases << "\t" << itRg->second.bc.softClipCount << "\t" << (double) itRg->second.bc.softClipCount / (double) alignedbases << "\t" << itRg->second.bc.hardClipCount << "\t" << (double) itRg->second.bc.hardClipCount / (double) alignedbases << "\t" << (double) (itRg->second.bc.mismatchCount + itRg->second.bc.delCount + itRg->second.bc.insCount + itRg->second.bc.softClipCount + itRg->second.bc.hardClipCount) / (double) alignedbases  << std::endl;
     }
     erfile.close();
@@ -384,8 +387,8 @@ namespace bamstats
     // Output coverage histograms
     statFileName = c.outprefix + ".coverage.tsv";
     std::ofstream cofile(statFileName.c_str());
+    cofile << "Sample\tCoverage\tCount\tLibrary" << std::endl;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
-      cofile << "Sample\tCoverage\tCount\tLibrary" << std::endl;
       for(uint32_t i = 0; i < itRg->second.bc.bpWithCoverage.size(); ++i) cofile << c.sampleName << "\t" << i << "\t" << itRg->second.bc.bpWithCoverage[i] << "\t" << itRg->first << std::endl;
     }
     cofile.close();
@@ -393,8 +396,8 @@ namespace bamstats
     // Output insert size histograms
     statFileName = c.outprefix + ".isize.tsv";
     std::ofstream isfile(statFileName.c_str());
+    isfile << "Sample\tInsertSize\tCount\tLayout\tLibrary" << std::endl;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
-      isfile << "Sample\tInsertSize\tCount\tLayout\tLibrary" << std::endl;
       for(uint32_t i = 0; i < itRg->second.pc.fPlus.size(); ++i) {
 	isfile << c.sampleName << "\t" << i << "\t" << itRg->second.pc.fPlus[i] << "\tF+\t" << itRg->first << std::endl;
 	isfile << c.sampleName << "\t" << i << "\t" << itRg->second.pc.fMinus[i] << "\tF-\t" << itRg->first << std::endl;
