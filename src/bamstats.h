@@ -334,14 +334,35 @@ namespace bamstats
     ProfilerStop();
 #endif
 
-    // Output read counts
-    std::string statFileName = c.outprefix + ".readcounts.tsv";
+    // Output metrics
+    std::string statFileName = c.outprefix + ".metrics.tsv";
     std::ofstream rcfile(statFileName.c_str());
-    rcfile << "Sample\tLibrary\t#QCFail\tQCFailFraction\t#DuplicateMarked\tDuplicateFraction\t#Unmapped\tUnmappedFraction\t#Mapped\tMappedFraction\t#MappedRead1\t#MappedRead2\tRatioMapped2vsMapped1\t#SecondaryAlignments\tSecondaryAlignmentFraction\t#SupplementaryAlignments\tSupplementaryAlignmentFraction" << std::endl;
+    rcfile << "Sample\tLibrary\t#QCFail\tQCFailFraction\t#DuplicateMarked\tDuplicateFraction\t#Unmapped\tUnmappedFraction\t#Mapped\tMappedFraction\t#MappedRead1\t#MappedRead2\tRatioMapped2vsMapped1\t#SecondaryAlignments\tSecondaryAlignmentFraction\t#SupplementaryAlignments\tSupplementaryAlignmentFraction" << "\t";
+    rcfile << "#Pairs\t#MappedPairs\tMappedFraction\t#MappedSameChr\tMappedSameChrFraction\tDefaultLibraryLayout" << "\t";
+    rcfile << "#ReferenceBases\t#AlignedBases\t#Coverage\t#MatchedBases\tMatchRate\t#MismatchedBases\tMismatchRate\t#DeletionsCigarD\tDeletionRate\t#InsertionsCigarI\tInsertionRate\t#SoftClippedBases\tSoftClipRate\t#HardClippedBases\tHardClipRate\tErrorRate" << std::endl;    
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+      // Read counts
       uint64_t totalReadCount = itRg->second.rc.qcfail + itRg->second.rc.dup + itRg->second.rc.unmap + itRg->second.rc.mapped1 + itRg->second.rc.mapped2;
       uint64_t mappedCount = itRg->second.rc.mapped1 + itRg->second.rc.mapped2;
-      rcfile << c.sampleName << "\t" << itRg->first << "\t" << itRg->second.rc.qcfail << "\t" << (double) itRg->second.rc.qcfail / (double) totalReadCount << "\t" << itRg->second.rc.dup << "\t" << (double) itRg->second.rc.dup / (double) totalReadCount << "\t" << itRg->second.rc.unmap << "\t" << (double) itRg->second.rc.unmap / (double) totalReadCount << "\t" << mappedCount << "\t" << (double) mappedCount / (double) totalReadCount << "\t" << itRg->second.rc.mapped1 << "\t" << itRg->second.rc.mapped2 << "\t" << (double) itRg->second.rc.mapped2 / (double) itRg->second.rc.mapped1 << "\t" << itRg->second.rc.secondary << "\t" << (double) itRg->second.rc.secondary / (double) mappedCount << "\t" << itRg->second.rc.supplementary << "\t" << (double) itRg->second.rc.supplementary / (double) mappedCount  << std::endl;
+      rcfile << c.sampleName << "\t" << itRg->first << "\t" << itRg->second.rc.qcfail << "\t" << (double) itRg->second.rc.qcfail / (double) totalReadCount << "\t" << itRg->second.rc.dup << "\t" << (double) itRg->second.rc.dup / (double) totalReadCount << "\t" << itRg->second.rc.unmap << "\t" << (double) itRg->second.rc.unmap / (double) totalReadCount << "\t" << mappedCount << "\t" << (double) mappedCount / (double) totalReadCount << "\t" << itRg->second.rc.mapped1 << "\t" << itRg->second.rc.mapped2 << "\t" << (double) itRg->second.rc.mapped2 / (double) itRg->second.rc.mapped1 << "\t" << itRg->second.rc.secondary << "\t" << (double) itRg->second.rc.secondary / (double) mappedCount << "\t" << itRg->second.rc.supplementary << "\t" << (double) itRg->second.rc.supplementary / (double) mappedCount << "\t";
+
+      // Paired counts
+      int64_t paired = itRg->second.pc.paired / 2;
+      int64_t mapped = itRg->second.pc.mapped / 2;
+      int64_t mappedSameChr = itRg->second.pc.mappedSameChr / 2;
+      int32_t deflayout = 0;
+      int32_t maxcount = itRg->second.pc.orient[0];
+      for(int32_t i = 1; i<4; ++i) {
+	if (itRg->second.pc.orient[i] > maxcount) {
+	  maxcount = itRg->second.pc.orient[i];
+	  deflayout = i;
+	}
+      }
+      rcfile << paired << "\t" << mapped << "\t" << (double) mapped / (double) paired << "\t" << mappedSameChr << "\t" << (double) mappedSameChr / (double) paired << "\t" << deflayout << "\t";
+
+      // Error rates
+      uint64_t alignedbases = itRg->second.bc.matchCount + itRg->second.bc.mismatchCount;
+      rcfile << referencebp << "\t" << alignedbases << "\t" << (double) alignedbases / (double) referencebp << "\t" << itRg->second.bc.matchCount << "\t" << (double) itRg->second.bc.matchCount / (double) alignedbases << "\t" << itRg->second.bc.mismatchCount << "\t" << (double) itRg->second.bc.mismatchCount / (double) alignedbases << "\t" << itRg->second.bc.delCount << "\t" << (double) itRg->second.bc.delCount / (double) alignedbases << "\t" << itRg->second.bc.insCount << "\t" << (double) itRg->second.bc.insCount / (double) alignedbases << "\t" << itRg->second.bc.softClipCount << "\t" << (double) itRg->second.bc.softClipCount / (double) alignedbases << "\t" << itRg->second.bc.hardClipCount << "\t" << (double) itRg->second.bc.hardClipCount / (double) alignedbases << "\t" << (double) (itRg->second.bc.mismatchCount + itRg->second.bc.delCount + itRg->second.bc.insCount + itRg->second.bc.softClipCount + itRg->second.bc.hardClipCount) / (double) alignedbases  << std::endl;
     }
     rcfile.close();
 
@@ -354,36 +375,6 @@ namespace bamstats
     }
     rlfile.close();
 
-    // Output paired counts
-    statFileName = c.outprefix + ".pairedcounts.tsv";
-    std::ofstream pcfile(statFileName.c_str());
-    pcfile << "Sample\tLibrary\t#Pairs\t#MappedPairs\tMappedFraction\t#MappedSameChr\tMappedSameChrFraction\tDefaultLibraryLayout" << std::endl;
-    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
-      int64_t paired = itRg->second.pc.paired / 2;
-      int64_t mapped = itRg->second.pc.mapped / 2;
-      int64_t mappedSameChr = itRg->second.pc.mappedSameChr / 2;
-      int32_t deflayout = 0;
-      int32_t maxcount = itRg->second.pc.orient[0];
-      for(int32_t i = 1; i<4; ++i) {
-	if (itRg->second.pc.orient[i] > maxcount) {
-	  maxcount = itRg->second.pc.orient[i];
-	  deflayout = i;
-	}
-      }
-      pcfile << c.sampleName << "\t" << itRg->first << "\t" << paired << "\t" << mapped << "\t" << (double) mapped / (double) paired << "\t" << mappedSameChr << "\t" << (double) mappedSameChr / (double) paired << "\t" << deflayout << std::endl;
-    }
-    pcfile.close();
-    
-    // Output error rates
-    statFileName = c.outprefix + ".errorrates.tsv";
-    std::ofstream erfile(statFileName.c_str());
-    erfile << "Sample\tLibrary\t#ReferenceBases\t#AlignedBases\t#Coverage\t#MatchedBases\tMatchRate\t#MismatchedBases\tMismatchRate\t#DeletionsCigarD\tDeletionRate\t#InsertionsCigarI\tInsertionRate\t#SoftClippedBases\tSoftClipRate\t#HardClippedBases\tHardClipRate\tErrorRate" << std::endl;
-    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
-      uint64_t alignedbases = itRg->second.bc.matchCount + itRg->second.bc.mismatchCount;
-      erfile << c.sampleName << "\t" << itRg->first << "\t" << referencebp << "\t" << alignedbases << "\t" << (double) alignedbases / (double) referencebp << "\t" << itRg->second.bc.matchCount << "\t" << (double) itRg->second.bc.matchCount / (double) alignedbases << "\t" << itRg->second.bc.mismatchCount << "\t" << (double) itRg->second.bc.mismatchCount / (double) alignedbases << "\t" << itRg->second.bc.delCount << "\t" << (double) itRg->second.bc.delCount / (double) alignedbases << "\t" << itRg->second.bc.insCount << "\t" << (double) itRg->second.bc.insCount / (double) alignedbases << "\t" << itRg->second.bc.softClipCount << "\t" << (double) itRg->second.bc.softClipCount / (double) alignedbases << "\t" << itRg->second.bc.hardClipCount << "\t" << (double) itRg->second.bc.hardClipCount / (double) alignedbases << "\t" << (double) (itRg->second.bc.mismatchCount + itRg->second.bc.delCount + itRg->second.bc.insCount + itRg->second.bc.softClipCount + itRg->second.bc.hardClipCount) / (double) alignedbases  << std::endl;
-    }
-    erfile.close();
-    
     // Output coverage histograms
     statFileName = c.outprefix + ".coverage.tsv";
     std::ofstream cofile(statFileName.c_str());

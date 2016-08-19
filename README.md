@@ -15,6 +15,12 @@ Running bamStats
 `Rscript R/isize.R outprefix.isize.tsv`
 
 `Rscript R/coverage.R outprefix.coverage.tsv`
-	
+
+To read the metrics file on screen you may want to transpose rows and columns and layout columns:
+
+`cat outprefix.metrics.tsv | datamash transpose | column -t`
+
+
+
 
 
