@@ -12,11 +12,15 @@ Running bamStats
 
 `./src/bamStats -r <ref.fa> -o outprefix <align.bam>`
 
+Plotting the insert size distribution.
+
 `Rscript R/isize.R outprefix.isize.tsv`
+
+Plotting the coverage distribution.
 
 `Rscript R/coverage.R outprefix.coverage.tsv`
 
-To read the metrics file on screen you may want to transpose rows and columns and layout columns:
+To convert all the alignment metrics from column format to rows to easily read it on screen.
 
 `cat outprefix.metrics.tsv | datamash transpose | column -t`
 
