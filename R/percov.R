@@ -13,7 +13,6 @@ for(i in 1:nrow(sl)) {
 s$cov = as.numeric(as.character(s$cov))
 s$frac = as.numeric(as.character(s$frac))
 
-print(summary(s))
 # Plot
 pdf(paste0(args[1], ".pdf"))
 p1=ggplot(data=s, aes(x=cov, y=frac))
