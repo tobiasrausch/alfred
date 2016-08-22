@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
   generic.add_options()
     ("help,?", "show help message")
     ("reference,r", boost::program_options::value<boost::filesystem::path>(&c.genome), "reference fasta file (required)")
-    ("bed,b", boost::program_options::value<boost::filesystem::path>(&c.regionFile), "BED file with regions to analyze (optional)")
+    ("bed,b", boost::program_options::value<boost::filesystem::path>(&c.regionFile), "bed file with regions to analyze (optional)")
     ("outprefix,o", boost::program_options::value<std::string>(&c.outprefix)->default_value("stats"), "output file prefix")
     ;
 
@@ -130,9 +130,34 @@ int main(int argc, char **argv) {
   // Check region file
   if (vm.count("bed")) {
     if (!(boost::filesystem::exists(c.regionFile) && boost::filesystem::is_regular_file(c.regionFile) && boost::filesystem::file_size(c.regionFile))) {
-      std::cerr << "Input BED region file is missing: " << c.regionFile.string() << std::endl;
+      std::cerr << "Input region file in bed format is missing: " << c.regionFile.string() << std::endl;
       return 1;
     }
+    std::string oldChr;
+    faidx_t* fai = fai_load(c.genome.string().c_str());
+    std::ifstream interval_file(c.regionFile.string().c_str(), std::ifstream::in);
+    if (interval_file.is_open()) {
+      while (interval_file.good()) {
+	std::string intervalLine;
+	getline(interval_file, intervalLine);
+	typedef boost::tokenizer< boost::char_separator<char> > Tokenizer;
+	boost::char_separator<char> sep(" \t,;");
+	Tokenizer tokens(intervalLine, sep);
+	Tokenizer::iterator tokIter = tokens.begin();
+	if (tokIter!=tokens.end()) {
+	  std::string chrName=*tokIter++;
+	  if (chrName.compare(oldChr) != 0) {
+	    oldChr = chrName;
+	    if (!faidx_has_seq(fai, chrName.c_str())) {
+	      std::cerr << "Chromosome from bed file " << chrName << " is NOT present in your reference file " << c.genome.string() << std::endl;
+	      return 1;
+	    }
+	  }
+	}
+      }
+      interval_file.close();
+    }
+    fai_destroy(fai);
     c.hasRegionFile = true;
   } else c.hasRegionFile = false;
 

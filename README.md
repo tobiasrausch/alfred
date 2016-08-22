@@ -25,6 +25,17 @@ To convert all the alignment metrics from column format to rows to easily read i
 `cat outprefix.metrics.tsv | datamash transpose | column -t`
 
 
+Running bamStats using a bed file of target regions
+---------------------------------------------------
 
+If target regions are provided, bamStats computes the average coverage for each target and the on-target rate.
 
+`./src/bamStats -r <ref.fa> -b <targets.bed> -o outprefix <align.bam>`
 
+Plotting the on-target rate.
+
+`Rscript R/ontarget.R outprefix.ontarget.tsv`
+
+Plotting the fraction of targets above a given coverage threshold.
+
+`Rscript R/percov.R stats.bedcov.tsv`

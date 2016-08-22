@@ -3,6 +3,7 @@
 
 #include <limits>
 
+#include <boost/dynamic_bitset.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
@@ -103,6 +104,51 @@ namespace bamstats
   ReadGroupStats() : bc(BaseCounts()), rc(ReadCounts()), pc(PairCounts()) {}
   };
 
+
+  struct BedCounts {
+    typedef double TAvgCov;
+    typedef std::vector<TAvgCov> TBpCov;
+    typedef boost::unordered_map<std::string, TBpCov> TRgBpMap;
+    typedef std::vector<TRgBpMap> TGenomicBp;
+
+    typedef std::vector<int64_t> TOnTargetBp;
+    typedef boost::unordered_map<std::string, TOnTargetBp> TOnTargetMap;
+    
+    int32_t stepsize;
+    int32_t onTSize;
+    TGenomicBp gCov;
+    TOnTargetMap onTarget;
+    
+    BedCounts(int32_t nchr, int32_t s, int32_t vs) : stepsize(s), onTSize(vs) {
+      gCov.resize(nchr, TRgBpMap());
+    }
+  };
+  
+
+  template<typename TChromosomeRegions, typename TBpCoverage, typename TBedCounts>
+  inline void
+  _summarizeBedCoverage(TChromosomeRegions const& chrRegions, TBpCoverage const& cov, int32_t refIndex, std::string const& rg, TBedCounts& be) {
+    typename BedCounts::TRgBpMap::iterator itChr = be.gCov[refIndex].find(rg);
+    typename BedCounts::TOnTargetMap::iterator itOT = be.onTarget.find(rg);
+    for(int32_t s = 0; s < (int32_t) itOT->second.size(); ++s) {
+      // Avoid over-counting
+      typedef boost::dynamic_bitset<> TBitSet;
+      TBitSet used(cov.size());
+      for(uint32_t i = 0; i<chrRegions.size(); ++i) {
+	int64_t avgCov = 0;
+	int32_t rStart = std::max(0, chrRegions[i].start - s * be.stepsize);
+	int32_t rEnd = std::min((int32_t) cov.size(), chrRegions[i].end + s * be.stepsize);
+	for(int32_t k = rStart; k < rEnd; ++k) {
+	  if (!used[k]) {
+	    avgCov += cov[k];
+	    used[k] = 1;
+	  }
+	}
+	itOT->second[s] += avgCov;
+	if (s == 0) itChr->second[i] = (typename BedCounts::TAvgCov) ( (double) avgCov / (double) (chrRegions[i].end - chrRegions[i].start));
+      }
+    }
+  }
   
   template<typename TConfig>
   inline int32_t
@@ -142,9 +188,6 @@ namespace bamstats
 	  }
 	}
       }
-    } else {
-      // Make one region for every chromosome
-      for (int refIndex = 0; refIndex<hdr->n_targets; ++refIndex) gRegions[refIndex].push_back(Interval(0, hdr->target_len[refIndex]));
     }
     
     // Debug code
@@ -155,13 +198,24 @@ namespace bamstats
     //}
     //}
 
+    // BED file statistics
+    BedCounts be(hdr->n_targets, 25, 20);
+    
     // Read group statistics
     typedef std::set<std::string> TRgSet;
     TRgSet rgs;
     getRGs(std::string(hdr->text), rgs);
     typedef boost::unordered_map<std::string, ReadGroupStats> TRGMap;
     TRGMap rgMap;
-    for(typename TRgSet::const_iterator itRg = rgs.begin(); itRg != rgs.end(); ++itRg) rgMap.insert(std::make_pair(*itRg, ReadGroupStats()));
+    for(typename TRgSet::const_iterator itRg = rgs.begin(); itRg != rgs.end(); ++itRg) {
+      rgMap.insert(std::make_pair(*itRg, ReadGroupStats()));
+      for(int32_t refIndex = 0; refIndex < hdr->n_targets; ++refIndex) {
+	typename BedCounts::TRgBpMap::iterator itChr = be.gCov[refIndex].insert(std::make_pair(*itRg, typename BedCounts::TBpCov())).first;
+	itChr->second.resize(gRegions[refIndex].size());
+	typename BedCounts::TOnTargetMap::iterator itOT = be.onTarget.insert(std::make_pair(*itRg, typename BedCounts::TOnTargetBp())).first;
+	itOT->second.resize(be.onTSize, 0);
+      }
+    }
 
     // Total reference base pairs
     uint64_t referencebp = 0;
@@ -185,6 +239,7 @@ namespace bamstats
 	// Summarize bp-level coverage
 	if (refIndex != -1) {
 	  for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+	    if ((c.hasRegionFile) && (!gRegions[refIndex].empty())) _summarizeBedCoverage(gRegions[refIndex], itRg->second.bc.cov, refIndex, itRg->first, be);
 	    for(uint32_t i = 0; i < hdr->target_len[refIndex]; ++i) ++itRg->second.bc.bpWithCoverage[itRg->second.bc.cov[i]];
 	    itRg->second.bc.cov.clear();
 	  }
@@ -315,25 +370,13 @@ namespace bamstats
     // Summarize bp-level coverage
     if (refIndex != -1) {
       for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+	if ((c.hasRegionFile) && (!gRegions[refIndex].empty())) _summarizeBedCoverage(gRegions[refIndex], itRg->second.bc.cov, refIndex, itRg->first, be);
 	for(uint32_t i = 0; i < hdr->target_len[refIndex]; ++i) ++itRg->second.bc.bpWithCoverage[itRg->second.bc.cov[i]];
 	itRg->second.bc.cov.clear();
       }
       if (seq != NULL) free(seq);
     }
     
-    // clean-up
-    bam_destroy1(rec);
-    fai_destroy(fai);
-    bam_hdr_destroy(hdr);
-    sam_close(samfile);
-    
-    now = boost::posix_time::second_clock::local_time();
-    std::cout << '[' << boost::posix_time::to_simple_string(now) << "] Done." << std::endl;
-    
-#ifdef PROFILE
-    ProfilerStop();
-#endif
-
     // Output metrics
     std::string statFileName = c.outprefix + ".metrics.tsv";
     std::ofstream rcfile(statFileName.c_str());
@@ -397,7 +440,49 @@ namespace bamstats
       }
     }
     isfile.close();
+
+    if (c.hasRegionFile) {
+      // Output avg. bed coverage
+      statFileName = c.outprefix + ".bedcov.tsv";
+      std::ofstream bcfile(statFileName.c_str());
+      bcfile << "Sample\tLibrary\tChr\tStart\tEnd\tAvgCov" << std::endl;
+      for(int32_t refIndex = 0; refIndex < hdr->n_targets; ++refIndex) {
+	for(typename BedCounts::TRgBpMap::const_iterator itChr = be.gCov[refIndex].begin(); itChr != be.gCov[refIndex].end(); ++itChr) {
+	  for(uint32_t i = 0; i < gRegions[refIndex].size(); ++i) {
+	    bcfile << c.sampleName << "\t" << itChr->first << "\t" << hdr->target_name[refIndex] << "\t" << gRegions[refIndex][i].start << "\t" << gRegions[refIndex][i].end << "\t" << itChr->second[i] << std::endl;
+	  }
+	}
+      }
+      bcfile.close();
     
+      // Output on-target rate
+      statFileName = c.outprefix + ".ontarget.tsv";
+      std::ofstream otfile(statFileName.c_str());
+      otfile << "Sample\tLibrary\tExtension\tOnTarget" << std::endl;
+      for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+	uint64_t alignedbases = itRg->second.bc.matchCount + itRg->second.bc.mismatchCount;
+	typename BedCounts::TOnTargetMap::iterator itOT = be.onTarget.find(itRg->first);
+	for(uint32_t k = 0; k < itOT->second.size(); ++k) {
+	  otfile << c.sampleName << "\t" << itRg->first << "\t" << k * be.stepsize << "\t" << (double) itOT->second[k] / (double) alignedbases << std::endl;
+	}
+      }
+      otfile.close();
+    }
+
+    // clean-up
+    bam_destroy1(rec);
+    fai_destroy(fai);
+    bam_hdr_destroy(hdr);
+    sam_close(samfile);
+    
+    now = boost::posix_time::second_clock::local_time();
+    std::cout << '[' << boost::posix_time::to_simple_string(now) << "] Done." << std::endl;
+    
+#ifdef PROFILE
+    ProfilerStop();
+#endif
+
+
     return 0;
   }
 
