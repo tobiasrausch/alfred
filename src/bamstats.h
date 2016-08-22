@@ -291,13 +291,13 @@ namespace bamstats
 	      break;
 	    case 2:
 	      ++itRg->second.pc.orient[2];
-	      if (outerISize < itRg->second.pc.maxInsertSize) ++itRg->second.pc.rMinus[outerISize];
-	      else ++itRg->second.pc.rMinus[itRg->second.pc.maxInsertSize];
+	      if (outerISize < itRg->second.pc.maxInsertSize) ++itRg->second.pc.rPlus[outerISize];
+	      else ++itRg->second.pc.rPlus[itRg->second.pc.maxInsertSize];
 	      break;
 	    case 3:
 	      ++itRg->second.pc.orient[3];
-	      if (outerISize < itRg->second.pc.maxInsertSize) ++itRg->second.pc.rPlus[outerISize];
-	      else ++itRg->second.pc.rPlus[itRg->second.pc.maxInsertSize];
+	      if (outerISize < itRg->second.pc.maxInsertSize) ++itRg->second.pc.rMinus[outerISize];
+	      else ++itRg->second.pc.rMinus[itRg->second.pc.maxInsertSize];
 	      break;
 	    default:
 	      break;
