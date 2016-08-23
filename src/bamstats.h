@@ -1,7 +1,6 @@
 #ifndef BAMSTATS_H
 #define BAMSTATS_H
 
-#include <numeric>
 #include <limits>
 
 #include <boost/dynamic_bitset.hpp>

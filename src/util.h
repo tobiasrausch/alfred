@@ -148,7 +148,8 @@ namespace bamstats
   template<typename TVector>
   inline int32_t
   medianFromHistogram(TVector const& vec) {
-    int64_t tc = std::accumulate(vec.begin(), vec.end(), 0);
+    int64_t tc = 0;
+    for(typename TVector::const_iterator it = vec.begin(); it != vec.end(); ++it) tc += *it;
     int64_t medind = tc / 2;
     tc = 0;
     for(int32_t i = 0; i < (int32_t) vec.size(); ++i) {
