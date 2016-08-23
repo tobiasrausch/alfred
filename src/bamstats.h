@@ -223,6 +223,10 @@ namespace bamstats
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "BAM file parsing" << std::endl;
     boost::progress_display show_progress( hdr->n_targets );
 
+    // N-content
+    typedef boost::dynamic_bitset<> TBitSet;
+    TBitSet nrun;
+    
     // Parse genome
     int32_t refIndex = -1;
     char* seq = NULL;
@@ -237,7 +241,8 @@ namespace bamstats
 	if (refIndex != -1) {
 	  for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
 	    if ((c.hasRegionFile) && (!gRegions[refIndex].empty())) _summarizeBedCoverage(gRegions[refIndex], itRg->second.bc.cov, refIndex, itRg->first, be);
-	    for(uint32_t i = 0; i < hdr->target_len[refIndex]; ++i) ++itRg->second.bc.bpWithCoverage[itRg->second.bc.cov[i]];
+	    for(uint32_t i = 0; i < hdr->target_len[refIndex]; ++i)
+	      if (!nrun[i]) ++itRg->second.bc.bpWithCoverage[itRg->second.bc.cov[i]];
 	    itRg->second.bc.cov.clear();
 	  }
 	  if (seq != NULL) free(seq);
@@ -248,6 +253,11 @@ namespace bamstats
 	int32_t seqlen = -1;
 	std::string tname(hdr->target_name[refIndex]);
 	seq = faidx_fetch_seq(fai, tname.c_str(), 0, hdr->target_len[refIndex], &seqlen);
+
+	// Set N-mask
+	nrun.resize(hdr->target_len[refIndex], 0);
+	for(uint32_t i = 0; i < hdr->target_len[refIndex]; ++i)
+	  if ((seq[i] == 'n') || (seq[i] == 'N')) nrun[i] = 1;
 	
 	// Resize coverage vectors
 	for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) itRg->second.bc.cov.resize(hdr->target_len[refIndex], 0);
@@ -367,7 +377,8 @@ namespace bamstats
     if (refIndex != -1) {
       for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
 	if ((c.hasRegionFile) && (!gRegions[refIndex].empty())) _summarizeBedCoverage(gRegions[refIndex], itRg->second.bc.cov, refIndex, itRg->first, be);
-	for(uint32_t i = 0; i < hdr->target_len[refIndex]; ++i) ++itRg->second.bc.bpWithCoverage[itRg->second.bc.cov[i]];
+	for(uint32_t i = 0; i < hdr->target_len[refIndex]; ++i)
+	  if (!nrun[i]) ++itRg->second.bc.bpWithCoverage[itRg->second.bc.cov[i]];
 	itRg->second.bc.cov.clear();
       }
       if (seq != NULL) free(seq);

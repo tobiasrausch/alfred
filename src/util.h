@@ -152,7 +152,7 @@ namespace bamstats
     int64_t medind = tc / 2;
     tc = 0;
     for(int32_t i = 0; i < (int32_t) vec.size(); ++i) {
-      tc += vec[i];
+      tc += (int64_t) vec[i];
       if (tc >= medind) return i;
     }
     return 0;
