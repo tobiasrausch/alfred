@@ -143,7 +143,20 @@ namespace bamstats
     }
     if (!rgPresent) rgs.insert("DefaultLib");
   }
-  
+
+
+  template<typename TVector>
+  inline int32_t
+  medianFromHistogram(TVector const& vec) {
+    int64_t tc = std::accumulate(vec.begin(), vec.end(), 0);
+    int64_t medind = tc / 2;
+    tc = 0;
+    for(int32_t i = 0; i < (int32_t) vec.size(); ++i) {
+      tc += vec[i];
+      if (tc >= medind) return i;
+    }
+    return 0;
+  }
 
 
 }
