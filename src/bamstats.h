@@ -164,6 +164,7 @@ namespace bamstats
     gRegions.resize(hdr->n_targets, TChromosomeRegions());
 
     // Parse regions from BED file or create one region per chromosome
+    int32_t totalBedSize = 0;
     if (c.hasRegionFile) {
       // Parse regions from BED file
       std::ifstream bedFile(c.regionFile.string().c_str(), std::ifstream::in);
@@ -187,6 +188,15 @@ namespace bamstats
 	    }
 	  }
 	}
+      }
+
+      // Get total bed size
+      for(int32_t refIndex = 0; refIndex < hdr->n_targets; ++refIndex) {
+	typedef boost::dynamic_bitset<> TBitSet;
+	TBitSet bedcovered(hdr->target_len[refIndex]);
+	for(uint32_t i = 0; i < gRegions[refIndex].size(); ++i)
+	  for(int32_t k = gRegions[refIndex][i].start; (k < gRegions[refIndex][i].end) && (k < (int32_t) hdr->target_len[refIndex]); ++k) bedcovered[k] = 1;
+	totalBedSize += bedcovered.count();
       }
     }
     
@@ -225,6 +235,8 @@ namespace bamstats
     // N-content
     typedef boost::dynamic_bitset<> TBitSet;
     TBitSet nrun;
+    uint64_t referencebp = 0;
+    uint64_t ncount = 0;
     
     // Parse genome
     int32_t refIndex = -1;
@@ -255,8 +267,13 @@ namespace bamstats
 
 	// Set N-mask
 	nrun.resize(hdr->target_len[refIndex], 0);
-	for(uint32_t i = 0; i < hdr->target_len[refIndex]; ++i)
-	  if ((seq[i] == 'n') || (seq[i] == 'N')) nrun[i] = 1;
+	referencebp += hdr->target_len[refIndex];
+	for(uint32_t i = 0; i < hdr->target_len[refIndex]; ++i) {
+	  if ((seq[i] == 'n') || (seq[i] == 'N')) {
+	    nrun[i] = 1;
+	    ++ncount;
+	  }
+	}
 	
 	// Resize coverage vectors
 	for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) itRg->second.bc.cov.resize(hdr->target_len[refIndex], 0);
@@ -388,8 +405,10 @@ namespace bamstats
     std::ofstream rcfile(statFileName.c_str());
     rcfile << "Sample\tLibrary\t#QCFail\tQCFailFraction\t#DuplicateMarked\tDuplicateFraction\t#Unmapped\tUnmappedFraction\t#Mapped\tMappedFraction\t#MappedRead1\t#MappedRead2\tRatioMapped2vsMapped1\t#SecondaryAlignments\tSecondaryAlignmentFraction\t#SupplementaryAlignments\tSupplementaryAlignmentFraction" << "\t";
     rcfile << "#Pairs\t#MappedPairs\tMappedFraction\t#MappedSameChr\tMappedSameChrFraction" << "\t";
-    rcfile << "#AlignedBases\t#MatchedBases\tMatchRate\t#MismatchedBases\tMismatchRate\t#DeletionsCigarD\tDeletionRate\t#InsertionsCigarI\tInsertionRate\t#SoftClippedBases\tSoftClipRate\t#HardClippedBases\tHardClipRate\tErrorRate" << "\t";
-    rcfile << "MedianReadLength\tDefaultLibraryLayout\tMedianInsertSize\tMedianCoverage" << std::endl;
+    rcfile << "#ReferenceBp\t#ReferenceNs\t#AlignedBases\t#MatchedBases\tMatchRate\t#MismatchedBases\tMismatchRate\t#DeletionsCigarD\tDeletionRate\t#InsertionsCigarI\tInsertionRate\t#SoftClippedBases\tSoftClipRate\t#HardClippedBases\tHardClipRate\tErrorRate" << "\t";
+    rcfile << "MedianReadLength\tDefaultLibraryLayout\tMedianInsertSize\tMedianCoverage";
+    if (c.hasRegionFile) rcfile << "\t#TotalBedBp\t#AlignedBasesInBed\tEnrichmentOverBed" << std::endl;
+    else rcfile << std::endl;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       // Read counts
       uint64_t totalReadCount = itRg->second.rc.qcfail + itRg->second.rc.dup + itRg->second.rc.unmap + itRg->second.rc.mapped1 + itRg->second.rc.mapped2;
@@ -412,7 +431,7 @@ namespace bamstats
 
       // Error rates
       uint64_t alignedbases = itRg->second.bc.matchCount + itRg->second.bc.mismatchCount;
-      rcfile << alignedbases << "\t" << itRg->second.bc.matchCount << "\t" << (double) itRg->second.bc.matchCount / (double) alignedbases << "\t" << itRg->second.bc.mismatchCount << "\t" << (double) itRg->second.bc.mismatchCount / (double) alignedbases << "\t" << itRg->second.bc.delCount << "\t" << (double) itRg->second.bc.delCount / (double) alignedbases << "\t" << itRg->second.bc.insCount << "\t" << (double) itRg->second.bc.insCount / (double) alignedbases << "\t" << itRg->second.bc.softClipCount << "\t" << (double) itRg->second.bc.softClipCount / (double) alignedbases << "\t" << itRg->second.bc.hardClipCount << "\t" << (double) itRg->second.bc.hardClipCount / (double) alignedbases << "\t" << (double) (itRg->second.bc.mismatchCount + itRg->second.bc.delCount + itRg->second.bc.insCount + itRg->second.bc.softClipCount + itRg->second.bc.hardClipCount) / (double) alignedbases  << "\t";
+      rcfile << referencebp << "\t" << ncount << "\t" << alignedbases << "\t" << itRg->second.bc.matchCount << "\t" << (double) itRg->second.bc.matchCount / (double) alignedbases << "\t" << itRg->second.bc.mismatchCount << "\t" << (double) itRg->second.bc.mismatchCount / (double) alignedbases << "\t" << itRg->second.bc.delCount << "\t" << (double) itRg->second.bc.delCount / (double) alignedbases << "\t" << itRg->second.bc.insCount << "\t" << (double) itRg->second.bc.insCount / (double) alignedbases << "\t" << itRg->second.bc.softClipCount << "\t" << (double) itRg->second.bc.softClipCount / (double) alignedbases << "\t" << itRg->second.bc.hardClipCount << "\t" << (double) itRg->second.bc.hardClipCount / (double) alignedbases << "\t" << (double) (itRg->second.bc.mismatchCount + itRg->second.bc.delCount + itRg->second.bc.insCount + itRg->second.bc.softClipCount + itRg->second.bc.hardClipCount) / (double) alignedbases  << "\t";
 
       // Median coverage, read length, etc.
       int32_t medISize = 0;
@@ -432,7 +451,16 @@ namespace bamstats
       default:
 	break;
       }
-      rcfile << medianFromHistogram(itRg->second.rc.lRc) << "\t" << deflayout << "\t" << medISize << "\t" << medianFromHistogram(itRg->second.bc.bpWithCoverage) << std::endl;
+      rcfile << medianFromHistogram(itRg->second.rc.lRc) << "\t" << deflayout << "\t" << medISize << "\t" << medianFromHistogram(itRg->second.bc.bpWithCoverage);
+
+      // Bed metrics
+      if (c.hasRegionFile) {
+	uint64_t nonN = referencebp - ncount;
+	typename BedCounts::TOnTargetMap::iterator itOT = be.onTarget.find(itRg->first);
+	uint64_t alignedBedBases = itOT->second[0];
+	double enrichment = ((double) alignedBedBases / (double) alignedbases) / ((double) totalBedSize / (double) nonN);
+	rcfile << "\t" << totalBedSize << "\t" << alignedBedBases << "\t" << enrichment << std::endl;
+      } else rcfile << std::endl;
     }
     rcfile.close();
 
