@@ -32,5 +32,6 @@ p1=p1 + scale_y_continuous(labels=comma) + ggtitle("Insert Size Distribution")
 p1=p1 + scale_x_continuous(labels=comma, breaks=as.integer(seq(min(insfilt$InsertSize), max(insfilt$InsertSize), length.out=10)))
 p1=p1 + facet_grid(Library ~ Sample)
 p1
+dev.off()
 print(warnings())
 
