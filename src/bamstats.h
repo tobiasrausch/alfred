@@ -67,7 +67,6 @@ namespace bamstats
     }
   };
 
-
   struct PairCounts {
     typedef uint16_t TMaxInsertSize;
     typedef uint32_t TCountType;
@@ -95,13 +94,28 @@ namespace bamstats
       rMinus.resize(maxInsertSize + 1, 0);
     }
   };
+
+  
+  struct QualCounts {
+    typedef uint8_t TMaxQuality;
+    typedef uint32_t TCountType;
+    typedef std::vector<TCountType> TQualCount;
+    int32_t maxQuality;
+    TQualCount qcount;
+
+    QualCounts() : maxQuality(std::numeric_limits<TMaxQuality>::max()) {
+      qcount.resize(maxQuality + 1, 0);
+    }
+  };
+    
   
   struct ReadGroupStats {
     BaseCounts bc;
     ReadCounts rc;
     PairCounts pc;
+    QualCounts qc;
     
-  ReadGroupStats() : bc(BaseCounts()), rc(ReadCounts()), pc(PairCounts()) {}
+  ReadGroupStats() : bc(BaseCounts()), rc(ReadCounts()), pc(PairCounts()), qc(QualCounts()) {}
   };
 
 
@@ -337,6 +351,7 @@ namespace bamstats
 	if (rec->core.flag & BAM_FUNMAP) ++itRg->second.rc.unmap;
 	continue;
       }
+      ++itRg->second.qc.qcount[(int32_t) rec->core.qual];
       if (rec->core.flag & BAM_FREAD2) ++itRg->second.rc.mapped2;
       else ++itRg->second.rc.mapped1;
       if (rec->core.l_qseq < itRg->second.rc.maxReadLength) ++itRg->second.rc.lRc[rec->core.l_qseq];
@@ -406,7 +421,7 @@ namespace bamstats
     rcfile << "Sample\tLibrary\t#QCFail\tQCFailFraction\t#DuplicateMarked\tDuplicateFraction\t#Unmapped\tUnmappedFraction\t#Mapped\tMappedFraction\t#MappedRead1\t#MappedRead2\tRatioMapped2vsMapped1\t#SecondaryAlignments\tSecondaryAlignmentFraction\t#SupplementaryAlignments\tSupplementaryAlignmentFraction" << "\t";
     rcfile << "#Pairs\t#MappedPairs\tMappedFraction\t#MappedSameChr\tMappedSameChrFraction" << "\t";
     rcfile << "#ReferenceBp\t#ReferenceNs\t#AlignedBases\t#MatchedBases\tMatchRate\t#MismatchedBases\tMismatchRate\t#DeletionsCigarD\tDeletionRate\t#InsertionsCigarI\tInsertionRate\t#SoftClippedBases\tSoftClipRate\t#HardClippedBases\tHardClipRate\tErrorRate" << "\t";
-    rcfile << "MedianReadLength\tDefaultLibraryLayout\tMedianInsertSize\tMedianCoverage";
+    rcfile << "MedianReadLength\tDefaultLibraryLayout\tMedianInsertSize\tMedianCoverage\tMedianMAPQ";
     if (c.hasRegionFile) rcfile << "\t#TotalBedBp\t#AlignedBasesInBed\tEnrichmentOverBed" << std::endl;
     else rcfile << std::endl;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
@@ -428,7 +443,7 @@ namespace bamstats
 	}
       }
       rcfile << paired << "\t" << mapped << "\t" << (double) mapped / (double) paired << "\t" << mappedSameChr << "\t" << (double) mappedSameChr / (double) paired << "\t";
-
+      
       // Error rates
       uint64_t alignedbases = itRg->second.bc.matchCount + itRg->second.bc.mismatchCount;
       rcfile << referencebp << "\t" << ncount << "\t" << alignedbases << "\t" << itRg->second.bc.matchCount << "\t" << (double) itRg->second.bc.matchCount / (double) alignedbases << "\t" << itRg->second.bc.mismatchCount << "\t" << (double) itRg->second.bc.mismatchCount / (double) alignedbases << "\t" << itRg->second.bc.delCount << "\t" << (double) itRg->second.bc.delCount / (double) alignedbases << "\t" << itRg->second.bc.insCount << "\t" << (double) itRg->second.bc.insCount / (double) alignedbases << "\t" << itRg->second.bc.softClipCount << "\t" << (double) itRg->second.bc.softClipCount / (double) alignedbases << "\t" << itRg->second.bc.hardClipCount << "\t" << (double) itRg->second.bc.hardClipCount / (double) alignedbases << "\t" << (double) (itRg->second.bc.mismatchCount + itRg->second.bc.delCount + itRg->second.bc.insCount + itRg->second.bc.softClipCount + itRg->second.bc.hardClipCount) / (double) alignedbases  << "\t";
@@ -451,8 +466,8 @@ namespace bamstats
       default:
 	break;
       }
-      rcfile << medianFromHistogram(itRg->second.rc.lRc) << "\t" << deflayout << "\t" << medISize << "\t" << medianFromHistogram(itRg->second.bc.bpWithCoverage);
-
+      rcfile << medianFromHistogram(itRg->second.rc.lRc) << "\t" << deflayout << "\t" << medISize << "\t" << medianFromHistogram(itRg->second.bc.bpWithCoverage) << "\t" << medianFromHistogram(itRg->second.qc.qcount);
+      
       // Bed metrics
       if (c.hasRegionFile) {
 	uint64_t nonN = referencebp - ncount;
@@ -472,6 +487,15 @@ namespace bamstats
       for(uint32_t i = 0; i < itRg->second.rc.lRc.size(); ++i) rlfile << c.sampleName << "\t" << i << "\t" << itRg->second.rc.lRc[i] << "\t" << itRg->first << std::endl;
     }
     rlfile.close();
+
+    // Output mapping quality histogram
+    statFileName = c.outprefix + ".mapq.tsv";
+    std::ofstream mqfile(statFileName.c_str());
+    mqfile << "Sample\tMappingQuality\tCount\tLibrary" << std::endl;
+    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+      for(uint32_t i = 0; i < itRg->second.qc.qcount.size(); ++i) mqfile << c.sampleName << "\t" << i << "\t" << itRg->second.qc.qcount[i] << "\t" << itRg->first << std::endl;
+    }
+    mqfile.close();
 
     // Output coverage histograms
     statFileName = c.outprefix + ".coverage.tsv";
