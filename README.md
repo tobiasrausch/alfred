@@ -1,16 +1,16 @@
-bamStats installation
+alfred installation
 ---------------------
 
-`git clone --recursive https://github.com/tobiasrausch/bamStats.git`
+`git clone --recursive https://github.com/tobiasrausch/alfred.git`
 
-`cd bamStats/`
+`cd alfred/`
 
 `make all`
 
-Running bamStats
+Running alfred
 ------------------
 
-`./src/bamStats -r <ref.fa> -o outprefix <align.bam>`
+`./src/alfred -r <ref.fa> -o outprefix <align.bam>`
 
 Plotting the insert size distribution.
 
@@ -25,12 +25,12 @@ To convert all the alignment metrics from column format to rows to easily read i
 `cat outprefix.metrics.tsv | datamash transpose | column -t`
 
 
-Running bamStats using a bed file of target regions
+Running alfred using a bed file of target regions
 ---------------------------------------------------
 
-If target regions are provided, bamStats computes the average coverage for each target and the on-target rate.
+If target regions are provided, alfred computes the average coverage for each target and the on-target rate.
 
-`./src/bamStats -r <ref.fa> -b <targets.bed> -o outprefix <align.bam>`
+`./src/alfred -r <ref.fa> -b <targets.bed> -o outprefix <align.bam>`
 
 Plotting the on-target rate.
 
