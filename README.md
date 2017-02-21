@@ -1,4 +1,4 @@
-alfred installation
+Alfred installation
 ---------------------
 
 `git clone --recursive https://github.com/tobiasrausch/alfred.git`
@@ -7,7 +7,7 @@ alfred installation
 
 `make all`
 
-Running alfred
+Running Alfred
 ------------------
 
 `./src/alfred -r <ref.fa> -o outprefix <align.bam>`
@@ -25,10 +25,10 @@ To convert all the alignment metrics from column format to rows to easily read i
 `cat outprefix.metrics.tsv | datamash transpose | column -t`
 
 
-Running alfred using a bed file of target regions
+Running Alfred using a bed file of target regions
 ---------------------------------------------------
 
-If target regions are provided, alfred computes the average coverage for each target and the on-target rate.
+If target regions are provided, Alfred computes the average coverage for each target and the on-target rate.
 
 `./src/alfred -r <ref.fa> -b <targets.bed> -o outprefix <align.bam>`
 
