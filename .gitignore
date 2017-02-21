@@ -1,6 +1,6 @@
 .boost
 .htslib
-src/bamStats
+src/alfred
 
 # Compiled Object files
 *.slo
