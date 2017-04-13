@@ -421,6 +421,8 @@ namespace bamstats
 	  sp += bam_cigar_oplen(cigar[i]);
 	} else if(bam_cigar_op(cigar[i]) == BAM_CHARD_CLIP) {
 	  ++itRg->second.bc.hardClipCount;
+	} else if (bam_cigar_op(cigar[i]) == BAM_CREF_SKIP) {
+	  rp += bam_cigar_oplen(cigar[i]);
 	} else {
 	  std::cerr << "Unknown Cigar options" << std::endl;
 	  return 1;
