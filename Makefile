@@ -1,5 +1,8 @@
 DEBUG ?= 0
 STATIC ?= 0
+prefix = /usr/local
+exec_prefix = $(prefix)
+bindir = $(exec_prefix)/bin
 
 # Submodules
 PWD = $(shell pwd)
@@ -33,7 +36,8 @@ HTSLIBSOURCES = $(wildcard src/htslib/*.c) $(wildcard src/htslib/*.h)
 SOURCES = $(wildcard src/*.h) $(wildcard src/*.cpp)
 
 # Targets
-TARGETS = .htslib .boost src/alfred
+BUILT_PROGRAMS = src/alfred
+TARGETS = .htslib .boost ${BUILT_PROGRAMS}
 
 all:   	$(TARGETS)
 
@@ -45,6 +49,10 @@ all:   	$(TARGETS)
 
 src/alfred: .htslib .boost $(SOURCES)
 	$(CXX) $(CXXFLAGS) $@.cpp -o $@ $(LDFLAGS)
+
+install: ${BUILT_PROGRAMS}
+	mkdir -p ${bindir}
+	install -p ${BUILT_PROGRAMS} ${bindir}
 
 clean:
 	cd src/htslib && make clean
