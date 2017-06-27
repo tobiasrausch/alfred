@@ -182,6 +182,27 @@ namespace bamstats
     return 0;
   }
 
+  template<typename TVector>
+  inline double
+  meanFromHistogram(TVector const& vec) {
+    int64_t tc = 0;
+    for(typename TVector::const_iterator it = vec.begin(); it != vec.end(); ++it) tc += *it;
+    int64_t mean = 0;
+    for(int32_t i = 0; i < (int32_t) vec.size(); ++i) mean += (int64_t) (vec[i]) * (int64_t) (i);
+    return (double) mean / (double) tc;
+  }
+
+  template<typename TVector>
+  inline double
+  sdFromHistogram(TVector const& vec) {
+    double mu = meanFromHistogram(vec);
+    int64_t tc = 0;
+    for(typename TVector::const_iterator it = vec.begin(); it != vec.end(); ++it) tc += *it;
+    double sd = 0;
+    for(int32_t i = 0; i < (int32_t) vec.size(); ++i) sd += (double) (vec[i]) * ((double) (i) - mu) * ((double) (i) - mu);
+    return std::sqrt((double) sd / (double) tc);
+  }
+
 
 }
 
