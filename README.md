@@ -1,3 +1,10 @@
+<p align="center">
+<img width="230" height="100" src="https://raw.githubusercontent.com/tobiasrausch/alfred/alfred.png">
+</p>
+
+[![Build Status](https://travis-ci.org/dellytools/delly.svg?branch=master)](https://travis-ci.org/tobiasrausch/alfred)
+
+
 Alfred installation
 ---------------------
 
