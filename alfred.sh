@@ -8,7 +8,7 @@ if [ $# -lt 3 ] || [ $# -gt 4 ]; then
     echo "Contact: Tobias Rausch (rausch@embl.de)"
     echo "**********************************************************************"
     echo ""
-    echo "Usage: $0 <genome.fa.gz> <output prefix> <input.bam> [<targets.bed>]"
+    echo "Usage: $0 <genome.fa> <output prefix> <input.bam> [<targets.bed>]"
     echo ""
     exit -1
 fi
@@ -32,7 +32,7 @@ Rscript ${BASEDIR}/R/mapq.R ${2}.mapq.tsv
 Rscript ${BASEDIR}/R/coverage.R ${2}.coverage.tsv
 ICOL=`cat ${2}.metrics.tsv | head -n 1 | tr '\t' '\n' | awk '{print $0"\t"NR;}' | grep "^MedianInsertSize" | cut -f 2`
 ISIZE=`cut -f 41 ${2}.metrics.tsv | tail -n +2 | awk '{SUM+=$1;} END {print SUM;}'`
-FILES="${2}.basequal.tsv.png ${2}.contentACGTN.tsv.png ${2}.readlength.tsv.png ${2}.mapq.tsv.png"
+FILES="${2}.basequal.tsv.png ${2}.contentACGTN.tsv.png ${2}.readlength.tsv.png ${2}.mapq.tsv.png ${2}.coverage.tsv.png"
 if [ ${ISIZE} -ne 0 ]
 then
     Rscript ${BASEDIR}/R/isize.R ${2}.isize.tsv
