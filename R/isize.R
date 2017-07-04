@@ -25,7 +25,7 @@ insfilt=ins[ins$InsertSize < 1000,]
 #}
 
 # Plot
-pdf(paste0(args[1], ".pdf"))
+png(paste0(args[1], ".png"), height=400, width=800)
 p1=ggplot(data=insfilt, aes(x=InsertSize, y=Count))
 p1=p1 + geom_line(aes(group=Layout, colour=Layout))
 p1=p1 + scale_y_continuous(labels=comma) + ggtitle("Insert Size Distribution")

@@ -2,16 +2,16 @@ library(ggplot2)
 library(scales)
 
 args=commandArgs(trailingOnly=TRUE)
-mq=read.table(args[1], header=T)
-lastpos=rev((1:nrow(mq))[mq$Count != 0])[1]
-mq=mq[mq$MappingQuality<lastpos,]
+bq=read.table(args[1], header=T)
+lastpos=rev((1:nrow(bq))[bq$BaseQual != 0])[1]
+bq=bq[bq$Position<lastpos,]
 
 # Plot
 png(paste0(args[1], ".png"), height=400, width=800)
-p1=ggplot(data=mq, aes(x=MappingQuality, y=Count))
+p1=ggplot(data=bq, aes(x=Position, y=BaseQual))
 p1=p1 + geom_line(aes(group=Library, colour=Library))
-p1=p1 + xlab("Mapping Quality") + ylab("#Reads")
-p1=p1 + scale_y_continuous(labels=comma) + ggtitle("Mapping Quality Distribution")
+p1=p1 + xlab("Position in read") + ylab("Mean Base Quality")
+p1=p1 + scale_y_continuous(labels=comma) + ggtitle("Base Quality Distribution")
 p1=p1 + scale_x_continuous(labels=comma)
 p1=p1 + theme(legend.position="bottom", legend.direction='vertical')
 p1

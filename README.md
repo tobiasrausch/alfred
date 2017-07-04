@@ -19,6 +19,25 @@ Running Alfred
 
 `./src/alfred -r <ref.fa> -o outprefix <align.bam>`
 
+Plotting basic quality control metrics
+--------------------------------------
+
+Plotting the mean base quality across the read
+
+`Rscript R/basequal.R outprefix.basequal.tsv`
+
+Plotting the base composition across the read
+
+`Rscript R/contentACGTN.R outprefix.contentACGTN.tsv`
+
+Plotting the read length distribution
+
+`Rscript R/readlength.R outprefix.readlength.tsv`
+
+Plotting the mapping quality distribution
+
+`Rscript R/mapq.R outprefix.mapq.tsv`
+
 Plotting the insert size distribution.
 
 `Rscript R/isize.R outprefix.isize.tsv`
@@ -45,4 +64,16 @@ Plotting the on-target rate.
 
 Plotting the fraction of targets above a given coverage threshold.
 
-`Rscript R/percov.R stats.bedcov.tsv`
+`Rscript R/bedcov.R stats.bedcov.tsv`
+
+
+Alfred wrapper scripts
+----------------------
+
+Alfred contains a wrapper script to combine all QC plots and metrics into a single pdf.
+
+`./alfred.sh <ref.fa> <outprefix> <align.bam>`
+
+A bed file of target regions is optional.
+
+`./alfred.sh <ref.fa> <outprefix> <align.bam> <exome.bed>`

@@ -74,7 +74,8 @@ namespace bamstats
     typedef uint16_t TMaxReadLength;
     typedef uint32_t TCountType;
     typedef std::vector<TCountType> TLengthReadCount;
-
+    typedef std::vector<uint64_t> TBaseQualitySum;
+    
     int32_t maxReadLength;
     int64_t secondary;
     int64_t qcfail;
@@ -84,9 +85,21 @@ namespace bamstats
     int64_t mapped1;
     int64_t mapped2;
     TLengthReadCount lRc;
+    TLengthReadCount nCount;
+    TLengthReadCount aCount;
+    TLengthReadCount cCount;
+    TLengthReadCount gCount;
+    TLengthReadCount tCount;
+    TBaseQualitySum bqCount;
 
     ReadCounts() : maxReadLength(std::numeric_limits<TMaxReadLength>::max()), secondary(0), qcfail(0), dup(0), supplementary(0), unmap(0), mapped1(0), mapped2(0) {
       lRc.resize(maxReadLength + 1, 0);
+      aCount.resize(maxReadLength + 1, 0);
+      cCount.resize(maxReadLength + 1, 0);
+      gCount.resize(maxReadLength + 1, 0);
+      tCount.resize(maxReadLength + 1, 0);
+      nCount.resize(maxReadLength + 1, 0);
+      bqCount.resize(maxReadLength + 1, 0);
     }
   };
 
@@ -381,10 +394,53 @@ namespace bamstats
       else ++itRg->second.rc.lRc[itRg->second.rc.maxReadLength];
       
       // Get the read sequence
+      typedef std::vector<uint8_t> TQuality;
+      TQuality quality;
+      quality.resize(rec->core.l_qseq);
       std::string sequence;
       sequence.resize(rec->core.l_qseq);
       uint8_t* seqptr = bam_get_seq(rec);
-      for (int32_t i = 0; i < rec->core.l_qseq; ++i) sequence[i] = "=ACMGRSVTWYHKDBN"[bam_seqi(seqptr, i)];
+      uint8_t* qualptr = bam_get_qual(rec);
+      for (int32_t i = 0; i < rec->core.l_qseq; ++i) {
+	quality[i] = qualptr[i];
+	sequence[i] = "=ACMGRSVTWYHKDBN"[bam_seqi(seqptr, i)];
+	//char c = 33 + quality[i];
+	int32_t relpos = i;
+	if (rec->core.flag & BAM_FREVERSE) {
+	  relpos = rec->core.l_qseq - i - 1;
+	  if (relpos < itRg->second.rc.maxReadLength) {
+	    itRg->second.rc.bqCount[relpos] += (uint64_t) quality[i];
+	    if ((sequence[i] == 'N') || (sequence[i] == 'n')) ++itRg->second.rc.nCount[relpos];
+	    else if ((sequence[i] == 'A') || (sequence[i] == 'a')) ++itRg->second.rc.tCount[relpos];
+	    else if ((sequence[i] == 'C') || (sequence[i] == 'c')) ++itRg->second.rc.gCount[relpos];
+	    else if ((sequence[i] == 'G') || (sequence[i] == 'g')) ++itRg->second.rc.cCount[relpos];
+	    else if ((sequence[i] == 'T') || (sequence[i] == 't')) ++itRg->second.rc.aCount[relpos];
+	  } else {
+	    itRg->second.rc.bqCount[itRg->second.rc.maxReadLength] += (uint64_t) quality[i];
+	    if ((sequence[i] == 'N') || (sequence[i] == 'n')) ++itRg->second.rc.nCount[itRg->second.rc.maxReadLength];
+	    else if ((sequence[i] == 'A') || (sequence[i] == 'a')) ++itRg->second.rc.tCount[itRg->second.rc.maxReadLength];
+	    else if ((sequence[i] == 'C') || (sequence[i] == 'c')) ++itRg->second.rc.gCount[itRg->second.rc.maxReadLength];
+	    else if ((sequence[i] == 'G') || (sequence[i] == 'g')) ++itRg->second.rc.cCount[itRg->second.rc.maxReadLength];
+	    else if ((sequence[i] == 'T') || (sequence[i] == 't')) ++itRg->second.rc.aCount[itRg->second.rc.maxReadLength];
+	  }
+	} else {
+	  if (relpos < itRg->second.rc.maxReadLength) {
+	    itRg->second.rc.bqCount[relpos] += (uint64_t) quality[i];
+	    if ((sequence[i] == 'N') || (sequence[i] == 'n')) ++itRg->second.rc.nCount[relpos];
+	    else if ((sequence[i] == 'A') || (sequence[i] == 'a')) ++itRg->second.rc.aCount[relpos];
+	    else if ((sequence[i] == 'C') || (sequence[i] == 'c')) ++itRg->second.rc.cCount[relpos];
+	    else if ((sequence[i] == 'G') || (sequence[i] == 'g')) ++itRg->second.rc.gCount[relpos];
+	    else if ((sequence[i] == 'T') || (sequence[i] == 't')) ++itRg->second.rc.tCount[relpos];
+	  } else {
+	    itRg->second.rc.bqCount[itRg->second.rc.maxReadLength] += (uint64_t) quality[i];
+	    if ((sequence[i] == 'N') || (sequence[i] == 'n')) ++itRg->second.rc.nCount[itRg->second.rc.maxReadLength];
+	    else if ((sequence[i] == 'A') || (sequence[i] == 'a')) ++itRg->second.rc.aCount[itRg->second.rc.maxReadLength];
+	    else if ((sequence[i] == 'C') || (sequence[i] == 'c')) ++itRg->second.rc.cCount[itRg->second.rc.maxReadLength];
+	    else if ((sequence[i] == 'G') || (sequence[i] == 'g')) ++itRg->second.rc.gCount[itRg->second.rc.maxReadLength];
+	    else if ((sequence[i] == 'T') || (sequence[i] == 't')) ++itRg->second.rc.tCount[itRg->second.rc.maxReadLength];
+	  }
+	}
+      }
       
       // Get the reference slice
       std::string refslice = boost::to_upper_copy(std::string(seq + rec->core.pos, seq + lastAlignedPosition(rec)));
@@ -467,7 +523,11 @@ namespace bamstats
 	  deflayout = i;
 	}
       }
-      rcfile << paired << "\t" << mapped << "\t" << (double) mapped / (double) paired << "\t" << mappedSameChr << "\t" << (double) mappedSameChr / (double) paired << "\t";
+      double mappedpairedfrac = 0;
+      if (paired > 0) mappedpairedfrac = (double) mapped / (double) paired;
+      double mappedpairedchrfrac = 0;
+      if (paired > 0) mappedpairedchrfrac = (double) mappedSameChr / (double) paired;
+      rcfile << paired << "\t" << mapped << "\t" << mappedpairedfrac << "\t" << mappedSameChr << "\t" << mappedpairedchrfrac << "\t";
       
       // Error rates
       uint64_t alignedbases = itRg->second.bc.matchCount + itRg->second.bc.mismatchCount;
@@ -516,6 +576,38 @@ namespace bamstats
       for(uint32_t i = 0; i < itRg->second.rc.lRc.size(); ++i) rlfile << c.sampleName << "\t" << i << "\t" << itRg->second.rc.lRc[i] << "\t" << itRg->first << std::endl;
     }
     rlfile.close();
+
+    // Output per base ACGTN content
+    statFileName = c.outprefix + ".contentACGTN.tsv";
+    std::ofstream ncountfile(statFileName.c_str());
+    ncountfile << "Sample\tPosition\tBase\tCount\tLibrary" << std::endl;
+    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+      for(uint32_t i = 0; i < itRg->second.rc.nCount.size(); ++i) {
+	ncountfile << c.sampleName << "\t" << i << "\tA\t" << itRg->second.rc.aCount[i] << "\t" << itRg->first << std::endl;
+	ncountfile << c.sampleName << "\t" << i << "\tC\t" << itRg->second.rc.cCount[i] << "\t" << itRg->first << std::endl;
+	ncountfile << c.sampleName << "\t" << i << "\tG\t" << itRg->second.rc.gCount[i] << "\t" << itRg->first << std::endl;
+	ncountfile << c.sampleName << "\t" << i << "\tT\t" << itRg->second.rc.tCount[i] << "\t" << itRg->first << std::endl;
+	ncountfile << c.sampleName << "\t" << i << "\tN\t" << itRg->second.rc.nCount[i] << "\t" << itRg->first << std::endl;
+      }
+    }
+    ncountfile.close();
+
+    // Output mean base quality
+    statFileName = c.outprefix + ".basequal.tsv";
+    std::ofstream bqfile(statFileName.c_str());
+    bqfile << "Sample\tPosition\tBaseQual\tLibrary" << std::endl;
+    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+      for(uint32_t i = 0; i < itRg->second.rc.nCount.size(); ++i) {
+	uint64_t bcount = itRg->second.rc.aCount[i];
+	bcount += itRg->second.rc.cCount[i];
+	bcount += itRg->second.rc.gCount[i];
+	bcount += itRg->second.rc.tCount[i];
+	bcount += itRg->second.rc.nCount[i];
+	if (bcount > 0) bqfile << c.sampleName << "\t" << i << "\t" << (double) (itRg->second.rc.bqCount[i]) / (double) (bcount) << "\t" << itRg->first << std::endl;
+	else bqfile << c.sampleName << "\t" << i << "\t0\t" << itRg->first << std::endl;
+      }
+    }
+    bqfile.close();
 
     // Output mapping quality histogram
     statFileName = c.outprefix + ".mapq.tsv";
