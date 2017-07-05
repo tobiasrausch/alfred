@@ -84,5 +84,5 @@ Example E. coli data set
 
 `./alfred.sh example/E.coli.fa.gz example/out example/E.coli.cram`
 
-The final PDF is example/out.pdf
+The final pdf is example/out.pdf
 
