@@ -44,7 +44,7 @@ then
     Rscript ${BASEDIR}/R/ontarget.R ${2}.ontarget.tsv
     FILES=${FILES}" ${2}.bedcov.tsv.png ${2}.ontarget.tsv.png"
 fi
-Rscript R/metric.R ${2}.metrics.tsv
+Rscript ${BASEDIR}/R/metric.R ${2}.metrics.tsv
 FILES=${FILES}" ${2}.metrics.tsv.pdf"
 
 # Join plots
