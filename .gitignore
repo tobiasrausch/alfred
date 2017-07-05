@@ -1,6 +1,8 @@
 .boost
 .htslib
 src/alfred
+data/
+ws/nohup.out
 
 # Compiled Object files
 *.slo

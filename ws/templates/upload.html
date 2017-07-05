@@ -1,0 +1,42 @@
+<html>
+    <head>
+	<title>Alfred</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<script type="text/javascript" src="https://code.jquery.com/jquery-3.1.1.slim.min.js"></script>
+	<script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+	<link type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" media="screen">
+    </head>
+    <body>
+	<div class="container">
+	    <div class="page-header">
+		<h1>Alfred: BAM Alignment Statistics</h1>
+		<p>This online service is meant for tiny alignment files (<8MB) and short reference sequences less than 1Mbp in size. For all other applications please <a href="https://github.com/tobiasrausch/alfred/releases">download</a> a pre-compiled binary of Alfred or build it from <a href="https://github.com/tobiasrausch/alfred">source</a>. Depending on the size of the BAM file analysis takes a couple of seconds to run, please be patient.</p>
+		<p><a href="https://www-db.embl.de/EMBLPersonGroup-PersonPicture/MailForm/?recipient=CP-60010497">Help</a></p>
+	    </div>
+
+	    <form action = "/alfred/upload" method = "POST" enctype = "multipart/form-data">
+		<div class="form-group">
+		    <label for="experiment">BAM Alignment File (.bam)</label>
+		    <br>
+		    <label class="btn btn-default btn-file">
+			<input type="file" name="experiment" id="experiment" hidden />
+		    </label>
+		</div>
+		<p></p>
+		<p></p>
+		<div class="form-group">
+		    <label for="fasta">Fasta Reference used for alignment (.fa)</label>
+		    <br>
+		    <label class="btn btn-default btn-file">
+			<input type="file" name="fasta" id="fasta" hidden />
+		    </label>
+		</div>
+		<p></p>
+		<button type = "submit" name = "submit" class = "btn btn-primary">Run Alfred</button>
+	    </form>
+	    {% if error %}
+	    <p class="error"><strong>Error:</strong> {{ error }}
+	    {% endif %}
+	</div>
+   </body>
+</html>
