@@ -148,8 +148,10 @@ int main(int argc, char **argv) {
   }
   hts_idx_t* idx = sam_index_load(samfile, c.bamFile.string().c_str());
   if (idx == NULL) {
-    std::cerr << "Fail to open index for " << c.bamFile.string() << std::endl;
-    return 1;
+    if (bam_index_build(c.bamFile.string().c_str(), 0) != 0) {
+      std::cerr << "Fail to open index for " << c.bamFile.string() << std::endl;
+      return 1;
+    }
   }
   bam_hdr_t* hdr = sam_hdr_read(samfile);
   faidx_t* fai = fai_load(c.genome.string().c_str());
