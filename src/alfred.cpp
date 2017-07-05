@@ -47,6 +47,7 @@ Contact: Tobias Rausch (rausch@embl.de)
 
 #include "bamstats.h"
 #include "util.h"
+#include "version.h"
 
 using namespace bamstats;
 
@@ -89,16 +90,36 @@ int main(int argc, char **argv) {
   cmdline_options.add(generic).add(hidden);
   boost::program_options::options_description visible_options;
   visible_options.add(generic);
+
+  // Only help/license/warranty/version information
+  if ((argc < 2) || (std::string(argv[1]) == "help") || (std::string(argv[1]) == "--help") || (std::string(argv[1]) == "-h") || (std::string(argv[1]) == "-?")) {
+    printTitle("Alfred");
+    std::cout << "Usage: " << argv[0] << " [OPTIONS] -r <ref.fa> <aligned.bam>" << std::endl;
+    std::cout << visible_options << "\n";
+    return 0;
+  } else if ((std::string(argv[1]) == "version") || (std::string(argv[1]) == "--version") || (std::string(argv[1]) == "--version-only") || (std::string(argv[1]) == "-v")) {
+    std::cout << "Alfred version: v" << alfredVersionNumber << std::endl;
+    return 0;
+  } else if ((std::string(argv[1]) == "warranty") || (std::string(argv[1]) == "--warranty") || (std::string(argv[1]) == "-w")) {
+    displayWarranty();
+    return 0;
+  } else if ((std::string(argv[1]) == "license") || (std::string(argv[1]) == "--license") || (std::string(argv[1]) == "-l")) {
+    gplV3();
+    return 0;
+  }
+
+  // Parse command-line
   boost::program_options::variables_map vm;
   boost::program_options::store(boost::program_options::command_line_parser(argc, argv).options(cmdline_options).positional(pos_args).run(), vm);
   boost::program_options::notify(vm);
 
   // Check command line arguments
-  if ((vm.count("help")) || (!vm.count("input-file")) || (!vm.count("reference"))) {
+  if ((!vm.count("input-file")) || (!vm.count("reference"))) {
+    printTitle("Alfred");
     std::cout << "Usage: " << argv[0] << " [OPTIONS] -r <ref.fa> <aligned.bam>" << std::endl;
     std::cout << visible_options << "\n";
     return 1;
-  } 
+  }
 
   // Check genome
   if (!(boost::filesystem::exists(c.genome) && boost::filesystem::is_regular_file(c.genome) && boost::filesystem::file_size(c.genome))) {
