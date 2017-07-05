@@ -571,50 +571,74 @@ namespace bamstats
     // Output read length histogram
     statFileName = c.outprefix + ".readlength.tsv";
     std::ofstream rlfile(statFileName.c_str());
-    rlfile << "Sample\tReadlength\tCount\tLibrary" << std::endl;
+    rlfile << "Sample\tReadlength\tCount\tFraction\tLibrary" << std::endl;
+    uint32_t lastValidRL = 0;
+    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg)
+      for(uint32_t i = lastValidRL + 1; i < itRg->second.rc.lRc.size(); ++i)
+	if (itRg->second.rc.lRc[i] > 0) lastValidRL = i; 
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
-      for(uint32_t i = 0; i < itRg->second.rc.lRc.size(); ++i) rlfile << c.sampleName << "\t" << i << "\t" << itRg->second.rc.lRc[i] << "\t" << itRg->first << std::endl;
+      double total = 0;
+      for(uint32_t i = 0; i <= lastValidRL; ++i) total += itRg->second.rc.lRc[i];
+      for(uint32_t i = 0; i <= lastValidRL; ++i) {
+	double frac = 0;
+	if (total > 0) frac = (double) itRg->second.rc.lRc[i] / total;
+	rlfile << c.sampleName << "\t" << i << "\t" << itRg->second.rc.lRc[i] << "\t" << frac << "\t" << itRg->first << std::endl;
+      }
     }
     rlfile.close();
 
-    // Output per base ACGTN content
-    statFileName = c.outprefix + ".contentACGTN.tsv";
-    std::ofstream ncountfile(statFileName.c_str());
-    ncountfile << "Sample\tPosition\tBase\tCount\tLibrary" << std::endl;
-    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
-      for(uint32_t i = 0; i < itRg->second.rc.nCount.size(); ++i) {
-	ncountfile << c.sampleName << "\t" << i << "\tA\t" << itRg->second.rc.aCount[i] << "\t" << itRg->first << std::endl;
-	ncountfile << c.sampleName << "\t" << i << "\tC\t" << itRg->second.rc.cCount[i] << "\t" << itRg->first << std::endl;
-	ncountfile << c.sampleName << "\t" << i << "\tG\t" << itRg->second.rc.gCount[i] << "\t" << itRg->first << std::endl;
-	ncountfile << c.sampleName << "\t" << i << "\tT\t" << itRg->second.rc.tCount[i] << "\t" << itRg->first << std::endl;
-	ncountfile << c.sampleName << "\t" << i << "\tN\t" << itRg->second.rc.nCount[i] << "\t" << itRg->first << std::endl;
-      }
-    }
-    ncountfile.close();
-
-    // Output mean base quality
+    // Output mean base quality and per base ACGTN content
     statFileName = c.outprefix + ".basequal.tsv";
+    std::string statFileName2 = c.outprefix + ".contentACGTN.tsv";
     std::ofstream bqfile(statFileName.c_str());
+    std::ofstream ncountfile(statFileName2.c_str());
     bqfile << "Sample\tPosition\tBaseQual\tLibrary" << std::endl;
+    ncountfile << "Sample\tPosition\tBase\tCount\tFraction\tLibrary" << std::endl;
+    uint32_t lastValidBQIdx = 0;
+    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg)
+      for(uint32_t i = lastValidBQIdx + 1; i < itRg->second.rc.nCount.size(); ++i) {
+	uint64_t bcount = itRg->second.rc.aCount[i] + itRg->second.rc.cCount[i] + itRg->second.rc.gCount[i] + itRg->second.rc.tCount[i] + itRg->second.rc.nCount[i];
+	if (bcount > 0) lastValidBQIdx = i;
+      }
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
-      for(uint32_t i = 0; i < itRg->second.rc.nCount.size(); ++i) {
-	uint64_t bcount = itRg->second.rc.aCount[i];
-	bcount += itRg->second.rc.cCount[i];
-	bcount += itRg->second.rc.gCount[i];
-	bcount += itRg->second.rc.tCount[i];
-	bcount += itRg->second.rc.nCount[i];
+      for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
+	uint64_t bcount = itRg->second.rc.aCount[i] + itRg->second.rc.cCount[i] + itRg->second.rc.gCount[i] + itRg->second.rc.tCount[i] + itRg->second.rc.nCount[i];
 	if (bcount > 0) bqfile << c.sampleName << "\t" << i << "\t" << (double) (itRg->second.rc.bqCount[i]) / (double) (bcount) << "\t" << itRg->first << std::endl;
-	else bqfile << c.sampleName << "\t" << i << "\t0\t" << itRg->first << std::endl;
+	else bqfile << c.sampleName << "\t" << i << "\tNA\t" << itRg->first << std::endl;
+	if (bcount > 0) {
+	  ncountfile << c.sampleName << "\t" << i << "\tA\t" << itRg->second.rc.aCount[i] << "\t" << (double) itRg->second.rc.aCount[i] / (double) bcount << "\t" << itRg->first << std::endl;
+	  ncountfile << c.sampleName << "\t" << i << "\tC\t" << itRg->second.rc.cCount[i] << "\t" << (double) itRg->second.rc.cCount[i] / (double) bcount << "\t" << itRg->first << std::endl;
+	  ncountfile << c.sampleName << "\t" << i << "\tG\t" << itRg->second.rc.gCount[i] << "\t" << (double) itRg->second.rc.gCount[i] / (double) bcount << "\t" << itRg->first << std::endl;
+	  ncountfile << c.sampleName << "\t" << i << "\tT\t" << itRg->second.rc.tCount[i] << "\t" << (double) itRg->second.rc.tCount[i] / (double) bcount << "\t" << itRg->first << std::endl;
+	  ncountfile << c.sampleName << "\t" << i << "\tN\t" << itRg->second.rc.nCount[i] << "\t" << (double) itRg->second.rc.nCount[i] / (double) bcount << "\t" << itRg->first << std::endl;
+	} else {
+	  ncountfile << c.sampleName << "\t" << i << "\tA\t" << itRg->second.rc.aCount[i] << "\tNA\t" << itRg->first << std::endl;
+	  ncountfile << c.sampleName << "\t" << i << "\tC\t" << itRg->second.rc.cCount[i] << "\tNA\t" << itRg->first << std::endl;
+	  ncountfile << c.sampleName << "\t" << i << "\tG\t" << itRg->second.rc.gCount[i] << "\tNA\t" << itRg->first << std::endl;
+	  ncountfile << c.sampleName << "\t" << i << "\tT\t" << itRg->second.rc.tCount[i] << "\tNA\t" << itRg->first << std::endl;
+	  ncountfile << c.sampleName << "\t" << i << "\tN\t" << itRg->second.rc.nCount[i] << "\tNA\t" << itRg->first << std::endl;
+	}
       }
     }
     bqfile.close();
-
+    ncountfile.close();
+    
     // Output mapping quality histogram
     statFileName = c.outprefix + ".mapq.tsv";
     std::ofstream mqfile(statFileName.c_str());
-    mqfile << "Sample\tMappingQuality\tCount\tLibrary" << std::endl;
+    mqfile << "Sample\tMappingQuality\tCount\tFraction\tLibrary" << std::endl;
+    uint32_t lastValidMQ = 0;
+    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg)
+      for(uint32_t i = lastValidMQ + 1; i < itRg->second.qc.qcount.size(); ++i)
+	if (itRg->second.qc.qcount[i] > 0) lastValidMQ = i;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
-      for(uint32_t i = 0; i < itRg->second.qc.qcount.size(); ++i) mqfile << c.sampleName << "\t" << i << "\t" << itRg->second.qc.qcount[i] << "\t" << itRg->first << std::endl;
+      double total = 0;
+      for(uint32_t i = 0; i <= lastValidMQ; ++i) total += itRg->second.qc.qcount[i];
+      for(uint32_t i = 0; i <= lastValidMQ; ++i) {
+	double frac = 0;
+	if (total > 0) frac = (double) itRg->second.qc.qcount[i] / total;
+	mqfile << c.sampleName << "\t" << i << "\t" << itRg->second.qc.qcount[i] << "\t" << frac << "\t" << itRg->first << std::endl;
+      }
     }
     mqfile.close();
 

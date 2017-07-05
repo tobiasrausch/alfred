@@ -3,8 +3,6 @@ library(scales)
 
 args=commandArgs(trailingOnly=TRUE)
 bq=read.table(args[1], header=T)
-lastpos=rev((1:nrow(bq))[bq$BaseQual != 0])[1]
-bq=bq[bq$Position<lastpos,]
 
 # Plot
 png(paste0(args[1], ".png"), height=400, width=800)

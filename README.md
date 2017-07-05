@@ -77,3 +77,12 @@ Alfred contains a wrapper script to combine all QC plots and metrics into a sing
 A bed file of target regions is optional.
 
 `./alfred.sh <ref.fa> <outprefix> <align.bam> <exome.bed>`
+
+
+Example E. coli data set
+------------------------
+
+`./alfred.sh example/E.coli.fa.gz example/out example/E.coli.cram`
+
+The final PDF is example/out.pdf
+
