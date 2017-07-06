@@ -5,7 +5,7 @@ args=commandArgs(trailingOnly=TRUE)
 base=read.table(args[1], header=T)
 
 # Plot
-png(paste0(args[1], ".png"), height=400, width=800)
+pdf(paste0(args[1], ".pdf"), height=4, width=8)
 p1=ggplot(data=base, aes(x=Position, y=Fraction))
 p1=p1 + geom_line(aes(group=Base, colour=Base))
 p1=p1 + xlab("Position in read") + ylab("Base Content Fraction")

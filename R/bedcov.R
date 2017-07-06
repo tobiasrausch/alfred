@@ -25,7 +25,7 @@ for(i in 1:nrow(sl)) {
 }
 
 # Plot
-png(paste0(args[1], ".png"), height=400, width=800)
+pdf(paste0(args[1], ".pdf"), height=4, width=8)
 p1=ggplot(data=sfilt, aes(x=cov, y=frac))
 p1=p1 + geom_line(aes(group=Library, colour=Library))
 p1=p1 + scale_y_continuous(labels=comma) + ggtitle("Target coverage distribution")

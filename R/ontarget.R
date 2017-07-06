@@ -7,7 +7,7 @@ cov$Extension=as.numeric(cov$Extension)
 cov$OnTarget=as.numeric(cov$OnTarget)
 
 # Plot
-png(paste0(args[1], ".png"), height=400, width=800)
+pdf(paste0(args[1], ".pdf"), height=4, width=8)
 p1=ggplot(data=cov, aes(x=Extension, y=OnTarget))
 p1=p1 + geom_line(aes(group=Library, colour=Library))
 p1=p1 + scale_y_continuous(labels=comma, limits=c(0,1)) + ggtitle("On-target rate")

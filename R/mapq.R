@@ -5,7 +5,7 @@ args=commandArgs(trailingOnly=TRUE)
 mq=read.table(args[1], header=T)
 
 # Plot
-png(paste0(args[1], ".png"), height=400, width=800)
+pdf(paste0(args[1], ".pdf"), height=4, width=8)
 p1=ggplot(data=mq, aes(x=MappingQuality, y=Fraction))
 p1=p1 + geom_line(aes(group=Library, colour=Library))
 p1=p1 + xlab("Mapping Quality") + ylab("Fraction of reads")

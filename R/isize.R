@@ -22,7 +22,7 @@ ins=ins[ins$InsertSize <= upperbound,]
 ins=ins[ins$InsertSize >= lowerbound,]
 
 # Plot
-png(paste0(args[1], ".png"), height=400, width=800)
+pdf(paste0(args[1], ".pdf"), height=4, width=8)
 p1=ggplot(data=ins, aes(x=InsertSize, y=Count))
 p1=p1 + geom_line(aes(group=Layout, colour=Layout))
 p1=p1 + scale_y_continuous(labels=comma) + ggtitle(paste0("Insert Size Distribution", "\n", infoMax, "\n", infoMin))
