@@ -23,7 +23,7 @@ p1=ggplot(data=covfilt, aes(x=Coverage, y=Count))
 p1=p1 + geom_line(aes(group=Library, colour=Library))
 p1=p1 + scale_y_continuous(labels=comma) + ggtitle("Coverage Distribution")
 p1=p1 + scale_x_continuous(labels=comma, breaks=as.integer(seq(min(covfilt$Coverage), max(covfilt$Coverage), length.out=10)))
-p1=p1 + facet_wrap(~ Sample) + theme(legend.position="bottom", legend.direction='vertical')
+p1=p1 + facet_wrap(~ Sample) + theme(legend.position="bottom", legend.direction='horizontal')
 p1
 dev.off()
 print(warnings())

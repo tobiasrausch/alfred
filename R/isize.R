@@ -27,7 +27,7 @@ p1=ggplot(data=ins, aes(x=InsertSize, y=Count))
 p1=p1 + geom_line(aes(group=Layout, colour=Layout))
 p1=p1 + scale_y_continuous(labels=comma) + ggtitle(paste0("Insert Size Distribution", "\n", infoMax, "\n", infoMin))
 p1=p1 + scale_x_continuous(labels=comma)
-p1=p1 + facet_grid(Library ~ Sample)
+p1=p1 + facet_grid(Sample ~ Library)
 p1
 dev.off()
 print(warnings())

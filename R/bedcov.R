@@ -30,7 +30,7 @@ p1=ggplot(data=sfilt, aes(x=cov, y=frac))
 p1=p1 + geom_line(aes(group=Library, colour=Library))
 p1=p1 + scale_y_continuous(labels=comma) + ggtitle("Target coverage distribution")
 p1=p1 + scale_x_continuous(labels=comma) + xlab("Coverage") + ylab("Fraction of targets above coverage level")
-p1=p1 + facet_wrap( ~ Sample) + theme(legend.position="bottom", legend.direction='vertical')
+p1=p1 + facet_wrap( ~ Sample) + theme(legend.position="bottom", legend.direction='horizontal')
 p1
 dev.off()
 print(warnings())
