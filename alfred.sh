@@ -48,4 +48,4 @@ Rscript ${BASEDIR}/R/metric.R ${2}.metrics.tsv
 FILES=${FILES}" ${2}.metrics.tsv.pdf"
 
 # Join plots
-convert -adjoin ${FILES} ${2}.pdf
+pdfunite ${FILES} ${2}.pdf

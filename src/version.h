@@ -27,7 +27,7 @@ Contact: Tobias Rausch (rausch@embl.de)
 namespace bamstats
 {
 
-  std::string alfredVersionNumber = "0.0.2";
+  std::string alfredVersionNumber = "0.0.3";
 
   inline 
     void printTitle(std::string const& title) 
