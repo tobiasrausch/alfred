@@ -16,7 +16,7 @@ app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024   #maximum of 8MB
 app.secret_key = 'soadfdafvmv'
 
 def allowed_file(filename):
-   return '.' in filename and filename.rsplit('.', 1)[1].lower() in set(['bam', 'pdf', 'fa', 'fa.gz', 'cram'])
+   return '.' in filename and filename.rsplit('.', 1)[1].lower() in set(['bam', 'pdf', 'fa', 'gz', 'cram'])
 
 uuid_re = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
 def is_valid_uuid(s):
