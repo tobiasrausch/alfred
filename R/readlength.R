@@ -3,11 +3,12 @@ library(scales)
 
 args=commandArgs(trailingOnly=TRUE)
 rl=read.table(args[1], header=T)
+rl$RG = substr(rl$Library, 0, 12)
 
 # Plot
 pdf(paste0(args[1], ".pdf"), height=4, width=8)
 p1=ggplot(data=rl, aes(x=Readlength, y=Fraction))
-p1=p1 + geom_line(aes(group=Library, colour=Library))
+p1=p1 + geom_line(aes(group=RG, colour=RG))
 p1=p1 + xlab("Read length") + ylab("Fraction of reads")
 p1=p1 + scale_y_continuous(labels=comma) + ggtitle("Read Length Distribution")
 p1=p1 + scale_x_continuous(labels=comma)
