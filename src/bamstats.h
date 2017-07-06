@@ -654,13 +654,20 @@ namespace bamstats
     // Output insert size histograms
     statFileName = c.outprefix + ".isize.tsv";
     std::ofstream isfile(statFileName.c_str());
-    isfile << "Sample\tInsertSize\tCount\tLayout\tLibrary" << std::endl;
+    isfile << "Sample\tInsertSize\tCount\tLayout\tQuantile\tLibrary" << std::endl;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+      // Ignore last bucket that collects all other pairs
+      uint64_t totalFR = 0;
+      for(uint32_t i = 0; i < itRg->second.pc.fPlus.size() - 1; ++i) totalFR += itRg->second.pc.fPlus[i] + itRg->second.pc.fMinus[i] + itRg->second.pc.rPlus[i] + itRg->second.pc.rMinus[i];
+      uint64_t cumsum = 0;
       for(uint32_t i = 0; i < itRg->second.pc.fPlus.size(); ++i) {
-	isfile << c.sampleName << "\t" << i << "\t" << itRg->second.pc.fPlus[i] << "\tF+\t" << itRg->first << std::endl;
-	isfile << c.sampleName << "\t" << i << "\t" << itRg->second.pc.fMinus[i] << "\tF-\t" << itRg->first << std::endl;
-	isfile << c.sampleName << "\t" << i << "\t" << itRg->second.pc.rPlus[i] << "\tR+\t" << itRg->first << std::endl;
-	isfile << c.sampleName << "\t" << i << "\t" << itRg->second.pc.rMinus[i] << "\tR-\t" << itRg->first << std::endl;
+	double quant = 0;
+	if (totalFR > 0) quant = (double) cumsum / (double) totalFR;
+	isfile << c.sampleName << "\t" << i << "\t" << itRg->second.pc.fPlus[i] << "\tF+\t" << quant << "\t" << itRg->first << std::endl;
+	isfile << c.sampleName << "\t" << i << "\t" << itRg->second.pc.fMinus[i] << "\tF-\t" << quant << "\t" << itRg->first << std::endl;
+	isfile << c.sampleName << "\t" << i << "\t" << itRg->second.pc.rPlus[i] << "\tR+\t" << quant << "\t" << itRg->first << std::endl;
+	isfile << c.sampleName << "\t" << i << "\t" << itRg->second.pc.rMinus[i] << "\tR-\t" << quant << "\t" << itRg->first << std::endl;		
+	cumsum += itRg->second.pc.fPlus[i] + itRg->second.pc.fMinus[i] + itRg->second.pc.rPlus[i] + itRg->second.pc.rMinus[i];
       }
     }
     isfile.close();
