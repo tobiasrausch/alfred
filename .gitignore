@@ -3,6 +3,7 @@
 src/alfred
 data/
 ws/nohup.out
+*.pyc
 
 # Compiled Object files
 *.slo
