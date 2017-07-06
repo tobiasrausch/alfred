@@ -32,17 +32,17 @@ Rscript ${BASEDIR}/R/mapq.R ${2}.mapq.tsv
 Rscript ${BASEDIR}/R/coverage.R ${2}.coverage.tsv
 ICOL=`cat ${2}.metrics.tsv | head -n 1 | tr '\t' '\n' | awk '{print $0"\t"NR;}' | grep "^MedianInsertSize" | cut -f 2`
 ISIZE=`cut -f 41 ${2}.metrics.tsv | tail -n +2 | awk '{SUM+=$1;} END {print SUM;}'`
-FILES="${2}.basequal.tsv.png ${2}.contentACGTN.tsv.png ${2}.readlength.tsv.png ${2}.mapq.tsv.png ${2}.coverage.tsv.png"
+FILES="${2}.basequal.tsv.pdf ${2}.contentACGTN.tsv.pdf ${2}.readlength.tsv.pdf ${2}.mapq.tsv.pdf ${2}.coverage.tsv.pdf"
 if [ ${ISIZE} -ne 0 ]
 then
     Rscript ${BASEDIR}/R/isize.R ${2}.isize.tsv
-    FILES=${FILES}" ${2}.isize.tsv.png"
+    FILES=${FILES}" ${2}.isize.tsv.pdf"
 fi
 if [ $# -eq 4 ]
 then
     Rscript ${BASEDIR}/R/bedcov.R ${2}.bedcov.tsv
     Rscript ${BASEDIR}/R/ontarget.R ${2}.ontarget.tsv
-    FILES=${FILES}" ${2}.bedcov.tsv.png ${2}.ontarget.tsv.png"
+    FILES=${FILES}" ${2}.bedcov.tsv.pdf ${2}.ontarget.tsv.pdf"
 fi
 Rscript ${BASEDIR}/R/metric.R ${2}.metrics.tsv
 FILES=${FILES}" ${2}.metrics.tsv.pdf"
