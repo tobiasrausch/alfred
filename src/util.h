@@ -24,7 +24,14 @@ Contact: Tobias Rausch (rausch@embl.de)
 #ifndef UTIL_H
 #define UTIL_H
 
+#include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string.hpp>
+#include <boost/iostreams/filtering_streambuf.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/copy.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
+#include <boost/iostreams/device/file.hpp>
 
 #include <htslib/sam.h>
 
@@ -32,6 +39,26 @@ Contact: Tobias Rausch (rausch@embl.de)
 namespace bamstats
 {
 
+  inline bool is_gz(boost::filesystem::path const& f) {
+    std::ifstream in(f.string().c_str());
+    if (!in) return false;
+    in.close();
+    
+    boost::iostreams::filtering_istream gzin;
+    gzin.push(boost::iostreams::gzip_decompressor());
+    gzin.push(boost::iostreams::file_source(f.string().c_str()), std::ios_base::in | std::ios_base::binary);
+    char c;
+    try {
+      gzin >> c;
+    } catch (boost::iostreams::gzip_error& e) {
+      gzin.pop();
+      return false;
+    }
+    gzin.pop();
+    return true;
+  }
+      
+    
 
   // F+ 0
   // F- 1

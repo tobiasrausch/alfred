@@ -59,13 +59,17 @@ If target regions are provided, Alfred computes the average coverage for each ta
 
 `./src/alfred -r <ref.fa> -b <targets.bed> -o outprefix <align.bam>`
 
+For instance, for a human whole-exome data set.
+
+`./src/alfred -r <hg19.fa> -b exon/exon.hg19.bed.gz -o outprefix <exome.bam>`
+
 Plotting the on-target rate.
 
 `Rscript R/ontarget.R outprefix.ontarget.tsv`
 
 Plotting the fraction of targets above a given coverage threshold.
 
-`Rscript R/bedcov.R stats.bedcov.tsv`
+`Rscript R/bedcov.R outprefix.bedcov.tsv`
 
 
 Alfred wrapper scripts
@@ -83,7 +87,13 @@ A bed file of target regions is optional.
 Example E. coli data set
 ------------------------
 
-`./alfred.sh example/E.coli.fa.gz example/out example/E.coli.cram`
+`./alfred.sh exampledata/E.coli.fa.gz exampledata/out exampledata/E.coli.cram`
 
-The final pdf is example/out.pdf
+The final pdf is exampledata/out.pdf
 
+
+Example plots
+-------------
+
+[Whole-genome paired-end illumina data with multiple read groups](https://raw.githubusercontent.com/tobiasrausch/alfred/master/exampleplots/NA06985.pe.pdf)
+[Whole-genome jumping library/mate-pair library](https://raw.githubusercontent.com/tobiasrausch/alfred/master/exampleplots/HG00513.mp.pdf)

@@ -195,7 +195,10 @@ namespace bamstats
 	  }
 	}
 	itOT->second[s] += avgCov;
-	if (s == 0) itChr->second[i] = (typename BedCounts::TAvgCov) ( (double) avgCov / (double) (chrRegions[i].end - chrRegions[i].start));
+	if (s == 0) {
+	  if (chrRegions[i].start < chrRegions[i].end) itChr->second[i] = (typename BedCounts::TAvgCov) ( (double) avgCov / (double) (chrRegions[i].end - chrRegions[i].start));
+	  else itChr->second[i] = (typename BedCounts::TAvgCov) (0);
+	}
       }
     }
   }
@@ -216,12 +219,14 @@ namespace bamstats
     // Parse regions from BED file or create one region per chromosome
     int32_t totalBedSize = 0;
     if (c.hasRegionFile) {
-      // Parse regions from BED file
-      std::ifstream bedFile(c.regionFile.string().c_str(), std::ifstream::in);
-      if (bedFile.is_open()) {
-	while (bedFile.good()) {
-	  std::string line;
-	  getline(bedFile, line);
+      if (is_gz(c.regionFile)) {
+	std::ifstream file(c.regionFile.string().c_str(), std::ios_base::in | std::ios_base::binary);
+	boost::iostreams::filtering_streambuf<boost::iostreams::input> dataIn;
+	dataIn.push(boost::iostreams::gzip_decompressor());
+	dataIn.push(file);
+	std::istream instream(&dataIn);
+	std::string line;
+	while(std::getline(instream, line)) {
 	  typedef boost::tokenizer< boost::char_separator<char> > Tokenizer;
 	  boost::char_separator<char> sep(" \t,;");
 	  Tokenizer tokens(line, sep);
@@ -237,6 +242,32 @@ namespace bamstats
 	      gRegions[chrid].push_back(Interval(start, end));
 	    }
 	  }
+	}
+	dataIn.pop();
+      } else {
+	// Parse regions from BED file
+	std::ifstream bedFile(c.regionFile.string().c_str(), std::ifstream::in);
+	if (bedFile.is_open()) {
+	  while (bedFile.good()) {
+	    std::string line;
+	    getline(bedFile, line);
+	    typedef boost::tokenizer< boost::char_separator<char> > Tokenizer;
+	    boost::char_separator<char> sep(" \t,;");
+	    Tokenizer tokens(line, sep);
+	    Tokenizer::iterator tokIter = tokens.begin();
+	    std::string chrName = *tokIter++;
+	    // Map chromosome names to the bam header chromosome IDs
+	    int32_t chrid = bam_name2id(hdr, chrName.c_str());
+	    // Valid ID?
+	    if (chrid >= 0) {
+	      if (tokIter!=tokens.end()) {
+		int32_t start = boost::lexical_cast<int32_t>(*tokIter++);
+		int32_t end = boost::lexical_cast<int32_t>(*tokIter++);
+		gRegions[chrid].push_back(Interval(start, end));
+	      }
+	    }
+	  }
+	  bedFile.close();
 	}
       }
 

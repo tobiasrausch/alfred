@@ -180,11 +180,14 @@ int main(int argc, char **argv) {
     }
     std::string oldChr;
     faidx_t* fai = fai_load(c.genome.string().c_str());
-    std::ifstream interval_file(c.regionFile.string().c_str(), std::ifstream::in);
-    if (interval_file.is_open()) {
-      while (interval_file.good()) {
-	std::string intervalLine;
-	getline(interval_file, intervalLine);
+    if (is_gz(c.regionFile)) {
+      std::ifstream file(c.regionFile.string().c_str(), std::ios_base::in | std::ios_base::binary);
+      boost::iostreams::filtering_streambuf<boost::iostreams::input> dataIn;
+      dataIn.push(boost::iostreams::gzip_decompressor());
+      dataIn.push(file);
+      std::istream instream(&dataIn);
+      std::string intervalLine;
+      while(std::getline(instream, intervalLine)) {
 	typedef boost::tokenizer< boost::char_separator<char> > Tokenizer;
 	boost::char_separator<char> sep(" \t,;");
 	Tokenizer tokens(intervalLine, sep);
@@ -200,7 +203,30 @@ int main(int argc, char **argv) {
 	  }
 	}
       }
-      interval_file.close();
+      dataIn.pop();
+    } else {
+      std::ifstream interval_file(c.regionFile.string().c_str(), std::ifstream::in);
+      if (interval_file.is_open()) {
+	while (interval_file.good()) {
+	  std::string intervalLine;
+	  getline(interval_file, intervalLine);
+	  typedef boost::tokenizer< boost::char_separator<char> > Tokenizer;
+	  boost::char_separator<char> sep(" \t,;");
+	  Tokenizer tokens(intervalLine, sep);
+	  Tokenizer::iterator tokIter = tokens.begin();
+	  if (tokIter!=tokens.end()) {
+	    std::string chrName=*tokIter++;
+	    if (chrName.compare(oldChr) != 0) {
+	      oldChr = chrName;
+	      if (!faidx_has_seq(fai, chrName.c_str())) {
+		std::cerr << "Chromosome from bed file " << chrName << " is NOT present in your reference file " << c.genome.string() << std::endl;
+		return 1;
+	      }
+	    }
+	  }
+	}
+	interval_file.close();
+      }
     }
     fai_destroy(fai);
     c.hasRegionFile = true;
