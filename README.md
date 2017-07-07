@@ -95,6 +95,12 @@ The final pdf is exampledata/out.pdf
 Example plots
 -------------
 
+
 [Whole-genome paired-end illumina data with multiple read groups](https://raw.githubusercontent.com/tobiasrausch/alfred/master/exampleplots/NA06985.pe.pdf)
+
+<a href="https://raw.githubusercontent.com/tobiasrausch/alfred/master/exampleplots/NA06985.pe.pdf" target=_blank>Whole-genome paired-end illumina data with multiple read groups</a>
+
+<a href="https://raw.githubusercontent.com/tobiasrausch/alfred/master/exampleplots/NA06985.pe.pdf">Whole-genome paired-end illumina data with multiple read groups</a>
+
 
 [Whole-genome jumping library/mate-pair library](https://raw.githubusercontent.com/tobiasrausch/alfred/master/exampleplots/HG00513.mp.pdf)
