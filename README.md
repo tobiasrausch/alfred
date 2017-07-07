@@ -97,7 +97,4 @@ Example plots
 
 [Whole-genome paired-end illumina data with multiple read groups](https://raw.githubusercontent.com/tobiasrausch/alfred/master/exampleplots/NA06985.pe.pdf)
 
-<iframe src="http://docs.google.com/gview?url=https://raw.githubusercontent.com/tobiasrausch/alfred/master/exampleplots/NA06985.pe.pdf&embedded=true"
-style="width:800px; height:400px;" frameborder="0">Whole-genome paired-end illumina data with multiple read groups</iframe>
-
 [Whole-genome jumping library/mate-pair library](https://raw.githubusercontent.com/tobiasrausch/alfred/master/exampleplots/HG00513.mp.pdf)
