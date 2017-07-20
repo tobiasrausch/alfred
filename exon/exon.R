@@ -6,7 +6,7 @@ exonTable = function(id) {
 	  ex=keepStandardChromosomes(ex)
 	  ex=ex[width(ex)>1,]
 	  df=data.frame(chr=seqnames(ex), start=start(ex), end=end(ex), type="exonic")
-	  gz = gzfile(paste0("exon.", id, ".bed.gz"), "w")
+	  gz = gzfile(paste0("exonic.", id, ".bed.gz"), "w")
 	  write.table(df, gz, quote=F, row.names=F, col.names=F, sep="\t")
 	  close(gz)
 }
