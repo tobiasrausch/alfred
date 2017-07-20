@@ -61,7 +61,9 @@ If target regions are provided, Alfred computes the average coverage for each ta
 
 For instance, for a human whole-exome data set.
 
-`./src/alfred -r <hg19.fa> -b exon/exon.hg19.bed.gz -o outprefix <exome.bam>`
+`cd exon/ && Rscript exon.R`
+
+`./src/alfred -r <hg19.fa> -b exon/exonic.hg19.bed.gz -o outprefix <exome.bam>`
 
 Plotting the on-target rate.
 

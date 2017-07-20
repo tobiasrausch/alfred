@@ -3,6 +3,8 @@
 src/alfred
 data/
 ws/nohup.out
+exon/
+
 *.pyc
 
 # Compiled Object files
