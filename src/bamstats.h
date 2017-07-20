@@ -82,6 +82,9 @@ namespace bamstats
     int64_t dup;
     int64_t supplementary;
     int64_t unmap;
+    int64_t forward;
+    int64_t reverse;
+    int64_t spliced;
     int64_t mapped1;
     int64_t mapped2;
     TLengthReadCount lRc;
@@ -92,7 +95,7 @@ namespace bamstats
     TLengthReadCount tCount;
     TBaseQualitySum bqCount;
 
-    ReadCounts() : maxReadLength(std::numeric_limits<TMaxReadLength>::max()), secondary(0), qcfail(0), dup(0), supplementary(0), unmap(0), mapped1(0), mapped2(0) {
+    ReadCounts() : maxReadLength(std::numeric_limits<TMaxReadLength>::max()), secondary(0), qcfail(0), dup(0), supplementary(0), unmap(0), forward(0), reverse(0), spliced(0), mapped1(0), mapped2(0) {
       lRc.resize(maxReadLength + 1, 0);
       aCount.resize(maxReadLength + 1, 0);
       cCount.resize(maxReadLength + 1, 0);
@@ -421,6 +424,8 @@ namespace bamstats
       ++itRg->second.qc.qcount[(int32_t) rec->core.qual];
       if (rec->core.flag & BAM_FREAD2) ++itRg->second.rc.mapped2;
       else ++itRg->second.rc.mapped1;
+      if (rec->core.flag & BAM_FREVERSE) ++itRg->second.rc.reverse;
+      else ++itRg->second.rc.forward;
       if (rec->core.l_qseq < itRg->second.rc.maxReadLength) ++itRg->second.rc.lRc[rec->core.l_qseq];
       else ++itRg->second.rc.lRc[itRg->second.rc.maxReadLength];
       
@@ -486,6 +491,7 @@ namespace bamstats
       
       // Parse the CIGAR
       uint32_t* cigar = bam_get_cigar(rec);
+      bool spliced = false;
       for (std::size_t i = 0; i < rec->core.n_cigar; ++i) {
 	if (bam_cigar_op(cigar[i]) == BAM_CMATCH) {
 	  // match or mismatch
@@ -509,6 +515,10 @@ namespace bamstats
 	} else if(bam_cigar_op(cigar[i]) == BAM_CHARD_CLIP) {
 	  ++itRg->second.bc.hardClipCount;
 	} else if (bam_cigar_op(cigar[i]) == BAM_CREF_SKIP) {
+	  if (!spliced) {
+	    ++itRg->second.rc.spliced;
+	    spliced = true;
+	  }
 	  rp += bam_cigar_oplen(cigar[i]);
 	} else {
 	  std::cerr << "Unknown Cigar options" << std::endl;
@@ -530,7 +540,7 @@ namespace bamstats
     // Output metrics
     std::string statFileName = c.outprefix + ".metrics.tsv";
     std::ofstream rcfile(statFileName.c_str());
-    rcfile << "Sample\tLibrary\t#QCFail\tQCFailFraction\t#DuplicateMarked\tDuplicateFraction\t#Unmapped\tUnmappedFraction\t#Mapped\tMappedFraction\t#MappedRead1\t#MappedRead2\tRatioMapped2vsMapped1\t#SecondaryAlignments\tSecondaryAlignmentFraction\t#SupplementaryAlignments\tSupplementaryAlignmentFraction" << "\t";
+    rcfile << "Sample\tLibrary\t#QCFail\tQCFailFraction\t#DuplicateMarked\tDuplicateFraction\t#Unmapped\tUnmappedFraction\t#Mapped\tMappedFraction\t#MappedRead1\t#MappedRead2\tRatioMapped2vsMapped1\t#MappedForward\tMappedForwardFraction\t#MappedReverse\tMappedReverseFraction\t#SecondaryAlignments\tSecondaryAlignmentFraction\t#SupplementaryAlignments\tSupplementaryAlignmentFraction\t#SplicedAlignments\tSplicedAlignmentFraction" << "\t";
     rcfile << "#Pairs\t#MappedPairs\tMappedFraction\t#MappedSameChr\tMappedSameChrFraction" << "\t";
     rcfile << "#ReferenceBp\t#ReferenceNs\t#AlignedBases\t#MatchedBases\tMatchRate\t#MismatchedBases\tMismatchRate\t#DeletionsCigarD\tDeletionRate\t#InsertionsCigarI\tInsertionRate\t#SoftClippedBases\tSoftClipRate\t#HardClippedBases\tHardClipRate\tErrorRate" << "\t";
     rcfile << "MedianReadLength\tDefaultLibraryLayout\tMedianInsertSize\tMedianCoverage\tSDCoverage\tMedianMAPQ";
@@ -540,7 +550,7 @@ namespace bamstats
       // Read counts
       uint64_t totalReadCount = itRg->second.rc.qcfail + itRg->second.rc.dup + itRg->second.rc.unmap + itRg->second.rc.mapped1 + itRg->second.rc.mapped2;
       uint64_t mappedCount = itRg->second.rc.mapped1 + itRg->second.rc.mapped2;
-      rcfile << c.sampleName << "\t" << itRg->first << "\t" << itRg->second.rc.qcfail << "\t" << (double) itRg->second.rc.qcfail / (double) totalReadCount << "\t" << itRg->second.rc.dup << "\t" << (double) itRg->second.rc.dup / (double) totalReadCount << "\t" << itRg->second.rc.unmap << "\t" << (double) itRg->second.rc.unmap / (double) totalReadCount << "\t" << mappedCount << "\t" << (double) mappedCount / (double) totalReadCount << "\t" << itRg->second.rc.mapped1 << "\t" << itRg->second.rc.mapped2 << "\t" << (double) itRg->second.rc.mapped2 / (double) itRg->second.rc.mapped1 << "\t" << itRg->second.rc.secondary << "\t" << (double) itRg->second.rc.secondary / (double) mappedCount << "\t" << itRg->second.rc.supplementary << "\t" << (double) itRg->second.rc.supplementary / (double) mappedCount << "\t";
+      rcfile << c.sampleName << "\t" << itRg->first << "\t" << itRg->second.rc.qcfail << "\t" << (double) itRg->second.rc.qcfail / (double) totalReadCount << "\t" << itRg->second.rc.dup << "\t" << (double) itRg->second.rc.dup / (double) totalReadCount << "\t" << itRg->second.rc.unmap << "\t" << (double) itRg->second.rc.unmap / (double) totalReadCount << "\t" << mappedCount << "\t" << (double) mappedCount / (double) totalReadCount << "\t" << itRg->second.rc.mapped1 << "\t" << itRg->second.rc.mapped2 << "\t" << (double) itRg->second.rc.mapped2 / (double) itRg->second.rc.mapped1 << "\t" << itRg->second.rc.forward << "\t" << (double) itRg->second.rc.forward / (double) mappedCount << "\t" << itRg->second.rc.reverse << "\t" << (double) itRg->second.rc.reverse / (double) mappedCount << "\t" << itRg->second.rc.secondary << "\t" << (double) itRg->second.rc.secondary / (double) mappedCount << "\t" << itRg->second.rc.supplementary << "\t" << (double) itRg->second.rc.supplementary / (double) mappedCount << "\t" << itRg->second.rc.spliced << "\t" << (double) itRg->second.rc.spliced / (double) mappedCount << "\t";
 
       // Paired counts
       int64_t paired = itRg->second.pc.paired / 2;
