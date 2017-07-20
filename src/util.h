@@ -39,6 +39,13 @@ Contact: Tobias Rausch (rausch@embl.de)
 namespace bamstats
 {
 
+  struct Interval {
+    int32_t start;
+    int32_t end;
+    
+    Interval(int32_t s, int32_t e) : start(s), end(e) {}
+  };
+  
   inline bool is_gz(boost::filesystem::path const& f) {
     std::ifstream in(f.string().c_str());
     if (!in) return false;

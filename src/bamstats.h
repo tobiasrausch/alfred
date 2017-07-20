@@ -40,13 +40,6 @@ Contact: Tobias Rausch (rausch@embl.de)
 namespace bamstats
 {
 
-  struct Interval {
-    int32_t start;
-    int32_t end;
-    
-    Interval(int32_t s, int32_t e) : start(s), end(e) {}
-  };
-
   struct BaseCounts {
     typedef uint32_t TCountType;
     typedef std::vector<TCountType> TCoverageBp;

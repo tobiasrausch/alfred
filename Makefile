@@ -44,7 +44,7 @@ HTSLIBSOURCES = $(wildcard src/htslib/*.c) $(wildcard src/htslib/*.h)
 SOURCES = $(wildcard src/*.h) $(wildcard src/*.cpp)
 
 # Targets
-BUILT_PROGRAMS = src/alfred
+BUILT_PROGRAMS = src/alfred src/count
 TARGETS = ${SUBMODULES} ${BUILT_PROGRAMS}
 
 all:   	$(TARGETS)
@@ -56,6 +56,9 @@ all:   	$(TARGETS)
 	cd src/modular-boost && ./bootstrap.sh --prefix=${PWD}/src/modular-boost --without-icu --with-libraries=iostreams,filesystem,system,program_options,date_time && ./b2 && ./b2 headers && cd ../../ && touch .boost
 
 src/alfred: ${SUBMODULES} $(SOURCES)
+	$(CXX) $(CXXFLAGS) $@.cpp -o $@ $(LDFLAGS)
+
+src/count: ${SUBMODULES} $(SOURCES)
 	$(CXX) $(CXXFLAGS) $@.cpp -o $@ $(LDFLAGS)
 
 install: ${BUILT_PROGRAMS}
