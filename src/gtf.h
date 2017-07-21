@@ -48,16 +48,33 @@ namespace bamstats
     char strand;
     int32_t lid;
 
+    IntervalLabel(int32_t s) : start(s), end(s+1), strand('*'), lid(-1) {}
     IntervalLabel(int32_t s, int32_t e, char t, int32_t l) : start(s), end(e), strand(t), lid(l) {}
   };
 
+  template<typename TRecord>
+  struct SortIntervalLabel : public std::binary_function<TRecord, TRecord, bool> {
+    inline bool operator()(TRecord const& s1, TRecord const& s2) const {
+      return s1.lid < s2.lid;
+    }
+  };
+
+  template<typename TRecord>
+  struct SortIntervalStart : public std::binary_function<TRecord, TRecord, bool> {
+    inline bool operator()(TRecord const& s1, TRecord const& s2) const {
+      return s1.start < s2.start;
+    }
+  };
 
   template<typename TGenomicRegions, typename TGeneIds>
-  inline bool
-    parseGTF(bam_hdr_t* hdr, boost::filesystem::path const& gtf, std::string const& feature, std::string const& attribute, TGenomicRegions& gRegions, TGeneIds& geneIds) {
+  inline int32_t
+  parseGTF(bam_hdr_t* hdr, boost::filesystem::path const& gtf, std::string const& feature, std::string const& attribute, TGenomicRegions& gRegions, TGeneIds& geneIds) {
+    typedef typename TGenomicRegions::value_type TChromosomeRegions;
+    TGenomicRegions overlappingRegions;
+    overlappingRegions.resize(gRegions.size(), TChromosomeRegions());
     if (!is_gz(gtf)) {
       std::cerr << "GTF file is not gzipped!" << std::endl;
-      return false;
+      return 0;
     }
     typedef std::map<std::string, int32_t> TIdMap;
     TIdMap idMap;
@@ -75,19 +92,19 @@ namespace bamstats
       Tokenizer::iterator tokIter = tokens.begin();
       if (tokIter==tokens.end()) {
 	std::cerr << "Empty line in GTF file!" << std::endl;
-	return false;
+	return 0;
       }
       std::string chrName=*tokIter++;
       int32_t chrid = bam_name2id(hdr, chrName.c_str());
       if (chrid < 0) continue;
       if (tokIter == tokens.end()) {
 	std::cerr << "Corrupted GTF file!" << std::endl;
-	return false;
+	return 0;
       }
       ++tokIter;
       if (tokIter == tokens.end()) {
 	std::cerr << "Corrupted GTF file!" << std::endl;
-	return false;
+	return 0;
       }
       std::string ft = *tokIter++;
       if (ft == feature) {
@@ -97,7 +114,7 @@ namespace bamstats
 	  ++tokIter; // score
 	  if (tokIter == tokens.end()) {
 	    std::cerr << "Corrupted GTF file!" << std::endl;
-	    return false;
+	    return 0;
 	  }
 	  char strand = boost::lexical_cast<char>(*tokIter++);
 	  ++tokIter; // frame
@@ -113,19 +130,52 @@ namespace bamstats
 	    std::string key = *kvTokensIt++;
 	    if (key == attribute) {
 	      std::string val = *kvTokensIt;
+	      if (val.size() >= 3) val = val.substr(1, val.size()-2); // Trim off the bloody "
 	      int32_t idval = geneIds.size();
 	      typename TIdMap::const_iterator idIter = idMap.find(val);
 	      if (idIter == idMap.end()) {
 		idMap.insert(std::make_pair(val, idval));
 		geneIds.push_back(val);
 	      } else idval = idIter->second;
-	      gRegions[chrid].push_back(IntervalLabel(start, end, strand, idval));
+	      // Convert to 0-based and right-open
+	      if (start == 0) {
+		std::cerr << "GTF is 1-based format!" << std::endl;
+		return 0;
+	      }
+	      if (start > end) {
+		std::cerr << "Feature start is greater than feature end!" << std::endl;
+		return 0;
+	      }
+	      overlappingRegions[chrid].push_back(IntervalLabel(start - 1, end, strand, idval));
 	    }
 	  }
 	}
       }
     }
-    return true;
+
+    // Make intervals non-overlapping for each label
+    for(uint32_t refIndex = 0; refIndex < overlappingRegions.size(); ++refIndex) {
+      // Sort by ID
+      std::sort(overlappingRegions[refIndex].begin(), overlappingRegions[refIndex].end(), SortIntervalLabel<IntervalLabel>());
+      int32_t runningId = -1;
+      char runningStrand = '*';
+      typedef boost::icl::interval_set<uint32_t> TIdIntervals;
+      typedef typename TIdIntervals::interval_type TIVal;
+      TIdIntervals idIntervals;
+      for(uint32_t i = 0; i < overlappingRegions[refIndex].size(); ++i) {
+	if (overlappingRegions[refIndex][i].lid != runningId) {
+	  for(typename TIdIntervals::iterator it = idIntervals.begin(); it != idIntervals.end(); ++it) gRegions[refIndex].push_back(IntervalLabel(it->lower(), it->upper(), runningStrand, runningId));
+	  idIntervals.clear();
+	  runningId = overlappingRegions[refIndex][i].lid;
+	  runningStrand = overlappingRegions[refIndex][i].strand;
+	}
+	idIntervals.insert(TIVal::right_open(overlappingRegions[refIndex][i].start, overlappingRegions[refIndex][i].end));
+      }
+      // Process last id
+      for(typename TIdIntervals::iterator it = idIntervals.begin(); it != idIntervals.end(); ++it) gRegions[refIndex].push_back(IntervalLabel(it->lower(), it->upper(), runningStrand, runningId));
+    }
+    
+    return geneIds.size();
   }
 
 }

@@ -53,17 +53,18 @@ Contact: Tobias Rausch (rausch@embl.de)
 using namespace bamstats;
 
 struct Config {
+  unsigned short minQual;
   std::string sampleName;
-  std::string outprefix;
   boost::filesystem::path gtfFile;
   boost::filesystem::path bamFile;
+  boost::filesystem::path outfile;
 };
 
 
 int main(int argc, char **argv) {
 
 #ifdef PROFILE
-  ProfilerStart("pbBamStats.prof");
+  ProfilerStart("alfred.prof");
 #endif
 
   Config c;
@@ -72,8 +73,9 @@ int main(int argc, char **argv) {
   boost::program_options::options_description generic("Generic options");
   generic.add_options()
     ("help,?", "show help message")
+    ("map-qual,m", boost::program_options::value<unsigned short>(&c.minQual)->default_value(10), "min. mapping quality")
     ("gtf,g", boost::program_options::value<boost::filesystem::path>(&c.gtfFile), "gtf file (required)")
-    ("outprefix,o", boost::program_options::value<std::string>(&c.outprefix)->default_value("count"), "output file prefix")
+    ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("gene.count"), "output file")
     ;
 
   boost::program_options::options_description hidden("Hidden options");

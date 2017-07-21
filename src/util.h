@@ -45,7 +45,27 @@ namespace bamstats
     
     Interval(int32_t s, int32_t e) : start(s), end(e) {}
   };
-  
+
+  inline std::size_t hash_pair(bam1_t* rec) {
+    std::size_t seed = 0;
+    boost::hash_combine(seed, rec->core.tid);
+    boost::hash_combine(seed, rec->core.pos);
+    boost::hash_combine(seed, rec->core.mtid);
+    boost::hash_combine(seed, rec->core.mpos);
+    return seed;
+  }
+
+
+  inline std::size_t hash_pair_mate(bam1_t* rec) {
+    std::size_t seed = 0;
+    boost::hash_combine(seed, rec->core.mtid);
+    boost::hash_combine(seed, rec->core.mpos);
+    boost::hash_combine(seed, rec->core.tid);
+    boost::hash_combine(seed, rec->core.pos);
+    return seed;
+  }
+
+    
   inline bool is_gz(boost::filesystem::path const& f) {
     std::ifstream in(f.string().c_str());
     if (!in) return false;
@@ -90,13 +110,12 @@ namespace bamstats
       }
     }
   }
-
   
   inline uint32_t alignmentLength(bam1_t const* rec) {
     uint32_t* cigar = bam_get_cigar(rec);
     uint32_t alen = 0;
     for (uint32_t i = 0; i < rec->core.n_cigar; ++i)
-      if ((bam_cigar_op(cigar[i]) == BAM_CMATCH) || (bam_cigar_op(cigar[i]) == BAM_CDEL)) alen += bam_cigar_oplen(cigar[i]);
+      if ((bam_cigar_op(cigar[i]) == BAM_CMATCH) || (bam_cigar_op(cigar[i]) == BAM_CDEL) || (bam_cigar_op(cigar[i]) == BAM_CREF_SKIP)) alen += bam_cigar_oplen(cigar[i]);
     return alen;
   }
 
