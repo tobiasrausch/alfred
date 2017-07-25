@@ -21,8 +21,8 @@ Contact: Tobias Rausch (rausch@embl.de)
 ============================================================================
 */
 
-#ifndef BAMSTATS_H
-#define BAMSTATS_H
+#ifndef COUNT_H
+#define COUNT_H
 
 #include <limits>
 
@@ -36,6 +36,7 @@ Contact: Tobias Rausch (rausch@embl.de)
 #include <htslib/sam.h>
 #include <htslib/faidx.h>
 
+#include "version.h"
 #include "util.h"
 #include "gtf.h"
 
@@ -43,9 +44,26 @@ Contact: Tobias Rausch (rausch@embl.de)
 namespace bamstats
 {
 
+  struct CountConfig {
+    unsigned short minQual;
+    std::string sampleName;
+    std::string idname;
+    std::string feature;
+    boost::filesystem::path gtfFile;
+    boost::filesystem::path bamFile;
+    boost::filesystem::path outfile;
+  };
+
+
+  
   template<typename TConfig>
   inline int32_t
   countRun(TConfig const& c) {
+
+#ifdef PROFILE
+    ProfilerStart("alfred.prof");
+#endif
+
     // Load bam file
     samFile* samfile = sam_open(c.bamFile.string().c_str(), "r");
     hts_idx_t* idx = sam_index_load(samfile, c.bamFile.string().c_str());
@@ -60,7 +78,7 @@ namespace bamstats
     gRegions.resize(hdr->n_targets, TChromosomeRegions());
     typedef std::vector<std::string> TGeneIds;
     TGeneIds geneIds;
-    int32_t tf = parseGTF(hdr, c.gtfFile, "exon", "gene_id", gRegions, geneIds);
+    int32_t tf = parseGTF(hdr, c.gtfFile, c.feature, c.idname, gRegions, geneIds);
     if (tf == 0) {
       std::cerr << "Error parsing GTF file!" << std::endl;
       return 1;
@@ -103,10 +121,16 @@ namespace bamstats
       // Count reads
       hts_itr_t* iter = sam_itr_queryi(idx, refIndex, 0, hdr->target_len[refIndex]);
       bam1_t* rec = bam_init1();
+      int32_t lastAlignedPos = 0;
+      std::set<std::size_t> lastAlignedPosReads;
       while (sam_itr_next(samfile, iter, rec) >= 0) {
-	if (rec->core.flag & (BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP | BAM_FSUPPLEMENTARY | BAM_FUNMAP | BAM_FMUNMAP)) continue;
-	if (rec->core.tid != rec->core.mtid) continue;
-	if (!(rec->core.flag & BAM_FPAIRED) || (rec->core.qual < c.minQual)) continue;
+	if ((rec->core.flag & (BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP | BAM_FSUPPLEMENTARY | BAM_FUNMAP | BAM_FMUNMAP)) || (rec->core.tid != rec->core.mtid) || (!(rec->core.flag & BAM_FPAIRED))) continue; 
+
+	// Clean-up the read store for identical alignment positions
+	if (rec->core.pos > lastAlignedPos) {
+	  lastAlignedPosReads.clear();
+	  lastAlignedPos = rec->core.pos;
+	}
 
 	// Get read sequence
 	std::string sequence;
@@ -118,7 +142,8 @@ namespace bamstats
 	uint32_t* cigar = bam_get_cigar(rec);
 	int32_t gp = rec->core.pos; // Genomic position
 	int32_t sp = 0; // Sequence position
-	int32_t featurepos = -1; // Genomic position where the read intersects a feature
+	typedef std::vector<int32_t> TFeaturePos;
+	TFeaturePos featurepos;
 	bool ambiguous = false;
 	for (std::size_t i = 0; ((i < rec->core.n_cigar) && (!ambiguous)); ++i) {
 	  if (bam_cigar_op(cigar[i]) == BAM_CSOFT_CLIP) sp += bam_cigar_oplen(cigar[i]);
@@ -133,56 +158,62 @@ namespace bamstats
 		ambiguous = true;
 		break;
 	      }
-	      if (featureBitMap[gp]) featurepos = gp;
+	      if (featureBitMap[gp]) featurepos.push_back(gp);
 	    }
 	  } else {
 	    std::cerr << "Unknown Cigar options" << std::endl;
 	    return 1;
 	  }
 	}
-	if (ambiguous) continue;  // Ambiguous Read
-	if (featurepos == -1) continue; // No feature
+	if (ambiguous) continue; // Ambiguous read
 
 	// Find feature
-	int32_t featureid = -1;
-	TChromosomeRegions::const_iterator vIt = std::lower_bound(gRegions[refIndex].begin(), gRegions[refIndex].end(), IntervalLabel(rec->core.pos), SortIntervalStart<IntervalLabel>());
-	TChromosomeRegions::const_iterator prevIt = vIt;
-	TChromosomeRegions::const_iterator vItEnd = std::lower_bound(gRegions[refIndex].begin(), gRegions[refIndex].end(), IntervalLabel(featurepos), SortIntervalStart<IntervalLabel>());
-	for(;((vIt!=vItEnd) && (featureid == -1)); ++vIt) {
-	  if ((vIt->start <= featurepos) && (vIt->end > featurepos)) featureid = vIt->lid;
-	}
-	if (featureid == -1) {
-	  // Backtrack because interval start might be smaller than rec->core.pos
-	  while (featureid == -1) {
-	    if ((prevIt->start <= featurepos) && (prevIt->end > featurepos)) featureid = vIt->lid;
-	    if (prevIt == gRegions[refIndex].begin()) break;
-	    else --prevIt;
-	  }
-	  if (featureid == -1) {
-	    std::cerr << "Fatal error: corresponding read feature not found!" << std::endl;
-	    return 1;
+	int32_t featureid = -1;  // No feature by default
+	if (!featurepos.empty()) {
+	  int32_t fpfirst = featurepos[0];
+	  int32_t fplast = featurepos[featurepos.size()-1];
+	  for(TChromosomeRegions::const_iterator vIt = gRegions[refIndex].begin(); vIt != gRegions[refIndex].end(); ++vIt) {
+	    if ((vIt->start > fplast) || (vIt->end <= fpfirst)) continue;
+	    for(TFeaturePos::const_iterator fIt = featurepos.begin(); fIt != featurepos.end(); ++fIt) {
+	      if ((vIt->start <= *fIt) && (vIt->end > *fIt) && (featureid != vIt->lid)) {
+		if (featureid == -1) featureid = vIt->lid;
+		else {
+		  ambiguous = true;
+		  break;
+		}
+	      }
+	    }
 	  }
 	}
+	if (ambiguous) continue; // Ambiguous read
 
-	// Check pair
-	if (rec->core.pos < rec->core.mpos) {
+	// First or Second Read?
+	if ((rec->core.pos < rec->core.mpos) || ((rec->core.pos == rec->core.mpos) && (lastAlignedPosReads.find(hash_string(bam_get_qname(rec))) == lastAlignedPosReads.end()))) {
 	  // First read
+	  lastAlignedPosReads.insert(hash_string(bam_get_qname(rec)));
 	  std::size_t hv = hash_pair(rec);
 	  qualities[hv] = rec->core.qual;
 	  features[hv] = featureid;
 	} else {
 	  // Second read
-	  std::size_t hv=hash_pair_mate(rec);
+	  std::size_t hv = hash_pair_mate(rec);
+	  if (qualities.find(hv) == qualities.end()) continue; // Mate discarded
 	  uint8_t pairQuality = std::min((uint8_t) qualities[hv], (uint8_t) rec->core.qual);
 	  int32_t featuremate = features[hv];
 	  qualities[hv] = 0;
 	  features[hv] = -1;
 
 	  // Pair quality
-	  if (pairQuality < c.minQual) continue;
+	  if (pairQuality < c.minQual) continue; // Low quality pair
 
-	  // Feature disagreement
-	  if (featureid != featuremate) continue;
+	  // Check feature agreement
+	  if ((featureid == -1) && (featuremate == -1)) continue; // No feature
+	  else if ((featureid == -1) && (featuremate != -1)) featureid = featuremate;
+	  else if ((featureid != -1) && (featuremate == -1)) featuremate = featureid;
+	  else {
+	    // Both reads have a feature assignment
+	    if (featureid != featuremate) continue; // Feature disagreement
+	  }
 
 	  // Hurray, we finally have a valid pair
 	  ++fc[featureid];
@@ -219,6 +250,95 @@ namespace bamstats
     return 0;
   }
 
+
+  int count(int argc, char **argv) {
+    CountConfig c;
+
+    // Parameter
+    boost::program_options::options_description generic("Generic options");
+    generic.add_options()
+      ("help,?", "show help message")
+      ("map-qual,m", boost::program_options::value<unsigned short>(&c.minQual)->default_value(10), "min. mapping quality")
+      ("gtf,g", boost::program_options::value<boost::filesystem::path>(&c.gtfFile), "gtf file (required)")
+      ("id,i", boost::program_options::value<std::string>(&c.idname)->default_value("gene_id"), "GTF attribute")
+      ("feature,f", boost::program_options::value<std::string>(&c.feature)->default_value("exon"), "GTF feature")
+      ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("gene.count"), "output file")
+      ;
+
+    boost::program_options::options_description hidden("Hidden options");
+    hidden.add_options()
+      ("input-file", boost::program_options::value<boost::filesystem::path>(&c.bamFile), "input bam file")
+      ;
+
+    boost::program_options::positional_options_description pos_args;
+    pos_args.add("input-file", -1);
+
+    boost::program_options::options_description cmdline_options;
+    cmdline_options.add(generic).add(hidden);
+    boost::program_options::options_description visible_options;
+    visible_options.add(generic);
+
+    // Parse command-line
+    boost::program_options::variables_map vm;
+    boost::program_options::store(boost::program_options::command_line_parser(argc, argv).options(cmdline_options).positional(pos_args).run(), vm);
+    boost::program_options::notify(vm);
+
+    // Check command line arguments
+    if ((vm.count("help")) || (!vm.count("input-file")) || (!vm.count("gtf"))) {
+      printTitle("Alfred");
+      std::cout << "Usage: alfred " << argv[0] << " [OPTIONS] -g <hg19.gtf> <aligned.bam>" << std::endl;
+      std::cout << visible_options << "\n";
+      return 1;
+    }
+
+    // Check bam file
+    if (!(boost::filesystem::exists(c.bamFile) && boost::filesystem::is_regular_file(c.bamFile) && boost::filesystem::file_size(c.bamFile))) {
+      std::cerr << "Alignment file is missing: " << c.bamFile.string() << std::endl;
+      return 1;
+    } else {
+      samFile* samfile = sam_open(c.bamFile.string().c_str(), "r");
+      if (samfile == NULL) {
+	std::cerr << "Fail to open file " << c.bamFile.string() << std::endl;
+	return 1;
+      }
+      hts_idx_t* idx = sam_index_load(samfile, c.bamFile.string().c_str());
+      if (idx == NULL) {
+	if (bam_index_build(c.bamFile.string().c_str(), 0) != 0) {
+	  std::cerr << "Fail to open index for " << c.bamFile.string() << std::endl;
+	  return 1;
+	}
+      }
+      bam_hdr_t* hdr = sam_hdr_read(samfile);
+
+      // Get sample name
+      std::string sampleName;
+      if (!getSMTag(std::string(hdr->text), c.bamFile.stem().string(), sampleName)) {
+	std::cerr << "Only one sample (@RG:SM) is allowed per input BAM file " << c.bamFile.string() << std::endl;
+	return 1;
+      } else c.sampleName = sampleName;
+      bam_hdr_destroy(hdr);
+      hts_idx_destroy(idx);
+      sam_close(samfile);
+    }
+
+    // Check region file
+    if (!(boost::filesystem::exists(c.gtfFile) && boost::filesystem::is_regular_file(c.gtfFile) && boost::filesystem::file_size(c.gtfFile))) {
+      std::cerr << "Input gtf file is missing: " << c.gtfFile.string() << std::endl;
+      return 1;
+    }
+
+    // Show cmd
+    boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
+    std::cout << '[' << boost::posix_time::to_simple_string(now) << "] ";
+    for(int i=0; i<argc; ++i) { std::cout << argv[i] << ' '; }
+    std::cout << std::endl;
+
+    return countRun(c);
+  }
+  
+
+
+  
 }
 
 #endif

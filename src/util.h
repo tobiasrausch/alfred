@@ -46,8 +46,17 @@ namespace bamstats
     Interval(int32_t s, int32_t e) : start(s), end(e) {}
   };
 
+  inline unsigned hash_string(const char *s) {
+    unsigned h = 37;
+    while (*s) {
+      h = (h * 54059) ^ (s[0] * 76963);
+      s++;
+    }
+    return h;
+  }
+  
   inline std::size_t hash_pair(bam1_t* rec) {
-    std::size_t seed = 0;
+    std::size_t seed = hash_string(bam_get_qname(rec));
     boost::hash_combine(seed, rec->core.tid);
     boost::hash_combine(seed, rec->core.pos);
     boost::hash_combine(seed, rec->core.mtid);
@@ -57,7 +66,7 @@ namespace bamstats
 
 
   inline std::size_t hash_pair_mate(bam1_t* rec) {
-    std::size_t seed = 0;
+    std::size_t seed = hash_string(bam_get_qname(rec));
     boost::hash_combine(seed, rec->core.mtid);
     boost::hash_combine(seed, rec->core.mpos);
     boost::hash_combine(seed, rec->core.tid);

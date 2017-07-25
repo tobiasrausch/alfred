@@ -146,6 +146,7 @@ namespace bamstats
 		std::cerr << "Feature start is greater than feature end!" << std::endl;
 		return 0;
 	      }
+	      //std::cerr << geneIds[idval] << "\t" << start << "\t" << end << std::endl;
 	      overlappingRegions[chrid].push_back(IntervalLabel(start - 1, end, strand, idval));
 	    }
 	  }
@@ -164,7 +165,10 @@ namespace bamstats
       TIdIntervals idIntervals;
       for(uint32_t i = 0; i < overlappingRegions[refIndex].size(); ++i) {
 	if (overlappingRegions[refIndex][i].lid != runningId) {
-	  for(typename TIdIntervals::iterator it = idIntervals.begin(); it != idIntervals.end(); ++it) gRegions[refIndex].push_back(IntervalLabel(it->lower(), it->upper(), runningStrand, runningId));
+	  for(typename TIdIntervals::iterator it = idIntervals.begin(); it != idIntervals.end(); ++it) {
+	    //std::cerr << "merged\t" << geneIds[runningId] << "\t" << it->lower() << "\t" << it->upper() << std::endl;  
+	    gRegions[refIndex].push_back(IntervalLabel(it->lower(), it->upper(), runningStrand, runningId));
+	  }
 	  idIntervals.clear();
 	  runningId = overlappingRegions[refIndex][i].lid;
 	  runningStrand = overlappingRegions[refIndex][i].strand;
