@@ -45,6 +45,7 @@ namespace bamstats
 {
 
   struct CountConfig {
+    bool stranded;
     unsigned short minQual;
     std::string sampleName;
     std::string idname;
@@ -107,16 +108,11 @@ namespace bamstats
       // Sort by position
       std::sort(gRegions[refIndex].begin(), gRegions[refIndex].end(), SortIntervalStart<IntervalLabel>());
 
-      // Flag ambiguous positions
+      // Flag feature positions
       typedef boost::dynamic_bitset<> TBitSet;
       TBitSet featureBitMap(hdr->target_len[refIndex]);
-      TBitSet ambiguousBitMap(hdr->target_len[refIndex]);
-      for(uint32_t i = 0; i < gRegions[refIndex].size(); ++i) {
-	for(int32_t k = gRegions[refIndex][i].start; k < gRegions[refIndex][i].end; ++k) {
-	  if (featureBitMap[k]) ambiguousBitMap[k] = 1;
-	  else featureBitMap[k] = 1;
-	}
-      }
+      for(uint32_t i = 0; i < gRegions[refIndex].size(); ++i)
+	for(int32_t k = gRegions[refIndex][i].start; k < gRegions[refIndex][i].end; ++k) featureBitMap[k] = 1;
 
       // Count reads
       hts_itr_t* iter = sam_itr_queryi(idx, refIndex, 0, hdr->target_len[refIndex]);
@@ -144,8 +140,7 @@ namespace bamstats
 	int32_t sp = 0; // Sequence position
 	typedef std::vector<int32_t> TFeaturePos;
 	TFeaturePos featurepos;
-	bool ambiguous = false;
-	for (std::size_t i = 0; ((i < rec->core.n_cigar) && (!ambiguous)); ++i) {
+	for (std::size_t i = 0; i < rec->core.n_cigar; ++i) {
 	  if (bam_cigar_op(cigar[i]) == BAM_CSOFT_CLIP) sp += bam_cigar_oplen(cigar[i]);
 	  else if (bam_cigar_op(cigar[i]) == BAM_CINS) sp += bam_cigar_oplen(cigar[i]);
 	  else if (bam_cigar_op(cigar[i]) == BAM_CDEL) gp += bam_cigar_oplen(cigar[i]);
@@ -153,21 +148,16 @@ namespace bamstats
 	  else if (bam_cigar_op(cigar[i]) == BAM_CHARD_CLIP) {
 	    //Nop
 	  } else if (bam_cigar_op(cigar[i]) == BAM_CMATCH) {
-	    for(std::size_t k = 0; k<bam_cigar_oplen(cigar[i]); ++k, ++sp, ++gp) {
-	      if (ambiguousBitMap[gp]) {
-		ambiguous = true;
-		break;
-	      }
+	    for(std::size_t k = 0; k<bam_cigar_oplen(cigar[i]); ++k, ++sp, ++gp)
 	      if (featureBitMap[gp]) featurepos.push_back(gp);
-	    }
 	  } else {
 	    std::cerr << "Unknown Cigar options" << std::endl;
 	    return 1;
 	  }
 	}
-	if (ambiguous) continue; // Ambiguous read
 
 	// Find feature
+	bool ambiguous = false;
 	int32_t featureid = -1;  // No feature by default
 	if (!featurepos.empty()) {
 	  int32_t fpfirst = featurepos[0];
@@ -176,6 +166,21 @@ namespace bamstats
 	    if ((vIt->start > fplast) || (vIt->end <= fpfirst)) continue;
 	    for(TFeaturePos::const_iterator fIt = featurepos.begin(); fIt != featurepos.end(); ++fIt) {
 	      if ((vIt->start <= *fIt) && (vIt->end > *fIt) && (featureid != vIt->lid)) {
+		if (c.stranded) {
+		  if (rec->core.flag & BAM_FREAD1) {
+		    if (rec->core.flag & BAM_FREVERSE) {
+		      if (vIt->strand != '-') continue;
+		    } else {
+		      if (vIt->strand != '+') continue;
+		    }
+		  } else {
+		    if (rec->core.flag & BAM_FREVERSE) {
+		      if (vIt->strand != '+') continue;
+		    } else {
+		      if (vIt->strand != '-') continue;
+		    }
+		  }
+		}
 		if (featureid == -1) featureid = vIt->lid;
 		else {
 		  ambiguous = true;
@@ -259,6 +264,7 @@ namespace bamstats
     generic.add_options()
       ("help,?", "show help message")
       ("map-qual,m", boost::program_options::value<unsigned short>(&c.minQual)->default_value(10), "min. mapping quality")
+      ("stranded,s", "strand-specific counting")
       ("gtf,g", boost::program_options::value<boost::filesystem::path>(&c.gtfFile), "gtf file (required)")
       ("id,i", boost::program_options::value<std::string>(&c.idname)->default_value("gene_id"), "GTF attribute")
       ("feature,f", boost::program_options::value<std::string>(&c.feature)->default_value("exon"), "GTF feature")
@@ -291,6 +297,10 @@ namespace bamstats
       return 1;
     }
 
+    // Strand-specific counting
+    if (vm.count("stranded")) c.stranded = true;
+    else c.stranded = false;
+    
     // Check bam file
     if (!(boost::filesystem::exists(c.bamFile) && boost::filesystem::is_regular_file(c.bamFile) && boost::filesystem::file_size(c.bamFile))) {
       std::cerr << "Alignment file is missing: " << c.bamFile.string() << std::endl;
