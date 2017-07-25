@@ -19,9 +19,9 @@ BASEDIR=$(dirname "$SCRIPT")
 # Run analysis pipeline
 if [ $# -eq 3 ]
 then
-    ${BASEDIR}/src/alfred -r ${1} -o ${2} ${3}
+    ${BASEDIR}/src/alfred qc -r ${1} -o ${2} ${3}
 else
-    ${BASEDIR}/src/alfred -r ${1} -b ${4} -o ${2} ${3}
+    ${BASEDIR}/src/alfred qc -r ${1} -b ${4} -o ${2} ${3}
 fi
 
 # Plot results
@@ -31,7 +31,7 @@ Rscript ${BASEDIR}/R/readlength.R ${2}.readlength.tsv
 Rscript ${BASEDIR}/R/mapq.R ${2}.mapq.tsv
 Rscript ${BASEDIR}/R/coverage.R ${2}.coverage.tsv
 ICOL=`cat ${2}.metrics.tsv | head -n 1 | tr '\t' '\n' | awk '{print $0"\t"NR;}' | grep "^MedianInsertSize" | cut -f 2`
-ISIZE=`cut -f 41 ${2}.metrics.tsv | tail -n +2 | awk '{SUM+=$1;} END {print SUM;}'`
+ISIZE=`cut -f ${ICOL} ${2}.metrics.tsv | tail -n +2 | awk '{SUM+=$1;} END {print SUM;}'`
 FILES="${2}.basequal.tsv.pdf ${2}.contentACGTN.tsv.pdf ${2}.readlength.tsv.pdf ${2}.mapq.tsv.pdf ${2}.coverage.tsv.pdf"
 if [ ${ISIZE} -ne 0 ]
 then
