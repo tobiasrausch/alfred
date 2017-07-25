@@ -18,7 +18,15 @@ Alfred installation
 Running Alfred
 ------------------
 
-`./src/alfred -r <ref.fa> -o outprefix <align.bam>`
+BAM Alignment Quality Control: Insert size, coverage, mapping quality, read length, base composition and base quality distributions by read group and various other mapping statistics
+
+`./src/alfred qc -r <ref.fa> -o outprefix <align.bam>`
+
+BAM Feature Counting: Assigning reads to gene annotation features from a GTF file such as counting reads by gene or transcript identifier
+
+`cd gtf/ && ./downloadGTF.sh`
+
+`./src/alfred count -g gtf/Homo_sapiens.GRCh37.75.gtf.gz <align.GRCh37.bam>`
 
 Plotting basic quality control metrics
 --------------------------------------
@@ -52,18 +60,18 @@ To convert all the alignment metrics from column format to rows to easily read i
 `cat outprefix.metrics.tsv | datamash transpose | column -t`
 
 
-Running Alfred using a bed file of target regions
+Running Alfred QC using a bed file of target regions
 ---------------------------------------------------
 
 If target regions are provided, Alfred computes the average coverage for each target and the on-target rate.
 
-`./src/alfred -r <ref.fa> -b <targets.bed> -o outprefix <align.bam>`
+`./src/alfred qc -r <ref.fa> -b <targets.bed> -o outprefix <align.bam>`
 
 For instance, for a human whole-exome data set.
 
 `cd exon/ && Rscript exon.R`
 
-`./src/alfred -r <hg19.fa> -b exon/exonic.hg19.bed.gz -o outprefix <exome.bam>`
+`./src/alfred qc -r <hg19.fa> -b exon/exonic.hg19.bed.gz -o outprefix <exome.bam>`
 
 Plotting the on-target rate.
 
@@ -94,9 +102,8 @@ Example E. coli data set
 The final pdf is exampledata/out.pdf
 
 
-Example plots
--------------
-
+Example QC plots
+----------------
 
 [Whole-genome paired-end data with multiple read groups](https://raw.githubusercontent.com/tobiasrausch/alfred/master/exampleplots/NA06985.pe.pdf)
 
