@@ -22,7 +22,7 @@ BAM Alignment Quality Control: Insert size, coverage, mapping quality, read leng
 
 `./src/alfred qc -r <ref.fa> -o outprefix <align.bam>`
 
-BAM Feature Counting: Assigning reads to gene annotation features from a GTF file such as counting reads by gene or transcript identifier
+BAM Feature Counting: Assigning reads to gene annotation features from a GTF file such as counting reads by gene or transcript identifier. Requires paired-end data.
 
 `cd gtf/ && ./downloadGTF.sh`
 
@@ -110,3 +110,8 @@ Example QC plots
 [Whole-exome paired-end data with on-target rate](https://raw.githubusercontent.com/tobiasrausch/alfred/master/exampleplots/HG00112.wes.pdf)
 
 [Whole-genome jumping library](https://raw.githubusercontent.com/tobiasrausch/alfred/master/exampleplots/HG00513.mp.pdf)
+
+
+Credits
+-------
+[htseq-count](http://htseq.readthedocs.io) was used to benchmark and validate the read counting.
