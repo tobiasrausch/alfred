@@ -163,7 +163,8 @@ namespace bamstats
 	  int32_t fpfirst = featurepos[0];
 	  int32_t fplast = featurepos[featurepos.size()-1];
 	  for(TChromosomeRegions::const_iterator vIt = gRegions[refIndex].begin(); vIt != gRegions[refIndex].end(); ++vIt) {
-	    if ((vIt->start > fplast) || (vIt->end <= fpfirst)) continue;
+	    if (vIt->end <= fpfirst) continue;
+	    if (vIt->start > fplast) break; // Sorted intervals so we can stop searching
 	    for(TFeaturePos::const_iterator fIt = featurepos.begin(); fIt != featurepos.end(); ++fIt) {
 	      if ((vIt->start <= *fIt) && (vIt->end > *fIt) && (featureid != vIt->lid)) {
 		if (c.stranded) {
