@@ -293,7 +293,7 @@ namespace bamstats
     // Check command line arguments
     if ((vm.count("help")) || (!vm.count("input-file")) || (!vm.count("gtf"))) {
       printTitle("Alfred");
-      std::cout << "Usage: alfred " << argv[0] << " [OPTIONS] -g <hg19.gtf> <aligned.bam>" << std::endl;
+      std::cout << "Usage: alfred " << argv[0] << " [OPTIONS] -g <hg19.gtf.gz> <aligned.bam>" << std::endl;
       std::cout << visible_options << "\n";
       return 1;
     }
