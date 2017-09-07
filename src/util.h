@@ -54,6 +54,32 @@ namespace bamstats
     }
     return h;
   }
+
+
+  struct IntervalLabel {
+    int32_t start;
+    int32_t end;
+    char strand;
+    int32_t lid;
+
+    IntervalLabel(int32_t s) : start(s), end(s+1), strand('*'), lid(-1) {}
+    IntervalLabel(int32_t s, int32_t e, char t, int32_t l) : start(s), end(e), strand(t), lid(l) {}
+  };
+
+  template<typename TRecord>
+  struct SortIntervalLabel : public std::binary_function<TRecord, TRecord, bool> {
+    inline bool operator()(TRecord const& s1, TRecord const& s2) const {
+      return s1.lid < s2.lid;
+    }
+  };
+
+  template<typename TRecord>
+  struct SortIntervalStart : public std::binary_function<TRecord, TRecord, bool> {
+    inline bool operator()(TRecord const& s1, TRecord const& s2) const {
+      return s1.start < s2.start;
+    }
+  };
+
   
   inline std::size_t hash_pair(bam1_t* rec) {
     std::size_t seed = hash_string(bam_get_qname(rec));

@@ -39,6 +39,7 @@ Contact: Tobias Rausch (rausch@embl.de)
 #include "version.h"
 #include "util.h"
 #include "gtf.h"
+#include "bed.h"
 
 
 namespace bamstats
@@ -47,10 +48,12 @@ namespace bamstats
   struct CountConfig {
     bool stranded;
     unsigned short minQual;
+    uint8_t inputFileFormat;   // 0 = gtf, 1 = bed
     std::string sampleName;
     std::string idname;
     std::string feature;
     boost::filesystem::path gtfFile;
+    boost::filesystem::path bedFile;
     boost::filesystem::path bamFile;
     boost::filesystem::path outfile;
   };
@@ -72,16 +75,18 @@ namespace bamstats
 
     // Parse GTF file
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
-    std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "GTF file parsing" << std::endl;
+    std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "GTF/BED file parsing" << std::endl;
     typedef std::vector<IntervalLabel> TChromosomeRegions;
     typedef std::vector<TChromosomeRegions> TGenomicRegions;
     TGenomicRegions gRegions;
     gRegions.resize(hdr->n_targets, TChromosomeRegions());
     typedef std::vector<std::string> TGeneIds;
     TGeneIds geneIds;
-    int32_t tf = parseGTF(hdr, c.gtfFile, c.feature, c.idname, gRegions, geneIds);
+    int32_t tf = 0;
+    if (c.inputFileFormat == 0) tf = parseGTF(hdr, c.gtfFile, c.feature, c.idname, gRegions, geneIds);
+    else if (c.inputFileFormat == 1) tf = parseBED(hdr, c.bedFile, gRegions, geneIds);
     if (tf == 0) {
-      std::cerr << "Error parsing GTF file!" << std::endl;
+      std::cerr << "Error parsing GTF/BED file!" << std::endl;
       return 1;
     }
     
@@ -266,10 +271,19 @@ namespace bamstats
       ("help,?", "show help message")
       ("map-qual,m", boost::program_options::value<unsigned short>(&c.minQual)->default_value(10), "min. mapping quality")
       ("stranded,s", "strand-specific counting")
-      ("gtf,g", boost::program_options::value<boost::filesystem::path>(&c.gtfFile), "gtf file (required)")
+      ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("gene.count"), "output file")
+      ;
+
+    boost::program_options::options_description gtfopt("GTF input file options");
+    gtfopt.add_options()
+      ("gtf,g", boost::program_options::value<boost::filesystem::path>(&c.gtfFile), "gtf file")
       ("id,i", boost::program_options::value<std::string>(&c.idname)->default_value("gene_id"), "GTF attribute")
       ("feature,f", boost::program_options::value<std::string>(&c.feature)->default_value("exon"), "GTF feature")
-      ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("gene.count"), "output file")
+      ;
+    
+    boost::program_options::options_description bedopt("BED input file options, columns chr, start, end, name [, score, strand]");
+    bedopt.add_options()
+      ("bed,b", boost::program_options::value<boost::filesystem::path>(&c.bedFile), "bed file")
       ;
 
     boost::program_options::options_description hidden("Hidden options");
@@ -281,9 +295,9 @@ namespace bamstats
     pos_args.add("input-file", -1);
 
     boost::program_options::options_description cmdline_options;
-    cmdline_options.add(generic).add(hidden);
+    cmdline_options.add(generic).add(gtfopt).add(bedopt).add(hidden);
     boost::program_options::options_description visible_options;
-    visible_options.add(generic);
+    visible_options.add(generic).add(gtfopt).add(bedopt);
 
     // Parse command-line
     boost::program_options::variables_map vm;
@@ -291,9 +305,9 @@ namespace bamstats
     boost::program_options::notify(vm);
 
     // Check command line arguments
-    if ((vm.count("help")) || (!vm.count("input-file")) || (!vm.count("gtf"))) {
+    if ((vm.count("help")) || (!vm.count("input-file")) || ((!vm.count("gtf")) && (!vm.count("bed")))) {
       printTitle("Alfred");
-      std::cout << "Usage: alfred " << argv[0] << " [OPTIONS] -g <hg19.gtf.gz> <aligned.bam>" << std::endl;
+      std::cout << "Usage: alfred " << argv[0] << " [OPTIONS] -g [<hg19.gtf.gz>|<hg19.bed.gz>] <aligned.bam>" << std::endl;
       std::cout << visible_options << "\n";
       return 1;
     }
@@ -334,9 +348,11 @@ namespace bamstats
 
     // Check region file
     if (!(boost::filesystem::exists(c.gtfFile) && boost::filesystem::is_regular_file(c.gtfFile) && boost::filesystem::file_size(c.gtfFile))) {
-      std::cerr << "Input gtf file is missing: " << c.gtfFile.string() << std::endl;
-      return 1;
-    }
+      if (!(boost::filesystem::exists(c.bedFile) && boost::filesystem::is_regular_file(c.bedFile) && boost::filesystem::file_size(c.bedFile))) {
+	std::cerr << "Input gtf/bed file is missing." << std::endl;
+	return 1;
+      } else c.inputFileFormat = 1;
+    } else c.inputFileFormat = 0;
 
     // Show cmd
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();

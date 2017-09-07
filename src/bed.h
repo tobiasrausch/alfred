@@ -21,8 +21,8 @@ Contact: Tobias Rausch (rausch@embl.de)
 ============================================================================
 */
 
-#ifndef GTF_H
-#define GTF_H
+#ifndef BED_H
+#define BED_H
 
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
@@ -43,17 +43,17 @@ namespace bamstats
 
   template<typename TGenomicRegions, typename TGeneIds>
   inline int32_t
-  parseGTF(bam_hdr_t* hdr, boost::filesystem::path const& gtf, std::string const& feature, std::string const& attribute, TGenomicRegions& gRegions, TGeneIds& geneIds) {
+  parseBED(bam_hdr_t* hdr, boost::filesystem::path const& bed, TGenomicRegions& gRegions, TGeneIds& geneIds) {
     typedef typename TGenomicRegions::value_type TChromosomeRegions;
     TGenomicRegions overlappingRegions;
     overlappingRegions.resize(gRegions.size(), TChromosomeRegions());
-    if (!is_gz(gtf)) {
-      std::cerr << "GTF file is not gzipped!" << std::endl;
+    if (!is_gz(bed)) {
+      std::cerr << "BED file is not gzipped!" << std::endl;
       return 0;
     }
     typedef std::map<std::string, int32_t> TIdMap;
     TIdMap idMap;
-    std::ifstream file(gtf.string().c_str(), std::ios_base::in | std::ios_base::binary);
+    std::ifstream file(bed.string().c_str(), std::ios_base::in | std::ios_base::binary);
     boost::iostreams::filtering_streambuf<boost::iostreams::input> dataIn;
     dataIn.push(boost::iostreams::gzip_decompressor());
     dataIn.push(file);
@@ -62,71 +62,45 @@ namespace bamstats
     while(std::getline(instream, gline)) {
       if ((gline.size()) && (gline[0] == '#')) continue;
       typedef boost::tokenizer< boost::char_separator<char> > Tokenizer;
-      boost::char_separator<char> sep("\t");
+      boost::char_separator<char> sep(" \t,;");
       Tokenizer tokens(gline, sep);
       Tokenizer::iterator tokIter = tokens.begin();
       if (tokIter==tokens.end()) {
-	std::cerr << "Empty line in GTF file!" << std::endl;
+	std::cerr << "Empty line in BED file!" << std::endl;
 	return 0;
       }
       std::string chrName=*tokIter++;
       int32_t chrid = bam_name2id(hdr, chrName.c_str());
       if (chrid < 0) continue;
       if (tokIter == tokens.end()) {
-	std::cerr << "Corrupted GTF file!" << std::endl;
+	std::cerr << "Corrupted BED file!" << std::endl;
 	return 0;
       }
-      ++tokIter;
+      int32_t start = boost::lexical_cast<int32_t>(*tokIter++);
+      int32_t end = boost::lexical_cast<int32_t>(*tokIter++);
       if (tokIter == tokens.end()) {
-	std::cerr << "Corrupted GTF file!" << std::endl;
+	std::cerr << "Name is missing in BED file!" << std::endl;
 	return 0;
       }
-      std::string ft = *tokIter++;
-      if (ft == feature) {
-	if (tokIter != tokens.end()) {
-	  int32_t start = boost::lexical_cast<int32_t>(*tokIter++);
-	  int32_t end = boost::lexical_cast<int32_t>(*tokIter++);
-	  ++tokIter; // score
-	  if (tokIter == tokens.end()) {
-	    std::cerr << "Corrupted GTF file!" << std::endl;
-	    return 0;
-	  }
-	  char strand = boost::lexical_cast<char>(*tokIter++);
-	  ++tokIter; // frame
-	  std::string attr = *tokIter;
-	  boost::char_separator<char> sepAttr(";");
-	  Tokenizer attrTokens(attr, sepAttr);
-	  for(Tokenizer::iterator attrIter = attrTokens.begin(); attrIter != attrTokens.end(); ++attrIter) {
-	    std::string keyval = *attrIter;
-	    boost::trim(keyval);
-	    boost::char_separator<char> sepKeyVal(" ");
-	    Tokenizer kvTokens(keyval, sepKeyVal);
-	    Tokenizer::iterator kvTokensIt = kvTokens.begin();
-	    std::string key = *kvTokensIt++;
-	    if (key == attribute) {
-	      std::string val = *kvTokensIt;
-	      if (val.size() >= 3) val = val.substr(1, val.size()-2); // Trim off the bloody "
-	      int32_t idval = geneIds.size();
-	      typename TIdMap::const_iterator idIter = idMap.find(val);
-	      if (idIter == idMap.end()) {
-		idMap.insert(std::make_pair(val, idval));
-		geneIds.push_back(val);
-	      } else idval = idIter->second;
-	      // Convert to 0-based and right-open
-	      if (start == 0) {
-		std::cerr << "GTF is 1-based format!" << std::endl;
-		return 0;
-	      }
-	      if (start > end) {
-		std::cerr << "Feature start is greater than feature end!" << std::endl;
-		return 0;
-	      }
-	      //std::cerr << geneIds[idval] << "\t" << start << "\t" << end << std::endl;
-	      overlappingRegions[chrid].push_back(IntervalLabel(start - 1, end, strand, idval));
-	    }
-	  }
-	}
+      std::string val = *tokIter++;
+      char strand = '*';
+      if (tokIter != tokens.end()) {
+	++tokIter; // skip score
+	strand = boost::lexical_cast<char>(*tokIter++);
       }
+      int32_t idval = geneIds.size();
+      typename TIdMap::const_iterator idIter = idMap.find(val);
+      if (idIter == idMap.end()) {
+	idMap.insert(std::make_pair(val, idval));
+	geneIds.push_back(val);
+      } else idval = idIter->second;
+      // BED is 0-based and right-open, no need to convert
+      if (start > end) {
+	std::cerr << "Feature start is greater than feature end!" << std::endl;
+	return 0;
+      }
+      //std::cerr << geneIds[idval] << "\t" << start << "\t" << end << std::endl;
+      overlappingRegions[chrid].push_back(IntervalLabel(start, end, strand, idval));
     }
 
     // Make intervals non-overlapping for each label
@@ -153,7 +127,6 @@ namespace bamstats
       // Process last id
       for(typename TIdIntervals::iterator it = idIntervals.begin(); it != idIntervals.end(); ++it) gRegions[refIndex].push_back(IntervalLabel(it->lower(), it->upper(), runningStrand, runningId));
     }
-    
     return geneIds.size();
   }
 
