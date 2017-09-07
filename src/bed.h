@@ -41,19 +41,19 @@ Contact: Tobias Rausch (rausch@embl.de)
 namespace bamstats
 {
 
-  template<typename TGenomicRegions, typename TGeneIds>
+  template<typename TConfig, typename TGenomicRegions, typename TGeneIds>
   inline int32_t
-  parseBED(bam_hdr_t* hdr, boost::filesystem::path const& bed, TGenomicRegions& gRegions, TGeneIds& geneIds) {
+  parseBED(TConfig const& c, TGenomicRegions& gRegions, TGeneIds& geneIds) {
     typedef typename TGenomicRegions::value_type TChromosomeRegions;
     TGenomicRegions overlappingRegions;
     overlappingRegions.resize(gRegions.size(), TChromosomeRegions());
-    if (!is_gz(bed)) {
+    if (!is_gz(c.bedFile)) {
       std::cerr << "BED file is not gzipped!" << std::endl;
       return 0;
     }
     typedef std::map<std::string, int32_t> TIdMap;
     TIdMap idMap;
-    std::ifstream file(bed.string().c_str(), std::ios_base::in | std::ios_base::binary);
+    std::ifstream file(c.bedFile.string().c_str(), std::ios_base::in | std::ios_base::binary);
     boost::iostreams::filtering_streambuf<boost::iostreams::input> dataIn;
     dataIn.push(boost::iostreams::gzip_decompressor());
     dataIn.push(file);
@@ -70,8 +70,8 @@ namespace bamstats
 	return 0;
       }
       std::string chrName=*tokIter++;
-      int32_t chrid = bam_name2id(hdr, chrName.c_str());
-      if (chrid < 0) continue;
+      if (c.nchr.find(chrName) == c.nchr.end()) continue;
+      int32_t chrid = c.nchr.find(chrName)->second;
       if (tokIter == tokens.end()) {
 	std::cerr << "Corrupted BED file!" << std::endl;
 	return 0;

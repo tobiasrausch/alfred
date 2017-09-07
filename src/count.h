@@ -49,6 +49,7 @@ namespace bamstats
     bool stranded;
     unsigned short minQual;
     uint8_t inputFileFormat;   // 0 = gtf, 1 = bed
+    std::map<std::string, int32_t> nchr;
     std::string sampleName;
     std::string idname;
     std::string feature;
@@ -59,39 +60,19 @@ namespace bamstats
   };
 
 
-  
-  template<typename TConfig>
+
+  template<typename TConfig, typename TGenomicRegions, typename TFeatureCounter>
   inline int32_t
-  countRun(TConfig const& c) {
-
-#ifdef PROFILE
-    ProfilerStart("alfred.prof");
-#endif
-
+  bam_counter(TConfig const& c, TGenomicRegions& gRegions, TFeatureCounter& fc) {
+    typedef typename TGenomicRegions::value_type TChromosomeRegions;
+    
     // Load bam file
     samFile* samfile = sam_open(c.bamFile.string().c_str(), "r");
     hts_idx_t* idx = sam_index_load(samfile, c.bamFile.string().c_str());
     bam_hdr_t* hdr = sam_hdr_read(samfile);
 
-    // Parse GTF file
-    boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
-    std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "GTF/BED file parsing" << std::endl;
-    typedef std::vector<IntervalLabel> TChromosomeRegions;
-    typedef std::vector<TChromosomeRegions> TGenomicRegions;
-    TGenomicRegions gRegions;
-    gRegions.resize(hdr->n_targets, TChromosomeRegions());
-    typedef std::vector<std::string> TGeneIds;
-    TGeneIds geneIds;
-    int32_t tf = 0;
-    if (c.inputFileFormat == 0) tf = parseGTF(hdr, c.gtfFile, c.feature, c.idname, gRegions, geneIds);
-    else if (c.inputFileFormat == 1) tf = parseBED(hdr, c.bedFile, gRegions, geneIds);
-    if (tf == 0) {
-      std::cerr << "Error parsing GTF/BED file!" << std::endl;
-      return 1;
-    }
-    
     // Parse BAM file
-    now = boost::posix_time::second_clock::local_time();
+    boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "BAM file parsing" << std::endl;
     boost::progress_display show_progress( hdr->n_targets );
 
@@ -100,10 +81,6 @@ namespace bamstats
     TQualities qualities;
     typedef boost::unordered_map<std::size_t, int32_t> TFeatures;
     TFeatures features;
-
-    // Feature counter
-    typedef std::vector<int32_t> TFeatureCounter;
-    TFeatureCounter fc(tf, 0);
 
     // Iterate chromosomes
     for(int32_t refIndex=0; refIndex < (int32_t) hdr->n_targets; ++refIndex) {
@@ -167,7 +144,7 @@ namespace bamstats
 	if (!featurepos.empty()) {
 	  int32_t fpfirst = featurepos[0];
 	  int32_t fplast = featurepos[featurepos.size()-1];
-	  for(TChromosomeRegions::const_iterator vIt = gRegions[refIndex].begin(); vIt != gRegions[refIndex].end(); ++vIt) {
+	  for(typename TChromosomeRegions::const_iterator vIt = gRegions[refIndex].begin(); vIt != gRegions[refIndex].end(); ++vIt) {
 	    if (vIt->end <= fpfirst) continue;
 	    if (vIt->start > fplast) break; // Sorted intervals so we can stop searching
 	    for(TFeaturePos::const_iterator fIt = featurepos.begin(); fIt != featurepos.end(); ++fIt) {
@@ -241,6 +218,45 @@ namespace bamstats
     bam_hdr_destroy(hdr);
     hts_idx_destroy(idx);
     sam_close(samfile);
+    return 0;
+  }
+
+
+
+  
+  template<typename TConfig>
+  inline int32_t
+  countRun(TConfig const& c) {
+
+#ifdef PROFILE
+    ProfilerStart("alfred.prof");
+#endif
+
+    // Parse GTF file
+    boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
+    std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "GTF/BED file parsing" << std::endl;
+    typedef std::vector<IntervalLabel> TChromosomeRegions;
+    typedef std::vector<TChromosomeRegions> TGenomicRegions;
+    TGenomicRegions gRegions;
+    gRegions.resize(c.nchr.size(), TChromosomeRegions());
+    typedef std::vector<std::string> TGeneIds;
+    TGeneIds geneIds;
+    int32_t tf = 0;
+    if (c.inputFileFormat == 0) tf = parseGTF(c, gRegions, geneIds);
+    else if (c.inputFileFormat == 1) tf = parseBED(c, gRegions, geneIds);
+    if (tf == 0) {
+      std::cerr << "Error parsing GTF/BED file!" << std::endl;
+      return 1;
+    }
+
+    // Feature counter
+    typedef std::vector<int32_t> TFeatureCounter;
+    TFeatureCounter fc(tf, 0);
+    int32_t retparse = bam_counter(c, gRegions, fc);
+    if (retparse != 0) {
+      std::cerr << "Error feature counting!" << std::endl;
+      return 1;
+    }
 
     // Output count table
     now = boost::posix_time::second_clock::local_time();
@@ -256,7 +272,6 @@ namespace bamstats
 #ifdef PROFILE
     ProfilerStop();
 #endif
-
 
     return 0;
   }
@@ -335,6 +350,7 @@ namespace bamstats
 	}
       }
       bam_hdr_t* hdr = sam_hdr_read(samfile);
+      for(int32_t refIndex=0; refIndex < hdr->n_targets; ++refIndex) c.nchr.insert(std::make_pair(hdr->target_name[refIndex], refIndex));
 
       // Get sample name
       std::string sampleName;
