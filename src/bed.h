@@ -45,6 +45,10 @@ namespace bamstats
   inline int32_t
   parseBED(TConfig const& c, TGenomicRegions& gRegions, TGeneIds& geneIds) {
     typedef typename TGenomicRegions::value_type TChromosomeRegions;
+
+    boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
+    std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "BED feature parsing" << std::endl;
+    
     TGenomicRegions overlappingRegions;
     overlappingRegions.resize(gRegions.size(), TChromosomeRegions());
     if (!is_gz(c.bedFile)) {

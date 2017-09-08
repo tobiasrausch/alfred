@@ -320,8 +320,6 @@ namespace bamstats
 #endif
 
     // Parse GTF file
-    boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
-    std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "GTF/BED file parsing" << std::endl;
     typedef std::vector<IntervalLabel> TChromosomeRegions;
     typedef std::vector<TChromosomeRegions> TGenomicRegions;
     TGenomicRegions gRegions;
@@ -348,7 +346,7 @@ namespace bamstats
     }
 
     // Output count table
-    now = boost::posix_time::second_clock::local_time();
+    boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Output count table" << std::endl;
     std::ofstream fcfile(c.outfile.string().c_str());
     fcfile << "gene\t" << c.sampleName << std::endl;
