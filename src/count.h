@@ -49,6 +49,7 @@ namespace bamstats
     bool stranded;
     unsigned short minQual;
     uint8_t inputFileFormat;   // 0 = gtf, 1 = bed
+    uint8_t inputBamFormat; // 0 = bam, 1 = bed
     std::map<std::string, int32_t> nchr;
     std::string sampleName;
     std::string idname;
@@ -59,6 +60,94 @@ namespace bamstats
     boost::filesystem::path outfile;
   };
 
+  template<typename TConfig, typename TGenomicRegions, typename TFeatureCounter>
+  inline int32_t
+  bed_counter(TConfig const& c, TGenomicRegions& gRegions, TFeatureCounter& fc) {
+    typedef typename TGenomicRegions::value_type TChromosomeRegions;
+
+    // Parse BED file
+    boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
+    std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "BED file parsing" << std::endl;
+    boost::progress_display show_progress(c.nchr.size());
+
+    // Iterate chromosomese
+    for(int32_t refIndex=0; refIndex < (int32_t) c.nchr.size(); ++refIndex) {
+      ++show_progress;
+      if (gRegions[refIndex].empty()) continue;
+
+      // Sort by position
+      std::sort(gRegions[refIndex].begin(), gRegions[refIndex].end(), SortIntervalStart<IntervalLabel>());
+
+      // Flag feature positions
+      typedef boost::dynamic_bitset<> TBitSet;
+      TBitSet featureBitMap(250000000);
+      for(uint32_t i = 0; i < gRegions[refIndex].size(); ++i)
+	for(int32_t k = gRegions[refIndex][i].start; k < gRegions[refIndex][i].end; ++k) featureBitMap[k] = 1;
+
+      // Count hits
+      std::ifstream chrFile(c.bamFile.string().c_str(), std::ifstream::in);
+      if (chrFile.is_open()) {
+	while (chrFile.good()) {
+	  std::string chrFromFile;
+	  getline(chrFile, chrFromFile);
+	  typedef boost::tokenizer< boost::char_separator<char> > Tokenizer;
+	  boost::char_separator<char> sep(" \t,;");
+	  Tokenizer tokens(chrFromFile, sep);
+	  Tokenizer::iterator tokIter = tokens.begin();
+	  if (tokIter!=tokens.end()) {
+	    std::string chrName = *tokIter++;
+	    if (c.nchr.find(chrName)->second != refIndex) continue;
+	    int32_t start = boost::lexical_cast<int32_t>(*tokIter++);
+	    int32_t end = boost::lexical_cast<int32_t>(*tokIter++);
+	    char strand = '*';
+	    if (tokIter != tokens.end()) {
+	      ++tokIter; // skip name
+	      if (tokIter != tokens.end()) {
+		++tokIter; // skip score
+		if (tokIter != tokens.end()) {
+		  strand = boost::lexical_cast<char>(*tokIter++);
+		}
+	      }
+	    }
+	    if (start >= end) continue;  // Bed has right-open intervals
+	    typedef std::vector<int32_t> TFeaturePos;
+	    TFeaturePos featurepos;
+	    for(int32_t i = start; i<end; ++i)
+	      if (featureBitMap[i]) featurepos.push_back(i);
+
+	    // Find feature
+	    bool ambiguous = false;
+	    int32_t featureid = -1;  // No feature by default
+	    if (!featurepos.empty()) {
+	      int32_t fpfirst = featurepos[0];
+	      int32_t fplast = featurepos[featurepos.size()-1];
+	      for(typename TChromosomeRegions::const_iterator vIt = gRegions[refIndex].begin(); vIt != gRegions[refIndex].end(); ++vIt) {
+		if (vIt->end <= fpfirst) continue;
+		if (vIt->start > fplast) break; // Sorted intervals so we can stop searching
+		for(TFeaturePos::const_iterator fIt = featurepos.begin(); fIt != featurepos.end(); ++fIt) {
+		  if ((vIt->start <= *fIt) && (vIt->end > *fIt) && (featureid != vIt->lid)) {
+		    if ((c.stranded) && (vIt->strand != strand)) continue;
+		    if (featureid == -1) featureid = vIt->lid;
+		    else {
+		      ambiguous = true;
+		      break;
+		    }
+		  }
+		}
+	      }
+	    }
+	    if (ambiguous) continue; // Ambiguous read
+
+	    // Check feature agreement
+	    if (featureid == -1) continue; // No feature
+	    ++fc[featureid];
+	  }
+	}
+	chrFile.close();
+      }
+    }
+    return 0;
+  }
 
 
   template<typename TConfig, typename TGenomicRegions, typename TFeatureCounter>
@@ -221,8 +310,6 @@ namespace bamstats
     return 0;
   }
 
-
-
   
   template<typename TConfig>
   inline int32_t
@@ -252,7 +339,9 @@ namespace bamstats
     // Feature counter
     typedef std::vector<int32_t> TFeatureCounter;
     TFeatureCounter fc(tf, 0);
-    int32_t retparse = bam_counter(c, gRegions, fc);
+    int32_t retparse = 1;
+    if (c.inputBamFormat == 0) retparse = bam_counter(c, gRegions, fc);
+    else if (c.inputBamFormat == 1) retparse = bed_counter(c, gRegions, fc);
     if (retparse != 0) {
       std::cerr << "Error feature counting!" << std::endl;
       return 1;
@@ -337,30 +426,57 @@ namespace bamstats
       std::cerr << "Alignment file is missing: " << c.bamFile.string() << std::endl;
       return 1;
     } else {
-      samFile* samfile = sam_open(c.bamFile.string().c_str(), "r");
-      if (samfile == NULL) {
-	std::cerr << "Fail to open file " << c.bamFile.string() << std::endl;
-	return 1;
-      }
-      hts_idx_t* idx = sam_index_load(samfile, c.bamFile.string().c_str());
-      if (idx == NULL) {
-	if (bam_index_build(c.bamFile.string().c_str(), 0) != 0) {
-	  std::cerr << "Fail to open index for " << c.bamFile.string() << std::endl;
+      if ((c.bamFile.string().length() > 3) && (c.bamFile.string().substr(c.bamFile.string().length() - 3) == "bed")) {
+	c.inputBamFormat = 1;
+	c.sampleName = c.bamFile.stem().string();
+	std::string oldChr = "";
+	typedef std::set<std::string> TChrSet;
+	TChrSet chrSet;
+	std::ifstream chrFile(c.bamFile.string().c_str(), std::ifstream::in);
+	if (chrFile.is_open()) {
+	  while (chrFile.good()) {
+	    std::string chrFromFile;
+	    getline(chrFile, chrFromFile);
+	    typedef boost::tokenizer< boost::char_separator<char> > Tokenizer;
+	    boost::char_separator<char> sep(" \t,;");
+	    Tokenizer tokens(chrFromFile, sep);
+	    Tokenizer::iterator tokIter = tokens.begin();
+	    if (tokIter!=tokens.end()) {
+	      std::string chrName = *tokIter++;
+	      if (chrName != oldChr) chrSet.insert(chrName);
+	    }
+	  }
+	  chrFile.close();
+	}
+	int32_t refIndex = 0;
+	for(TChrSet::iterator itc = chrSet.begin(); itc != chrSet.end(); ++itc, ++refIndex) c.nchr.insert(std::make_pair(*itc, refIndex));
+      } else {
+	c.inputBamFormat = 0;
+	samFile* samfile = sam_open(c.bamFile.string().c_str(), "r");
+	if (samfile == NULL) {
+	  std::cerr << "Fail to open file " << c.bamFile.string() << std::endl;
 	  return 1;
 	}
+	hts_idx_t* idx = sam_index_load(samfile, c.bamFile.string().c_str());
+	if (idx == NULL) {
+	  if (bam_index_build(c.bamFile.string().c_str(), 0) != 0) {
+	    std::cerr << "Fail to open index for " << c.bamFile.string() << std::endl;
+	    return 1;
+	  }
+	}
+	bam_hdr_t* hdr = sam_hdr_read(samfile);
+	for(int32_t refIndex=0; refIndex < hdr->n_targets; ++refIndex) c.nchr.insert(std::make_pair(hdr->target_name[refIndex], refIndex));
+	
+	// Get sample name
+	std::string sampleName;
+	if (!getSMTag(std::string(hdr->text), c.bamFile.stem().string(), sampleName)) {
+	  std::cerr << "Only one sample (@RG:SM) is allowed per input BAM file " << c.bamFile.string() << std::endl;
+	  return 1;
+	} else c.sampleName = sampleName;
+	bam_hdr_destroy(hdr);
+	hts_idx_destroy(idx);
+	sam_close(samfile);
       }
-      bam_hdr_t* hdr = sam_hdr_read(samfile);
-      for(int32_t refIndex=0; refIndex < hdr->n_targets; ++refIndex) c.nchr.insert(std::make_pair(hdr->target_name[refIndex], refIndex));
-
-      // Get sample name
-      std::string sampleName;
-      if (!getSMTag(std::string(hdr->text), c.bamFile.stem().string(), sampleName)) {
-	std::cerr << "Only one sample (@RG:SM) is allowed per input BAM file " << c.bamFile.string() << std::endl;
-	return 1;
-      } else c.sampleName = sampleName;
-      bam_hdr_destroy(hdr);
-      hts_idx_destroy(idx);
-      sam_close(samfile);
     }
 
     // Check region file
