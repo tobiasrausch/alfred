@@ -9,6 +9,9 @@
 Alfred installation
 ---------------------
 
+The easiest way to get Alfred is to download a statically linked binary from the [Alfred github release page](https://github.com/tobiasrausch/alfred/releases/).
+Alternatively, you can build Alfred from source. Alfred dependencies are included as submodules so you need to do a recursive clone.
+
 `git clone --recursive https://github.com/tobiasrausch/alfred.git`
 
 `cd alfred/`
