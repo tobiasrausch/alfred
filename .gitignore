@@ -2,8 +2,6 @@
 .htslib
 src/alfred
 src/count
-data/
-ws/nohup.out
 exon/
 gtf/
 
