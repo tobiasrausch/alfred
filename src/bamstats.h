@@ -704,12 +704,21 @@ namespace bamstats
     // Output coverage histograms
     rcfile << "# Coverage histogram (CO)." << std::endl;
     rcfile << "# Use `zgrep ^CO <outfile> | cut -f 2-` to extract this part." << std::endl;
-    rcfile << "CO\tSample\tCoverage\tCount\tLibrary" << std::endl;
+    rcfile << "CO\tSample\tCoverage\tCount\tQuantile\tLibrary" << std::endl;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       uint32_t lastValidCO = 0;
       for(uint32_t i = 0; i < itRg->second.bc.bpWithCoverage.size(); ++i)
 	if (itRg->second.bc.bpWithCoverage[i] > 0) lastValidCO = i;
-      for(uint32_t i = 0; i <= lastValidCO; ++i) rcfile << "CO\t" << c.sampleName << "\t" << i << "\t" << itRg->second.bc.bpWithCoverage[i] << "\t" << itRg->first << std::endl;
+      // Ignore last bucket that collects all higher coverage bases
+      uint64_t totalCO = 0;
+      for(uint32_t i = 0; i < itRg->second.bc.bpWithCoverage.size() - 1; ++i) totalCO += itRg->second.bc.bpWithCoverage[i];
+      uint64_t cumsum = 0;
+      for(uint32_t i = 0; i <= lastValidCO; ++i) {
+	double quant = 0;
+	if (totalCO > 0) quant = (double) cumsum / (double) totalCO;
+	rcfile << "CO\t" << c.sampleName << "\t" << i << "\t" << itRg->second.bc.bpWithCoverage[i] << "\t" << quant << "\t" << itRg->first << std::endl;
+	cumsum += itRg->second.bc.bpWithCoverage[i];
+      }
     }
     
     // Output insert size histograms

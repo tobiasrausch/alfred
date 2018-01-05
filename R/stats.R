@@ -83,31 +83,20 @@ all=read.table(pipe(cmd), header=T)
 for(sid in unique(all$Sample)) {
    for(rg in unique(all[all$Sample == sid,]$Library)) {
 	cov = all[all$Sample == sid & all$Library == rg,]
-	p1=ggplot(data=cov, aes(x=Coverage, y=Count))
-	p1=p1 + geom_line()
-	p1=p1 + scale_y_continuous(labels=comma)
-	p1=p1 + ggtitle(paste0("Coverage Distribution", "\n", "Sample: ", sid, "\n", "RG: ", rg))
-	p1=p1 + scale_x_continuous(labels=comma)
-	p1=p1 + theme(legend.position="bottom", legend.direction='horizontal')
-	print(p1)
-
-	# Remove leading and trailing small values
 	tc=sum(as.numeric(cov$Count))
-	sc=sort(cov$Count)
-	lowcut=sc[cumsum(sc) >= 0.01 * tc][1]
-	sl=unique(cov[,c("Sample", "Library")])
-	covfilt = data.frame()
-	for(i in 1:nrow(sl)) {
-	      slc=cov[(cov$Sample == sl[i,"Sample"]) & (cov$Library == sl[i,"Library"]),]
-              covfilt=rbind(covfilt, slc[which(slc$Count>=lowcut)[1]:tail(which(slc$Count>=lowcut), n=1),])
+	if (tc > 0) {
+	   upBound=max(cov[cov$Quantile >= 0.001 & cov$Quantile <= 0.999,]$Coverage)
+	   gr=sum(as.numeric(cov[cov$Coverage>upBound,]$Count))
+	   infoMax = paste0("Coverage > ", upBound, " (", round(100 * gr / tc, digits=2), "%)")
+	   cov=cov[cov$Coverage <= upBound,]
+	   p1=ggplot(data=cov, aes(x=Coverage, y=Count))
+	   p1=p1 + geom_line()
+	   p1=p1 + scale_y_continuous(labels=comma)
+	   p1=p1 + ggtitle(paste0("Coverage Distribution", "\n", infoMax, "\n", "Sample: ", sid, "\n", "RG: ", rg))
+	   p1=p1 + scale_x_continuous(labels=comma)
+	   p1=p1 + theme(legend.position="bottom", legend.direction='horizontal')
+	   print(p1)
 	}
-	p1=ggplot(data=covfilt, aes(x=Coverage, y=Count))
-	p1=p1 + geom_line()
-	p1=p1 + scale_y_continuous(labels=comma)
-	p1=p1 + ggtitle(paste0("Coverage Distribution (99% of the data)", "\n", "Sample: ", sid, "\n", "RG: ", rg))
-	p1=p1 + scale_x_continuous(labels=comma)
-	p1=p1 + theme(legend.position="bottom", legend.direction='horizontal')
-	print(p1)
    }
 }
 print(warnings())
