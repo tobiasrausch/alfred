@@ -51,7 +51,7 @@ namespace bamstats
 struct Config {
   bool hasRegionFile;
   std::string sampleName;
-  std::string outprefix;
+  boost::filesystem::path outfile;
   boost::filesystem::path genome;
   boost::filesystem::path regionFile;
   boost::filesystem::path bamFile;
@@ -67,7 +67,7 @@ int qc(int argc, char **argv) {
     ("help,?", "show help message")
     ("reference,r", boost::program_options::value<boost::filesystem::path>(&c.genome), "reference fasta file (required)")
     ("bed,b", boost::program_options::value<boost::filesystem::path>(&c.regionFile), "bed file with regions to analyze (optional)")
-    ("outprefix,o", boost::program_options::value<std::string>(&c.outprefix)->default_value("stats"), "output file prefix")
+    ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("stats.tsv"), "output file")
     ;
 
   boost::program_options::options_description hidden("Hidden options");

@@ -368,7 +368,13 @@ namespace bamstats
 	std::cerr << "Missing read group: " << rG << std::endl;
 	return 1;
       }
-      
+
+      // Alignments behind the reference end
+      if ((!(rec->core.flag & BAM_FUNMAP)) && (((rec->core.pos >= (int32_t) hdr->target_len[refIndex]) || (lastAlignedPosition(rec) >= hdr->target_len[refIndex])))) {
+	std::cerr << "Alignment is past the reference end: " << hdr->target_name[refIndex] << ':' << rec->core.pos << std::endl;
+	continue;
+      }
+	    
       // Paired counts
       if (rec->core.flag & BAM_FPAIRED) {
 	++itRg->second.pc.paired;
@@ -530,10 +536,18 @@ namespace bamstats
       if (seq != NULL) free(seq);
     }
     
+
+    // Outfile
+    std::ofstream rcfile(c.outfile.string().c_str());
+
+    // Output header
+    rcfile << "# This file was produced by alfred v" << alfredVersionNumber << "." << std::endl;
+    rcfile << "# This file contains alignment statistics for all reads." << std::endl;
+
     // Output metrics
-    std::string statFileName = c.outprefix + ".metrics.tsv";
-    std::ofstream rcfile(statFileName.c_str());
-    rcfile << "Sample\tLibrary\t#QCFail\tQCFailFraction\t#DuplicateMarked\tDuplicateFraction\t#Unmapped\tUnmappedFraction\t#Mapped\tMappedFraction\t#MappedRead1\t#MappedRead2\tRatioMapped2vsMapped1\t#MappedForward\tMappedForwardFraction\t#MappedReverse\tMappedReverseFraction\t#SecondaryAlignments\tSecondaryAlignmentFraction\t#SupplementaryAlignments\tSupplementaryAlignmentFraction\t#SplicedAlignments\tSplicedAlignmentFraction" << "\t";
+    rcfile << "# Alignment summary metrics (ME)." << std::endl;
+    rcfile << "# Use `grep ^ME <outfile> | cut -f 2-` to extract this part." << std::endl;
+    rcfile << "ME\tSample\tLibrary\t#QCFail\tQCFailFraction\t#DuplicateMarked\tDuplicateFraction\t#Unmapped\tUnmappedFraction\t#Mapped\tMappedFraction\t#MappedRead1\t#MappedRead2\tRatioMapped2vsMapped1\t#MappedForward\tMappedForwardFraction\t#MappedReverse\tMappedReverseFraction\t#SecondaryAlignments\tSecondaryAlignmentFraction\t#SupplementaryAlignments\tSupplementaryAlignmentFraction\t#SplicedAlignments\tSplicedAlignmentFraction" << "\t";
     rcfile << "#Pairs\t#MappedPairs\tMappedPairsFraction\t#MappedSameChr\tMappedSameChrFraction" << "\t";
     rcfile << "#ReferenceBp\t#ReferenceNs\t#AlignedBases\t#MatchedBases\tMatchRate\t#MismatchedBases\tMismatchRate\t#DeletionsCigarD\tDeletionRate\t#InsertionsCigarI\tInsertionRate\t#SoftClippedBases\tSoftClipRate\t#HardClippedBases\tHardClipRate\tErrorRate" << "\t";
     rcfile << "MedianReadLength\tDefaultLibraryLayout\tMedianInsertSize\tMedianCoverage\tSDCoverage\tMedianMAPQ";
@@ -543,7 +557,7 @@ namespace bamstats
       // Read counts
       uint64_t totalReadCount = itRg->second.rc.qcfail + itRg->second.rc.dup + itRg->second.rc.unmap + itRg->second.rc.mapped1 + itRg->second.rc.mapped2;
       uint64_t mappedCount = itRg->second.rc.mapped1 + itRg->second.rc.mapped2;
-      rcfile << c.sampleName << "\t" << itRg->first << "\t" << itRg->second.rc.qcfail << "\t" << (double) itRg->second.rc.qcfail / (double) totalReadCount << "\t" << itRg->second.rc.dup << "\t" << (double) itRg->second.rc.dup / (double) totalReadCount << "\t" << itRg->second.rc.unmap << "\t" << (double) itRg->second.rc.unmap / (double) totalReadCount << "\t" << mappedCount << "\t" << (double) mappedCount / (double) totalReadCount << "\t" << itRg->second.rc.mapped1 << "\t" << itRg->second.rc.mapped2 << "\t" << (double) itRg->second.rc.mapped2 / (double) itRg->second.rc.mapped1 << "\t" << itRg->second.rc.forward << "\t" << (double) itRg->second.rc.forward / (double) mappedCount << "\t" << itRg->second.rc.reverse << "\t" << (double) itRg->second.rc.reverse / (double) mappedCount << "\t" << itRg->second.rc.secondary << "\t" << (double) itRg->second.rc.secondary / (double) mappedCount << "\t" << itRg->second.rc.supplementary << "\t" << (double) itRg->second.rc.supplementary / (double) mappedCount << "\t" << itRg->second.rc.spliced << "\t" << (double) itRg->second.rc.spliced / (double) mappedCount << "\t";
+      rcfile << "ME\t" << c.sampleName << "\t" << itRg->first << "\t" << itRg->second.rc.qcfail << "\t" << (double) itRg->second.rc.qcfail / (double) totalReadCount << "\t" << itRg->second.rc.dup << "\t" << (double) itRg->second.rc.dup / (double) totalReadCount << "\t" << itRg->second.rc.unmap << "\t" << (double) itRg->second.rc.unmap / (double) totalReadCount << "\t" << mappedCount << "\t" << (double) mappedCount / (double) totalReadCount << "\t" << itRg->second.rc.mapped1 << "\t" << itRg->second.rc.mapped2 << "\t" << (double) itRg->second.rc.mapped2 / (double) itRg->second.rc.mapped1 << "\t" << itRg->second.rc.forward << "\t" << (double) itRg->second.rc.forward / (double) mappedCount << "\t" << itRg->second.rc.reverse << "\t" << (double) itRg->second.rc.reverse / (double) mappedCount << "\t" << itRg->second.rc.secondary << "\t" << (double) itRg->second.rc.secondary / (double) mappedCount << "\t" << itRg->second.rc.supplementary << "\t" << (double) itRg->second.rc.supplementary / (double) mappedCount << "\t" << itRg->second.rc.spliced << "\t" << (double) itRg->second.rc.spliced / (double) mappedCount << "\t";
 
       // Paired counts
       int64_t paired = itRg->second.pc.paired / 2;
@@ -600,12 +614,11 @@ namespace bamstats
 	rcfile << "\t" << totalBedSize << "\t" << alignedBedBases << "\t" << enrichment << std::endl;
       } else rcfile << std::endl;
     }
-    rcfile.close();
 
     // Output read length histogram
-    statFileName = c.outprefix + ".readlength.tsv";
-    std::ofstream rlfile(statFileName.c_str());
-    rlfile << "Sample\tReadlength\tCount\tFraction\tLibrary" << std::endl;
+    rcfile << "# Read length distribution (RL)." << std::endl;
+    rcfile << "# Use `grep ^RL <outfile> | cut -f 2-` to extract this part." << std::endl;
+    rcfile << "RL\tSample\tReadlength\tCount\tFraction\tLibrary" << std::endl;
     uint32_t lastValidRL = 0;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg)
       for(uint32_t i = lastValidRL + 1; i < itRg->second.rc.lRc.size(); ++i)
@@ -616,18 +629,14 @@ namespace bamstats
       for(uint32_t i = 0; i <= lastValidRL; ++i) {
 	double frac = 0;
 	if (total > 0) frac = (double) itRg->second.rc.lRc[i] / total;
-	rlfile << c.sampleName << "\t" << i << "\t" << itRg->second.rc.lRc[i] << "\t" << frac << "\t" << itRg->first << std::endl;
+	rcfile << "RL\t" << c.sampleName << "\t" << i << "\t" << itRg->second.rc.lRc[i] << "\t" << frac << "\t" << itRg->first << std::endl;
       }
     }
-    rlfile.close();
 
-    // Output mean base quality and per base ACGTN content
-    statFileName = c.outprefix + ".basequal.tsv";
-    std::string statFileName2 = c.outprefix + ".contentACGTN.tsv";
-    std::ofstream bqfile(statFileName.c_str());
-    std::ofstream ncountfile(statFileName2.c_str());
-    bqfile << "Sample\tPosition\tBaseQual\tLibrary" << std::endl;
-    ncountfile << "Sample\tPosition\tBase\tCount\tFraction\tLibrary" << std::endl;
+    // Output mean base quality
+    rcfile << "# Mean base quality (BQ)." << std::endl;
+    rcfile << "# Use `grep ^BQ <outfile> | cut -f 2-` to extract this part." << std::endl;
+    rcfile << "BQ\tSample\tPosition\tBaseQual\tLibrary" << std::endl;
     uint32_t lastValidBQIdx = 0;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg)
       for(uint32_t i = lastValidBQIdx + 1; i < itRg->second.rc.nCount.size(); ++i) {
@@ -637,30 +646,39 @@ namespace bamstats
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
 	uint64_t bcount = itRg->second.rc.aCount[i] + itRg->second.rc.cCount[i] + itRg->second.rc.gCount[i] + itRg->second.rc.tCount[i] + itRg->second.rc.nCount[i];
-	if (bcount > 0) bqfile << c.sampleName << "\t" << i << "\t" << (double) (itRg->second.rc.bqCount[i]) / (double) (bcount) << "\t" << itRg->first << std::endl;
-	else bqfile << c.sampleName << "\t" << i << "\tNA\t" << itRg->first << std::endl;
+	if (bcount > 0) rcfile << "BQ\t" << c.sampleName << "\t" << i << "\t" << (double) (itRg->second.rc.bqCount[i]) / (double) (bcount) << "\t" << itRg->first << std::endl;
+	else rcfile << "BQ\t" << c.sampleName << "\t" << i << "\tNA\t" << itRg->first << std::endl;
+      }
+    }
+
+    // Output per base ACGTN content
+    rcfile << "# Base content (BC)." << std::endl;
+    rcfile << "# Use `grep ^BC <outfile> | cut -f 2-` to extract this part." << std::endl;
+    rcfile << "BC\tSample\tPosition\tBase\tCount\tFraction\tLibrary" << std::endl;
+    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+      for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
+	uint64_t bcount = itRg->second.rc.aCount[i] + itRg->second.rc.cCount[i] + itRg->second.rc.gCount[i] + itRg->second.rc.tCount[i] + itRg->second.rc.nCount[i];
 	if (bcount > 0) {
-	  ncountfile << c.sampleName << "\t" << i << "\tA\t" << itRg->second.rc.aCount[i] << "\t" << (double) itRg->second.rc.aCount[i] / (double) bcount << "\t" << itRg->first << std::endl;
-	  ncountfile << c.sampleName << "\t" << i << "\tC\t" << itRg->second.rc.cCount[i] << "\t" << (double) itRg->second.rc.cCount[i] / (double) bcount << "\t" << itRg->first << std::endl;
-	  ncountfile << c.sampleName << "\t" << i << "\tG\t" << itRg->second.rc.gCount[i] << "\t" << (double) itRg->second.rc.gCount[i] / (double) bcount << "\t" << itRg->first << std::endl;
-	  ncountfile << c.sampleName << "\t" << i << "\tT\t" << itRg->second.rc.tCount[i] << "\t" << (double) itRg->second.rc.tCount[i] / (double) bcount << "\t" << itRg->first << std::endl;
-	  ncountfile << c.sampleName << "\t" << i << "\tN\t" << itRg->second.rc.nCount[i] << "\t" << (double) itRg->second.rc.nCount[i] / (double) bcount << "\t" << itRg->first << std::endl;
+	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tA\t" << itRg->second.rc.aCount[i] << "\t" << (double) itRg->second.rc.aCount[i] / (double) bcount << "\t" << itRg->first << std::endl;
+	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tC\t" << itRg->second.rc.cCount[i] << "\t" << (double) itRg->second.rc.cCount[i] / (double) bcount << "\t" << itRg->first << std::endl;
+	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tG\t" << itRg->second.rc.gCount[i] << "\t" << (double) itRg->second.rc.gCount[i] / (double) bcount << "\t" << itRg->first << std::endl;
+	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tT\t" << itRg->second.rc.tCount[i] << "\t" << (double) itRg->second.rc.tCount[i] / (double) bcount << "\t" << itRg->first << std::endl;
+	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tN\t" << itRg->second.rc.nCount[i] << "\t" << (double) itRg->second.rc.nCount[i] / (double) bcount << "\t" << itRg->first << std::endl;
 	} else {
-	  ncountfile << c.sampleName << "\t" << i << "\tA\t" << itRg->second.rc.aCount[i] << "\tNA\t" << itRg->first << std::endl;
-	  ncountfile << c.sampleName << "\t" << i << "\tC\t" << itRg->second.rc.cCount[i] << "\tNA\t" << itRg->first << std::endl;
-	  ncountfile << c.sampleName << "\t" << i << "\tG\t" << itRg->second.rc.gCount[i] << "\tNA\t" << itRg->first << std::endl;
-	  ncountfile << c.sampleName << "\t" << i << "\tT\t" << itRg->second.rc.tCount[i] << "\tNA\t" << itRg->first << std::endl;
-	  ncountfile << c.sampleName << "\t" << i << "\tN\t" << itRg->second.rc.nCount[i] << "\tNA\t" << itRg->first << std::endl;
+	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tA\t" << itRg->second.rc.aCount[i] << "\tNA\t" << itRg->first << std::endl;
+	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tC\t" << itRg->second.rc.cCount[i] << "\tNA\t" << itRg->first << std::endl;
+	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tG\t" << itRg->second.rc.gCount[i] << "\tNA\t" << itRg->first << std::endl;
+	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tT\t" << itRg->second.rc.tCount[i] << "\tNA\t" << itRg->first << std::endl;
+	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tN\t" << itRg->second.rc.nCount[i] << "\tNA\t" << itRg->first << std::endl;
 	}
       }
     }
-    bqfile.close();
-    ncountfile.close();
-    
+
+
     // Output mapping quality histogram
-    statFileName = c.outprefix + ".mapq.tsv";
-    std::ofstream mqfile(statFileName.c_str());
-    mqfile << "Sample\tMappingQuality\tCount\tFraction\tLibrary" << std::endl;
+    rcfile << "# Mapping quality histogram (MQ)." << std::endl;
+    rcfile << "# Use `grep ^MQ <outfile> | cut -f 2-` to extract this part." << std::endl;
+    rcfile << "MQ\tSample\tMappingQuality\tCount\tFraction\tLibrary" << std::endl;
     uint32_t lastValidMQ = 0;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg)
       for(uint32_t i = lastValidMQ + 1; i < itRg->second.qc.qcount.size(); ++i)
@@ -671,24 +689,22 @@ namespace bamstats
       for(uint32_t i = 0; i <= lastValidMQ; ++i) {
 	double frac = 0;
 	if (total > 0) frac = (double) itRg->second.qc.qcount[i] / total;
-	mqfile << c.sampleName << "\t" << i << "\t" << itRg->second.qc.qcount[i] << "\t" << frac << "\t" << itRg->first << std::endl;
+	rcfile << "MQ\t" << c.sampleName << "\t" << i << "\t" << itRg->second.qc.qcount[i] << "\t" << frac << "\t" << itRg->first << std::endl;
       }
     }
-    mqfile.close();
 
     // Output coverage histograms
-    statFileName = c.outprefix + ".coverage.tsv";
-    std::ofstream cofile(statFileName.c_str());
-    cofile << "Sample\tCoverage\tCount\tLibrary" << std::endl;
+    rcfile << "# Coverage histogram (CO)." << std::endl;
+    rcfile << "# Use `grep ^CO <outfile> | cut -f 2-` to extract this part." << std::endl;
+    rcfile << "CO\tSample\tCoverage\tCount\tLibrary" << std::endl;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
-      for(uint32_t i = 0; i < itRg->second.bc.bpWithCoverage.size(); ++i) cofile << c.sampleName << "\t" << i << "\t" << itRg->second.bc.bpWithCoverage[i] << "\t" << itRg->first << std::endl;
+      for(uint32_t i = 0; i < itRg->second.bc.bpWithCoverage.size(); ++i) rcfile << "CO\t" << c.sampleName << "\t" << i << "\t" << itRg->second.bc.bpWithCoverage[i] << "\t" << itRg->first << std::endl;
     }
-    cofile.close();
-
+    
     // Output insert size histograms
-    statFileName = c.outprefix + ".isize.tsv";
-    std::ofstream isfile(statFileName.c_str());
-    isfile << "Sample\tInsertSize\tCount\tLayout\tQuantile\tLibrary" << std::endl;
+    rcfile << "# Insert size histogram (IS)." << std::endl;
+    rcfile << "# Use `grep ^IS <outfile> | cut -f 2-` to extract this part." << std::endl;
+    rcfile << "IS\tSample\tInsertSize\tCount\tLayout\tQuantile\tLibrary" << std::endl;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       // Ignore last bucket that collects all other pairs
       uint64_t totalFR = 0;
@@ -697,42 +713,40 @@ namespace bamstats
       for(uint32_t i = 0; i < itRg->second.pc.fPlus.size(); ++i) {
 	double quant = 0;
 	if (totalFR > 0) quant = (double) cumsum / (double) totalFR;
-	isfile << c.sampleName << "\t" << i << "\t" << itRg->second.pc.fPlus[i] << "\tF+\t" << quant << "\t" << itRg->first << std::endl;
-	isfile << c.sampleName << "\t" << i << "\t" << itRg->second.pc.fMinus[i] << "\tF-\t" << quant << "\t" << itRg->first << std::endl;
-	isfile << c.sampleName << "\t" << i << "\t" << itRg->second.pc.rPlus[i] << "\tR+\t" << quant << "\t" << itRg->first << std::endl;
-	isfile << c.sampleName << "\t" << i << "\t" << itRg->second.pc.rMinus[i] << "\tR-\t" << quant << "\t" << itRg->first << std::endl;		
+	rcfile << "IS\t" << c.sampleName << "\t" << i << "\t" << itRg->second.pc.fPlus[i] << "\tF+\t" << quant << "\t" << itRg->first << std::endl;
+	rcfile << "IS\t" << c.sampleName << "\t" << i << "\t" << itRg->second.pc.fMinus[i] << "\tF-\t" << quant << "\t" << itRg->first << std::endl;
+	rcfile << "IS\t" << c.sampleName << "\t" << i << "\t" << itRg->second.pc.rPlus[i] << "\tR+\t" << quant << "\t" << itRg->first << std::endl;
+	rcfile << "IS\t" << c.sampleName << "\t" << i << "\t" << itRg->second.pc.rMinus[i] << "\tR-\t" << quant << "\t" << itRg->first << std::endl;		
 	cumsum += itRg->second.pc.fPlus[i] + itRg->second.pc.fMinus[i] + itRg->second.pc.rPlus[i] + itRg->second.pc.rMinus[i];
       }
     }
-    isfile.close();
 
     if (c.hasRegionFile) {
       // Output avg. bed coverage
-      statFileName = c.outprefix + ".bedcov.tsv";
-      std::ofstream bcfile(statFileName.c_str());
-      bcfile << "Sample\tLibrary\tChr\tStart\tEnd\tAvgCov" << std::endl;
+      rcfile << "# Avg. target coverage (TC)." << std::endl;
+      rcfile << "# Use `grep ^TC <outfile> | cut -f 2-` to extract this part." << std::endl;
+      rcfile << "TC\tSample\tLibrary\tChr\tStart\tEnd\tAvgCov" << std::endl;
       for(int32_t refIndex = 0; refIndex < hdr->n_targets; ++refIndex) {
 	for(typename BedCounts::TRgBpMap::const_iterator itChr = be.gCov[refIndex].begin(); itChr != be.gCov[refIndex].end(); ++itChr) {
 	  for(uint32_t i = 0; i < gRegions[refIndex].size(); ++i) {
-	    bcfile << c.sampleName << "\t" << itChr->first << "\t" << hdr->target_name[refIndex] << "\t" << gRegions[refIndex][i].start << "\t" << gRegions[refIndex][i].end << "\t" << itChr->second[i] << std::endl;
+	    rcfile << "TC\t" << c.sampleName << "\t" << itChr->first << "\t" << hdr->target_name[refIndex] << "\t" << gRegions[refIndex][i].start << "\t" << gRegions[refIndex][i].end << "\t" << itChr->second[i] << std::endl;
 	  }
 	}
       }
-      bcfile.close();
-    
+      
       // Output on-target rate
-      statFileName = c.outprefix + ".ontarget.tsv";
-      std::ofstream otfile(statFileName.c_str());
-      otfile << "Sample\tLibrary\tExtension\tOnTarget" << std::endl;
+      rcfile << "# On target rate (OT)." << std::endl;
+      rcfile << "# Use `grep ^OT <outfile> | cut -f 2-` to extract this part." << std::endl;
+      rcfile << "OT\tSample\tLibrary\tExtension\tOnTarget" << std::endl;
       for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
 	uint64_t alignedbases = itRg->second.bc.matchCount + itRg->second.bc.mismatchCount;
 	typename BedCounts::TOnTargetMap::iterator itOT = be.onTarget.find(itRg->first);
 	for(uint32_t k = 0; k < itOT->second.size(); ++k) {
-	  otfile << c.sampleName << "\t" << itRg->first << "\t" << k * be.stepsize << "\t" << (double) itOT->second[k] / (double) alignedbases << std::endl;
+	  rcfile << "OT\t" << c.sampleName << "\t" << itRg->first << "\t" << k * be.stepsize << "\t" << (double) itOT->second[k] / (double) alignedbases << std::endl;
 	}
       }
-      otfile.close();
     }
+    rcfile.close();
 
     // clean-up
     bam_destroy1(rec);
