@@ -9,14 +9,17 @@ print("Base Content")
 cmd=paste0('zgrep ^BC ', args[1], ' | cut -f 2-')
 all=read.table(pipe(cmd), header=T)
 for(sid in unique(all$Sample)) {
-	base = all[all$Sample == sid,]
-	p1=ggplot(data=base, aes(x=Position, y=Fraction))
-	p1=p1 + geom_line(aes(group=Base, colour=Base))
-	p1=p1 + xlab("Position in read") + ylab("Base Content Fraction")
-	p1=p1 + scale_y_continuous(labels=comma) + ggtitle("Base Content Distribution")
-	p1=p1 + scale_x_continuous(labels=comma)
-	p1=p1 + facet_wrap(~ Library) + theme(legend.position="bottom", legend.direction='horizontal')
-        print(p1)
+	for(rg in unique(all[all$Sample == sid,]$Library)) {
+	       base = all[all$Sample == sid & all$Library == rg,]
+	       p1=ggplot(data=base, aes(x=Position, y=Fraction))
+	       p1=p1 + geom_line(aes(group=Base, colour=Base))
+	       p1=p1 + xlab("Position in read") + ylab("Base Content Fraction")
+	       p1=p1 + scale_y_continuous(labels=comma, limits=c(0, max(base$Fraction)))
+	       p1=p1 + ggtitle(paste0("Base Content Distribution", "\n", "Sample: ", sid, "\n", "RG: ", rg))
+	       p1=p1 + scale_x_continuous(labels=comma)
+	       p1=p1 + theme(legend.position="bottom", legend.direction='horizontal')
+               print(p1)
+	}
 }
 print(warnings())	
 
@@ -24,14 +27,17 @@ print("Base Qualities")
 cmd=paste0('zgrep ^BQ ', args[1], ' | cut -f 2-')
 all=read.table(pipe(cmd), header=T)
 for(sid in unique(all$Sample)) {
-       bq = all[all$Sample == sid,]
-       p1=ggplot(data=bq, aes(x=Position, y=BaseQual))
-       p1=p1 + geom_line(aes(group=Library, colour=Library))
-       p1=p1 + xlab("Position in read") + ylab("Mean Base Quality")
-       p1=p1 + scale_y_continuous(labels=comma) + ggtitle("Base Quality Distribution")
-       p1=p1 + scale_x_continuous(labels=comma)
-       p1=p1 + theme(legend.position="bottom", legend.direction='horizontal')
-       print(p1)
+	for(rg in unique(all[all$Sample == sid,]$Library)) {	
+	       bq = all[all$Sample == sid & all$Library == rg,]
+	       p1=ggplot(data=bq, aes(x=Position, y=BaseQual))
+       	       p1=p1 + geom_line()
+       	       p1=p1 + xlab("Position in read") + ylab("Mean Base Quality")
+       	       p1=p1 + scale_y_continuous(labels=comma, limits=c(0, max(bq$BaseQual)))
+	       p1=p1 + ggtitle(paste0("Base Quality Distribution", "\n", "Sample: ", sid, "\n", "RG: ", rg))
+       	       p1=p1 + scale_x_continuous(labels=comma)
+       	       p1=p1 + theme(legend.position="bottom", legend.direction='horizontal')
+       	       print(p1)
+	}
 }
 print(warnings())
 
@@ -39,14 +45,17 @@ print("Read length")
 cmd=paste0('zgrep ^RL ', args[1], ' | cut -f 2-')
 all=read.table(pipe(cmd), header=T)
 for(sid in unique(all$Sample)) {
-	rl = all[all$Sample == sid,]
-	p1=ggplot(data=rl, aes(x=Readlength, y=Fraction))
-	p1=p1 + geom_line(aes(group=Library, colour=Library))
-	p1=p1 + xlab("Read length") + ylab("Fraction of reads")
-	p1=p1 + scale_y_continuous(labels=comma) + ggtitle("Read Length Distribution")
-	p1=p1 + scale_x_continuous(labels=comma)
-	p1=p1 + theme(legend.position="bottom", legend.direction='horizontal')
-	print(p1)
+	for(rg in unique(all[all$Sample == sid,]$Library)) {
+	       rl = all[all$Sample == sid & all$Library == rg,]
+	       p1=ggplot(data=rl, aes(x=Readlength, y=Fraction))
+	       p1=p1 + geom_line()
+	       p1=p1 + xlab("Read length") + ylab("Fraction of reads")
+	       p1=p1 + scale_y_continuous(labels=comma)
+	       p1=p1 + ggtitle(paste0("Read Length Distribution", "\n", "Sample: ", sid, "\n", "RG: ", rg))
+	       p1=p1 + scale_x_continuous(labels=comma)
+	       p1=p1 + theme(legend.position="bottom", legend.direction='horizontal')
+	       print(p1)
+	}
 }
 print(warnings())
 
@@ -54,14 +63,17 @@ print("Mapping quality")
 cmd=paste0('zgrep ^MQ ', args[1], ' | cut -f 2-')
 all=read.table(pipe(cmd), header=T)
 for(sid in unique(all$Sample)) {
-	mq = all[all$Sample == sid,]
-	p1=ggplot(data=mq, aes(x=MappingQuality, y=Fraction))
-	p1=p1 + geom_line(aes(group=Library, colour=Library))
-	p1=p1 + xlab("Mapping Quality") + ylab("Fraction of reads")
-	p1=p1 + scale_y_continuous(labels=comma) + ggtitle("Mapping Quality Distribution")
-	p1=p1 + scale_x_continuous(labels=comma)
-	p1=p1 + theme(legend.position="bottom", legend.direction='horizontal')
-	print(p1)
+	for(rg in unique(all[all$Sample == sid,]$Library)) {
+	       mq = all[all$Sample == sid & all$Library == rg,]
+	       p1=ggplot(data=mq, aes(x=MappingQuality, y=Fraction))
+	       p1=p1 + geom_line()
+	       p1=p1 + xlab("Mapping Quality") + ylab("Fraction of reads")
+	       p1=p1 + scale_y_continuous(labels=comma)
+	       p1=p1 + ggtitle(paste0("Mapping Quality Distribution", "\n", "Sample: ", sid, "\n", "RG: ", rg))
+	       p1=p1 + scale_x_continuous(labels=comma)
+	       p1=p1 + theme(legend.position="bottom", legend.direction='horizontal')
+	       print(p1)
+	}
 }
 print(warnings())
 
@@ -69,10 +81,12 @@ print("Coverage")
 cmd=paste0('zgrep ^CO ', args[1], ' | cut -f 2-')
 all=read.table(pipe(cmd), header=T)
 for(sid in unique(all$Sample)) {
-	cov = all[all$Sample == sid,]
+   for(rg in unique(all[all$Sample == sid,]$Library)) {
+	cov = all[all$Sample == sid & all$Library == rg,]
 	p1=ggplot(data=cov, aes(x=Coverage, y=Count))
-	p1=p1 + geom_line(aes(group=Library, colour=Library))
-	p1=p1 + scale_y_continuous(labels=comma) + ggtitle("Coverage Distribution")
+	p1=p1 + geom_line()
+	p1=p1 + scale_y_continuous(labels=comma)
+	p1=p1 + ggtitle(paste0("Coverage Distribution", "\n", "Sample: ", sid, "\n", "RG: ", rg))
 	p1=p1 + scale_x_continuous(labels=comma)
 	p1=p1 + theme(legend.position="bottom", legend.direction='horizontal')
 	print(p1)
@@ -88,11 +102,13 @@ for(sid in unique(all$Sample)) {
               covfilt=rbind(covfilt, slc[which(slc$Count>=lowcut)[1]:tail(which(slc$Count>=lowcut), n=1),])
 	}
 	p1=ggplot(data=covfilt, aes(x=Coverage, y=Count))
-	p1=p1 + geom_line(aes(group=Library, colour=Library))
-	p1=p1 + scale_y_continuous(labels=comma) + ggtitle("Coverage Distribution (99% of the data)")
+	p1=p1 + geom_line()
+	p1=p1 + scale_y_continuous(labels=comma)
+	p1=p1 + ggtitle(paste0("Coverage Distribution (99% of the data)", "\n", "Sample: ", sid, "\n", "RG: ", rg))
 	p1=p1 + scale_x_continuous(labels=comma)
 	p1=p1 + theme(legend.position="bottom", legend.direction='horizontal')
 	print(p1)
+   }
 }
 print(warnings())
 
@@ -100,19 +116,23 @@ print("Insert Size")
 cmd=paste0('zgrep ^IS ', args[1], ' | cut -f 2-')
 all=read.table(pipe(cmd), header=T)
 for(sid in unique(all$Sample)) {
-	ins = all[all$Sample == sid,]
-	tc=sum(as.numeric(ins$Count))
+   for(rg in unique(all[all$Sample == sid,]$Library)) {
+      ins = all[all$Sample == sid & all$Library == rg,]
+      tc=sum(as.numeric(ins$Count))
+      if (tc > 0) {
 	upBound=max(ins[ins$Quantile >= 0.001 & ins$Quantile <= 0.999,]$InsertSize)
 	gr=sum(as.numeric(ins[ins$InsertSize>upBound,]$Count))
 	infoMax = paste0("Insert size > ", upBound, " (", round(100 * gr / tc, digits=2), "%)")
 	ins=ins[ins$InsertSize <= upBound,]
 	p1=ggplot(data=ins, aes(x=InsertSize, y=Count))
 	p1=p1 + geom_line(aes(group=Layout, colour=Layout))
-	p1=p1 + scale_y_continuous(labels=comma) + ggtitle(paste0("Insert Size Distribution", "\n", infoMax))
+	p1=p1 + scale_y_continuous(labels=comma)
+	p1=p1 + ggtitle(paste0("Insert Size Distribution", "\n", infoMax, "\n", "Sample: ", sid, "\n", "RG: ", rg))
 	p1=p1 + scale_x_continuous(labels=comma)
-	p1=p1 + facet_grid(~ Library)
 	p1=p1 + theme(axis.text.x = element_text(angle=45, hjust=1))
 	print(p1)
+     }
+   }
 }
 print(warnings())
 

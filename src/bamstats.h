@@ -625,11 +625,10 @@ namespace bamstats
     rcfile << "# Read length distribution (RL)." << std::endl;
     rcfile << "# Use `zgrep ^RL <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "RL\tSample\tReadlength\tCount\tFraction\tLibrary" << std::endl;
-    uint32_t lastValidRL = 0;
-    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg)
-      for(uint32_t i = lastValidRL + 1; i < itRg->second.rc.lRc.size(); ++i)
-	if (itRg->second.rc.lRc[i] > 0) lastValidRL = i; 
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+      uint32_t lastValidRL = 0;
+      for(uint32_t i = 0; i < itRg->second.rc.lRc.size(); ++i)
+	if (itRg->second.rc.lRc[i] > 0) lastValidRL = i;
       double total = 0;
       for(uint32_t i = 0; i <= lastValidRL; ++i) total += itRg->second.rc.lRc[i];
       for(uint32_t i = 0; i <= lastValidRL; ++i) {
@@ -643,13 +642,12 @@ namespace bamstats
     rcfile << "# Mean base quality (BQ)." << std::endl;
     rcfile << "# Use `zgrep ^BQ <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "BQ\tSample\tPosition\tBaseQual\tLibrary" << std::endl;
-    uint32_t lastValidBQIdx = 0;
-    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg)
+    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+      uint32_t lastValidBQIdx = 0;
       for(uint32_t i = lastValidBQIdx + 1; i < itRg->second.rc.nCount.size(); ++i) {
 	uint64_t bcount = itRg->second.rc.aCount[i] + itRg->second.rc.cCount[i] + itRg->second.rc.gCount[i] + itRg->second.rc.tCount[i] + itRg->second.rc.nCount[i];
 	if (bcount > 0) lastValidBQIdx = i;
       }
-    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
 	uint64_t bcount = itRg->second.rc.aCount[i] + itRg->second.rc.cCount[i] + itRg->second.rc.gCount[i] + itRg->second.rc.tCount[i] + itRg->second.rc.nCount[i];
 	if (bcount > 0) rcfile << "BQ\t" << c.sampleName << "\t" << i << "\t" << (double) (itRg->second.rc.bqCount[i]) / (double) (bcount) << "\t" << itRg->first << std::endl;
@@ -662,6 +660,11 @@ namespace bamstats
     rcfile << "# Use `zgrep ^BC <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "BC\tSample\tPosition\tBase\tCount\tFraction\tLibrary" << std::endl;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+      uint32_t lastValidBQIdx = 0;
+      for(uint32_t i = lastValidBQIdx + 1; i < itRg->second.rc.nCount.size(); ++i) {
+	uint64_t bcount = itRg->second.rc.aCount[i] + itRg->second.rc.cCount[i] + itRg->second.rc.gCount[i] + itRg->second.rc.tCount[i] + itRg->second.rc.nCount[i];
+	if (bcount > 0) lastValidBQIdx = i;
+      }
       for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
 	uint64_t bcount = itRg->second.rc.aCount[i] + itRg->second.rc.cCount[i] + itRg->second.rc.gCount[i] + itRg->second.rc.tCount[i] + itRg->second.rc.nCount[i];
 	if (bcount > 0) {
@@ -685,11 +688,10 @@ namespace bamstats
     rcfile << "# Mapping quality histogram (MQ)." << std::endl;
     rcfile << "# Use `zgrep ^MQ <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "MQ\tSample\tMappingQuality\tCount\tFraction\tLibrary" << std::endl;
-    uint32_t lastValidMQ = 0;
-    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg)
-      for(uint32_t i = lastValidMQ + 1; i < itRg->second.qc.qcount.size(); ++i)
-	if (itRg->second.qc.qcount[i] > 0) lastValidMQ = i;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+      uint32_t lastValidMQ = 0;
+      for(uint32_t i = 0; i < itRg->second.qc.qcount.size(); ++i)
+	if (itRg->second.qc.qcount[i] > 0) lastValidMQ = i;
       double total = 0;
       for(uint32_t i = 0; i <= lastValidMQ; ++i) total += itRg->second.qc.qcount[i];
       for(uint32_t i = 0; i <= lastValidMQ; ++i) {
@@ -704,7 +706,10 @@ namespace bamstats
     rcfile << "# Use `zgrep ^CO <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "CO\tSample\tCoverage\tCount\tLibrary" << std::endl;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
-      for(uint32_t i = 0; i < itRg->second.bc.bpWithCoverage.size(); ++i) rcfile << "CO\t" << c.sampleName << "\t" << i << "\t" << itRg->second.bc.bpWithCoverage[i] << "\t" << itRg->first << std::endl;
+      uint32_t lastValidCO = 0;
+      for(uint32_t i = 0; i < itRg->second.bc.bpWithCoverage.size(); ++i)
+	if (itRg->second.bc.bpWithCoverage[i] > 0) lastValidCO = i;
+      for(uint32_t i = 0; i <= lastValidCO; ++i) rcfile << "CO\t" << c.sampleName << "\t" << i << "\t" << itRg->second.bc.bpWithCoverage[i] << "\t" << itRg->first << std::endl;
     }
     
     // Output insert size histograms
@@ -712,11 +717,16 @@ namespace bamstats
     rcfile << "# Use `zgrep ^IS <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "IS\tSample\tInsertSize\tCount\tLayout\tQuantile\tLibrary" << std::endl;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+      uint32_t lastValidISIdx = 0;
+      for(uint32_t i = 0; i < itRg->second.pc.fPlus.size(); ++i) {
+	uint64_t tpecount = itRg->second.pc.fPlus[i] + itRg->second.pc.fMinus[i] + itRg->second.pc.rPlus[i] + itRg->second.pc.rMinus[i];
+	if (tpecount > 0) lastValidISIdx = i;
+      }
       // Ignore last bucket that collects all other pairs
       uint64_t totalFR = 0;
       for(uint32_t i = 0; i < itRg->second.pc.fPlus.size() - 1; ++i) totalFR += itRg->second.pc.fPlus[i] + itRg->second.pc.fMinus[i] + itRg->second.pc.rPlus[i] + itRg->second.pc.rMinus[i];
       uint64_t cumsum = 0;
-      for(uint32_t i = 0; i < itRg->second.pc.fPlus.size(); ++i) {
+      for(uint32_t i = 0; i <= lastValidISIdx; ++i) {
 	double quant = 0;
 	if (totalFR > 0) quant = (double) cumsum / (double) totalFR;
 	rcfile << "IS\t" << c.sampleName << "\t" << i << "\t" << itRg->second.pc.fPlus[i] << "\tF+\t" << quant << "\t" << itRg->first << std::endl;
