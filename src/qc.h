@@ -67,7 +67,7 @@ int qc(int argc, char **argv) {
     ("help,?", "show help message")
     ("reference,r", boost::program_options::value<boost::filesystem::path>(&c.genome), "reference fasta file (required)")
     ("bed,b", boost::program_options::value<boost::filesystem::path>(&c.regionFile), "bed file with regions to analyze (optional)")
-    ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("stats.tsv"), "output file")
+    ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("stats.tsv.gz"), "gzipped output file")
     ;
 
   boost::program_options::options_description hidden("Hidden options");

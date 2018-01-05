@@ -31,6 +31,10 @@ Contact: Tobias Rausch (rausch@embl.de)
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/progress.hpp>
+#include <boost/iostreams/device/file.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/filter/zlib.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
 
 #include <htslib/sam.h>
 #include <htslib/faidx.h>
@@ -538,7 +542,9 @@ namespace bamstats
     
 
     // Outfile
-    std::ofstream rcfile(c.outfile.string().c_str());
+    boost::iostreams::filtering_ostream rcfile;
+    rcfile.push(boost::iostreams::gzip_compressor());
+    rcfile.push(boost::iostreams::file_sink(c.outfile.string().c_str(), std::ios_base::out | std::ios_base::binary));
 
     // Output header
     rcfile << "# This file was produced by alfred v" << alfredVersionNumber << "." << std::endl;
@@ -546,7 +552,7 @@ namespace bamstats
 
     // Output metrics
     rcfile << "# Alignment summary metrics (ME)." << std::endl;
-    rcfile << "# Use `grep ^ME <outfile> | cut -f 2-` to extract this part." << std::endl;
+    rcfile << "# Use `zgrep ^ME <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "ME\tSample\tLibrary\t#QCFail\tQCFailFraction\t#DuplicateMarked\tDuplicateFraction\t#Unmapped\tUnmappedFraction\t#Mapped\tMappedFraction\t#MappedRead1\t#MappedRead2\tRatioMapped2vsMapped1\t#MappedForward\tMappedForwardFraction\t#MappedReverse\tMappedReverseFraction\t#SecondaryAlignments\tSecondaryAlignmentFraction\t#SupplementaryAlignments\tSupplementaryAlignmentFraction\t#SplicedAlignments\tSplicedAlignmentFraction" << "\t";
     rcfile << "#Pairs\t#MappedPairs\tMappedPairsFraction\t#MappedSameChr\tMappedSameChrFraction" << "\t";
     rcfile << "#ReferenceBp\t#ReferenceNs\t#AlignedBases\t#MatchedBases\tMatchRate\t#MismatchedBases\tMismatchRate\t#DeletionsCigarD\tDeletionRate\t#InsertionsCigarI\tInsertionRate\t#SoftClippedBases\tSoftClipRate\t#HardClippedBases\tHardClipRate\tErrorRate" << "\t";
@@ -617,7 +623,7 @@ namespace bamstats
 
     // Output read length histogram
     rcfile << "# Read length distribution (RL)." << std::endl;
-    rcfile << "# Use `grep ^RL <outfile> | cut -f 2-` to extract this part." << std::endl;
+    rcfile << "# Use `zgrep ^RL <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "RL\tSample\tReadlength\tCount\tFraction\tLibrary" << std::endl;
     uint32_t lastValidRL = 0;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg)
@@ -635,7 +641,7 @@ namespace bamstats
 
     // Output mean base quality
     rcfile << "# Mean base quality (BQ)." << std::endl;
-    rcfile << "# Use `grep ^BQ <outfile> | cut -f 2-` to extract this part." << std::endl;
+    rcfile << "# Use `zgrep ^BQ <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "BQ\tSample\tPosition\tBaseQual\tLibrary" << std::endl;
     uint32_t lastValidBQIdx = 0;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg)
@@ -653,7 +659,7 @@ namespace bamstats
 
     // Output per base ACGTN content
     rcfile << "# Base content (BC)." << std::endl;
-    rcfile << "# Use `grep ^BC <outfile> | cut -f 2-` to extract this part." << std::endl;
+    rcfile << "# Use `zgrep ^BC <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "BC\tSample\tPosition\tBase\tCount\tFraction\tLibrary" << std::endl;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
@@ -677,7 +683,7 @@ namespace bamstats
 
     // Output mapping quality histogram
     rcfile << "# Mapping quality histogram (MQ)." << std::endl;
-    rcfile << "# Use `grep ^MQ <outfile> | cut -f 2-` to extract this part." << std::endl;
+    rcfile << "# Use `zgrep ^MQ <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "MQ\tSample\tMappingQuality\tCount\tFraction\tLibrary" << std::endl;
     uint32_t lastValidMQ = 0;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg)
@@ -695,7 +701,7 @@ namespace bamstats
 
     // Output coverage histograms
     rcfile << "# Coverage histogram (CO)." << std::endl;
-    rcfile << "# Use `grep ^CO <outfile> | cut -f 2-` to extract this part." << std::endl;
+    rcfile << "# Use `zgrep ^CO <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "CO\tSample\tCoverage\tCount\tLibrary" << std::endl;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       for(uint32_t i = 0; i < itRg->second.bc.bpWithCoverage.size(); ++i) rcfile << "CO\t" << c.sampleName << "\t" << i << "\t" << itRg->second.bc.bpWithCoverage[i] << "\t" << itRg->first << std::endl;
@@ -703,7 +709,7 @@ namespace bamstats
     
     // Output insert size histograms
     rcfile << "# Insert size histogram (IS)." << std::endl;
-    rcfile << "# Use `grep ^IS <outfile> | cut -f 2-` to extract this part." << std::endl;
+    rcfile << "# Use `zgrep ^IS <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "IS\tSample\tInsertSize\tCount\tLayout\tQuantile\tLibrary" << std::endl;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       // Ignore last bucket that collects all other pairs
@@ -724,7 +730,7 @@ namespace bamstats
     if (c.hasRegionFile) {
       // Output avg. bed coverage
       rcfile << "# Avg. target coverage (TC)." << std::endl;
-      rcfile << "# Use `grep ^TC <outfile> | cut -f 2-` to extract this part." << std::endl;
+      rcfile << "# Use `zgrep ^TC <outfile> | cut -f 2-` to extract this part." << std::endl;
       rcfile << "TC\tSample\tLibrary\tChr\tStart\tEnd\tAvgCov" << std::endl;
       for(int32_t refIndex = 0; refIndex < hdr->n_targets; ++refIndex) {
 	for(typename BedCounts::TRgBpMap::const_iterator itChr = be.gCov[refIndex].begin(); itChr != be.gCov[refIndex].end(); ++itChr) {
@@ -736,7 +742,7 @@ namespace bamstats
       
       // Output on-target rate
       rcfile << "# On target rate (OT)." << std::endl;
-      rcfile << "# Use `grep ^OT <outfile> | cut -f 2-` to extract this part." << std::endl;
+      rcfile << "# Use `zgrep ^OT <outfile> | cut -f 2-` to extract this part." << std::endl;
       rcfile << "OT\tSample\tLibrary\tExtension\tOnTarget" << std::endl;
       for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
 	uint64_t alignedbases = itRg->second.bc.matchCount + itRg->second.bc.mismatchCount;
@@ -746,7 +752,6 @@ namespace bamstats
 	}
       }
     }
-    rcfile.close();
 
     // clean-up
     bam_destroy1(rec);
