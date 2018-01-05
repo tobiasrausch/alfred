@@ -19,91 +19,56 @@ Alternatively, you can build Alfred from source. Alfred dependencies are include
 
 `make all`
 
-Running Alfred
-------------------
+BAM Alignment Quality Control
+-----------------------------
 
-BAM Alignment Quality Control: Insert size, coverage, mapping quality, read length, base composition and base quality distributions by read group and various other mapping statistics
+Alfred computes various alignment metrics and summary statistics by read group
 
-`./src/alfred qc -r <ref.fa> -o outprefix <align.bam>`
+`./src/alfred qc -r <ref.fa> -o <outfile.tsv.gz> <align.bam>`
 
-BAM Feature Counting: Assigning reads to gene annotation features from a GTF file such as counting reads by gene or transcript identifier. Requires paired-end data.
+Plotting alignment statistics
 
-`cd gtf/ && ./downloadGTF.sh`
+`Rscript R/stats.R <outfile.tsv.gz>`
 
-`./src/alfred count -g gtf/Homo_sapiens.GRCh37.75.gtf.gz <align.GRCh37.bam>`
+To convert all the alignment metrics from column format to rows to easily read it on screen
 
-Plotting basic quality control metrics
---------------------------------------
-
-Plotting the mean base quality across the read
-
-`Rscript R/basequal.R outprefix.basequal.tsv`
-
-Plotting the base composition across the read
-
-`Rscript R/contentACGTN.R outprefix.contentACGTN.tsv`
-
-Plotting the read length distribution
-
-`Rscript R/readlength.R outprefix.readlength.tsv`
-
-Plotting the mapping quality distribution
-
-`Rscript R/mapq.R outprefix.mapq.tsv`
-
-Plotting the insert size distribution.
-
-`Rscript R/isize.R outprefix.isize.tsv`
-
-Plotting the coverage distribution.
-
-`Rscript R/coverage.R outprefix.coverage.tsv`
-
-To convert all the alignment metrics from column format to rows to easily read it on screen.
-
-`cat outprefix.metrics.tsv | datamash transpose | column -t`
+`zgrep ^ME stats.tsv.gz | cut -f 2- | datamash transpose | column -t`
 
 
-Running Alfred QC using a bed file of target regions
----------------------------------------------------
+BAM Alignment Quality Control for Targeted Sequencing
+-----------------------------------------------------
 
 If target regions are provided, Alfred computes the average coverage for each target and the on-target rate.
 
-`./src/alfred qc -r <ref.fa> -b <targets.bed> -o outprefix <align.bam>`
+`./src/alfred qc -r <ref.fa> -b <targets.bed> -o <outfile.tsv.gz> <align.bam>`
 
 For instance, for a human whole-exome data set.
 
 `cd exon/ && Rscript exon.R`
 
-`./src/alfred qc -r <hg19.fa> -b exon/exonic.hg19.bed.gz -o outprefix <exome.bam>`
+`./src/alfred qc -r <hg19.fa> -b exon/exonic.hg19.bed.gz -o <outfile.tsv.gz> <exome.bam>`
 
-Plotting the on-target rate.
-
-`Rscript R/ontarget.R outprefix.ontarget.tsv`
-
-Plotting the fraction of targets above a given coverage threshold.
-
-`Rscript R/bedcov.R outprefix.bedcov.tsv`
+`Rscript R/stats.R <outfile.tsv.gz>`
 
 
-Alfred wrapper scripts
-----------------------
+BAM Feature Counting
+--------------------
 
-Alfred contains a wrapper script to combine all QC plots and metrics into a single pdf.
+Alfred can also assign reads to gene annotation features from a GTF file such as counting reads by gene or transcript identifier. Requires paired-end data.
 
-`./alfred.sh <ref.fa> <outprefix> <align.bam>`
+`cd gtf/ && ./downloadGTF.sh`
 
-A bed file of target regions is optional.
-
-`./alfred.sh <ref.fa> <outprefix> <align.bam> <exome.bed>`
+`./src/alfred count -g gtf/Homo_sapiens.GRCh37.75.gtf.gz <align.GRCh37.bam>`
 
 
 Example E. coli data set
 ------------------------
 
-`./alfred.sh exampledata/E.coli.fa.gz exampledata/out exampledata/E.coli.cram`
+`./src/alfred qc -r exampledata/E.coli.fa.gz -o exampledata/stats.tsv.gz exampledata/E.coli.cram`
 
-The final pdf is exampledata/out.pdf
+`Rscript R/stats.R exampledata/stats.tsv.gz`
+
+The final pdf is exampledata/stats.tsv.gz.pdf
 
 
 Example QC plots
