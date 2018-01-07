@@ -90,6 +90,28 @@ namespace bamstats
     return seed;
   }
 
+  inline int32_t
+  homopolymerContext(std::string const& s, int32_t idx, int32_t homlen) {
+    for(int32_t i = std::max(0, idx - (homlen - 1)); i <= (idx + 1); ++i) {
+      if (i + homlen <= (int32_t) s.size()) {
+	bool hompoly = true;
+	for(int32_t k = i + 1; k < i + homlen; ++k) {
+	  if (s[k] != s[i]) {
+	    hompoly = false;
+	    break;
+	  }
+	}
+	if (hompoly) {
+	  if (s[i] == 'A') return 0;
+	  else if (s[i] == 'C') return 1;
+	  else if (s[i] == 'G') return 2;
+	  else if (s[i] == 'T') return 3;
+	  else return 4;
+	}
+      }
+    }
+    return 4;
+  }
 
   inline std::size_t hash_pair_mate(bam1_t* rec) {
     std::size_t seed = hash_string(bam_get_qname(rec));

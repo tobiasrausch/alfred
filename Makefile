@@ -65,4 +65,4 @@ install: ${BUILT_PROGRAMS}
 clean:
 	cd src/htslib && make clean
 	cd src/modular-boost && ./b2 --clean-all
-	rm -f $(TARGETS) $(TARGETS:=.o)
+	rm -f $(TARGETS) $(TARGETS:=.o) ${SUBMODULES}

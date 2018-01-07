@@ -58,10 +58,14 @@ namespace bamstats
     uint64_t insCount;
     uint64_t softClipCount;
     uint64_t hardClipCount;
+    std::vector<uint32_t> delHomACGTN;  // A:0, C:1, G:2, T:3, N:4
+    std::vector<uint32_t> insHomACGTN;  // A:0, C:1, G:2, T:3, N:4
     TCoverageBp bpWithCoverage;
     TBpCoverage cov;
 
     BaseCounts() : maxCoverage(std::numeric_limits<TMaxCoverage>::max()), matchCount(0), mismatchCount(0), delCount(0), insCount(0), softClipCount(0), hardClipCount(0) {
+      delHomACGTN.resize(5, 0);
+      insHomACGTN.resize(5, 0);
       bpWithCoverage.resize(maxCoverage + 1, 0);
       cov.clear();
     }
@@ -508,9 +512,11 @@ namespace bamstats
 	  }
 	} else if (bam_cigar_op(cigar[i]) == BAM_CDEL) {
 	  ++itRg->second.bc.delCount;
+	  ++itRg->second.bc.delHomACGTN[homopolymerContext(sequence, sp, 3)];
 	  rp += bam_cigar_oplen(cigar[i]);
 	} else if (bam_cigar_op(cigar[i]) == BAM_CINS) {
 	  ++itRg->second.bc.insCount;
+	  ++itRg->second.bc.insHomACGTN[homopolymerContext(sequence, sp, 3)];
 	  sp += bam_cigar_oplen(cigar[i]);
 	} else if (bam_cigar_op(cigar[i]) == BAM_CSOFT_CLIP) {
 	  ++itRg->second.bc.softClipCount;
@@ -555,7 +561,7 @@ namespace bamstats
     rcfile << "# Use `zgrep ^ME <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "ME\tSample\tLibrary\t#QCFail\tQCFailFraction\t#DuplicateMarked\tDuplicateFraction\t#Unmapped\tUnmappedFraction\t#Mapped\tMappedFraction\t#MappedRead1\t#MappedRead2\tRatioMapped2vsMapped1\t#MappedForward\tMappedForwardFraction\t#MappedReverse\tMappedReverseFraction\t#SecondaryAlignments\tSecondaryAlignmentFraction\t#SupplementaryAlignments\tSupplementaryAlignmentFraction\t#SplicedAlignments\tSplicedAlignmentFraction" << "\t";
     rcfile << "#Pairs\t#MappedPairs\tMappedPairsFraction\t#MappedSameChr\tMappedSameChrFraction" << "\t";
-    rcfile << "#ReferenceBp\t#ReferenceNs\t#AlignedBases\t#MatchedBases\tMatchRate\t#MismatchedBases\tMismatchRate\t#DeletionsCigarD\tDeletionRate\t#InsertionsCigarI\tInsertionRate\t#SoftClippedBases\tSoftClipRate\t#HardClippedBases\tHardClipRate\tErrorRate" << "\t";
+    rcfile << "#ReferenceBp\t#ReferenceNs\t#AlignedBases\t#MatchedBases\tMatchRate\t#MismatchedBases\tMismatchRate\t#DeletionsCigarD\tDeletionRate\tdelHomopolymerACGTNone\t#InsertionsCigarI\tInsertionRate\tinsHomopolymerACGTNone\t#SoftClippedBases\tSoftClipRate\t#HardClippedBases\tHardClipRate\tErrorRate" << "\t";
     rcfile << "MedianReadLength\tDefaultLibraryLayout\tMedianInsertSize\tMedianCoverage\tSDCoverage\tMedianMAPQ";
     if (c.hasRegionFile) rcfile << "\t#TotalBedBp\t#AlignedBasesInBed\tEnrichmentOverBed" << std::endl;
     else rcfile << std::endl;
@@ -585,7 +591,7 @@ namespace bamstats
       
       // Error rates
       uint64_t alignedbases = itRg->second.bc.matchCount + itRg->second.bc.mismatchCount;
-      rcfile << referencebp << "\t" << ncount << "\t" << alignedbases << "\t" << itRg->second.bc.matchCount << "\t" << (double) itRg->second.bc.matchCount / (double) alignedbases << "\t" << itRg->second.bc.mismatchCount << "\t" << (double) itRg->second.bc.mismatchCount / (double) alignedbases << "\t" << itRg->second.bc.delCount << "\t" << (double) itRg->second.bc.delCount / (double) alignedbases << "\t" << itRg->second.bc.insCount << "\t" << (double) itRg->second.bc.insCount / (double) alignedbases << "\t" << itRg->second.bc.softClipCount << "\t" << (double) itRg->second.bc.softClipCount / (double) alignedbases << "\t" << itRg->second.bc.hardClipCount << "\t" << (double) itRg->second.bc.hardClipCount / (double) alignedbases << "\t" << (double) (itRg->second.bc.mismatchCount + itRg->second.bc.delCount + itRg->second.bc.insCount + itRg->second.bc.softClipCount + itRg->second.bc.hardClipCount) / (double) alignedbases  << "\t";
+      rcfile << referencebp << "\t" << ncount << "\t" << alignedbases << "\t" << itRg->second.bc.matchCount << "\t" << (double) itRg->second.bc.matchCount / (double) alignedbases << "\t" << itRg->second.bc.mismatchCount << "\t" << (double) itRg->second.bc.mismatchCount / (double) alignedbases << "\t" << itRg->second.bc.delCount << "\t" << (double) itRg->second.bc.delCount / (double) alignedbases << "\t" << itRg->second.bc.delHomACGTN[0] << ',' << itRg->second.bc.delHomACGTN[1] << ',' << itRg->second.bc.delHomACGTN[2] << ',' << itRg->second.bc.delHomACGTN[3] << ',' << itRg->second.bc.delHomACGTN[4] << "\t" << itRg->second.bc.insCount << "\t" << (double) itRg->second.bc.insCount / (double) alignedbases << "\t" << itRg->second.bc.insHomACGTN[0] << ',' << itRg->second.bc.insHomACGTN[1] << ',' << itRg->second.bc.insHomACGTN[2] << ',' << itRg->second.bc.insHomACGTN[3] << ',' << itRg->second.bc.insHomACGTN[4] << "\t" << itRg->second.bc.softClipCount << "\t" << (double) itRg->second.bc.softClipCount / (double) alignedbases << "\t" << itRg->second.bc.hardClipCount << "\t" << (double) itRg->second.bc.hardClipCount / (double) alignedbases << "\t" << (double) (itRg->second.bc.mismatchCount + itRg->second.bc.delCount + itRg->second.bc.insCount + itRg->second.bc.softClipCount + itRg->second.bc.hardClipCount) / (double) alignedbases  << "\t";
 
       // Median coverage, read length, etc.
       int32_t medISize = 0;
