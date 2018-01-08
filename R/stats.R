@@ -167,15 +167,18 @@ all=tryCatch(read.table(pipe(cmd), header=T), error=function(e) NULL)
 if (!is.null(all)) {
    print("On-target rate");
    for(sid in unique(all$Sample)) {
-   	ot = all[all$Sample == sid,]
+     for(rg in unique(all[all$Sample == sid,]$Library)) {
+   	ot = all[all$Sample == sid & all$Library == rg,]
 	ot$Extension=as.numeric(ot$Extension)
 	ot$OnTarget=as.numeric(ot$OnTarget)
 	p1=ggplot(data=ot, aes(x=Extension, y=OnTarget))
-	p1=p1 + geom_line(aes(group=Library, colour=Library))
-	p1=p1 + scale_y_continuous(labels=comma, limits=c(0,1)) + ggtitle("On-target rate")
+	p1=p1 + geom_line()
+	p1=p1 + scale_y_continuous(labels=comma, limits=c(0,1))
+	p1=p1 + ggtitle(paste0("On-target rate", "\n", "Sample: ", sid, "\n", "RG: ", rg))
 	p1=p1 + scale_x_continuous(labels=comma) + xlab("Left/Right Extension of target region") + ylab("Fraction of reads on-target")
 	p1=p1 + facet_wrap(~ Sample) + theme(legend.position="bottom", legend.direction='horizontal')
 	print(p1)
+     }
    }
    print(warnings())
 }
@@ -184,32 +187,35 @@ all=tryCatch(read.table(pipe(cmd), header=T), error=function(e) NULL)
 if (!is.null(all)) {
    print("Target coverage");
    for(sid in unique(all$Sample)) {
-      	x = all[all$Sample == sid,]
+     for(rg in unique(all[all$Sample == sid,]$Library)) {
+      	x = all[all$Sample == sid & all$Library == rg,]
 	s = data.frame()
 	sl=unique(x[,c("Sample", "Library")])
 	for(i in 1:nrow(sl)) {
 	      slc=x[(x$Sample == sl[i,"Sample"]) & (x$Library == sl[i,"Library"]),]
 	      for (j in 0:max(x$AvgCov)) { s=rbind(s, cbind(Sample=as.character(sl[i,"Sample"]), Library=as.character(sl[i,"Library"]), frac=mean(x$AvgCov >= j), cov=j)); }
 	}
-    s$cov = as.numeric(as.character(s$cov))
-    s$frac = as.numeric(as.character(s$frac))
+    	s$cov = as.numeric(as.character(s$cov))
+    	s$frac = as.numeric(as.character(s$frac))
 
-    # Remove trailing small values
-    tc=sum(as.numeric(s$frac))
-    sc=sort(s$frac)
-    lowcut=sc[cumsum(sc) >= 0.01 * tc][1]
-    sl=unique(s[,c("Sample", "Library")])
-    sfilt = data.frame()
-    for(i in 1:nrow(sl)) {
-      slc=s[(s$Sample == sl[i,"Sample"]) & (s$Library == sl[i,"Library"]),]
-      sfilt=rbind(sfilt, slc[which(slc$frac>=lowcut)[1]:tail(which(slc$frac>=lowcut), n=1),])
-    }
-    p1=ggplot(data=sfilt, aes(x=cov, y=frac))
-    p1=p1 + geom_line(aes(group=Library, colour=Library))
-    p1=p1 + scale_y_continuous(labels=comma) + ggtitle("Target coverage distribution")
-    p1=p1 + scale_x_continuous(labels=comma) + xlab("Coverage") + ylab("Fraction of targets above coverage level")
-    p1=p1 + theme(legend.position="bottom", legend.direction='horizontal')
-    print(p1)
+    	# Remove trailing small values
+    	tc=sum(as.numeric(s$frac))
+    	sc=sort(s$frac)
+    	lowcut=sc[cumsum(sc) >= 0.01 * tc][1]
+    	sl=unique(s[,c("Sample", "Library")])
+    	sfilt = data.frame()
+    	for(i in 1:nrow(sl)) {
+      	      slc=s[(s$Sample == sl[i,"Sample"]) & (s$Library == sl[i,"Library"]),]
+      	      sfilt=rbind(sfilt, slc[which(slc$frac>=lowcut)[1]:tail(which(slc$frac>=lowcut), n=1),])
+    	}
+    	p1=ggplot(data=sfilt, aes(x=cov, y=frac))
+    	p1=p1 + geom_line()
+    	p1=p1 + scale_y_continuous(labels=comma)
+	p1=p1 + ggtitle(paste0("Target coverage distribution", "\n", "Sample: ", sid, "\n", "RG: ", rg))
+   	p1=p1 + scale_x_continuous(labels=comma) + xlab("Coverage") + ylab("Fraction of targets above coverage level")
+    	p1=p1 + theme(legend.position="bottom", legend.direction='horizontal')
+    	print(p1)
+     }
    }
    print(warnings())	
 }
