@@ -52,6 +52,7 @@ namespace bamstats
     typedef std::vector<TMaxCoverage> TBpCoverage;
 
     uint32_t maxCoverage;
+    uint32_t maxIndelSize;
     uint64_t matchCount;
     uint64_t mismatchCount;
     uint64_t delCount;
@@ -60,13 +61,17 @@ namespace bamstats
     uint64_t hardClipCount;
     std::vector<uint32_t> delHomACGTN;  // A:0, C:1, G:2, T:3, N:4
     std::vector<uint32_t> insHomACGTN;  // A:0, C:1, G:2, T:3, N:4
+    std::vector<uint32_t> delSize;
+    std::vector<uint32_t> insSize;
     TCoverageBp bpWithCoverage;
     TBpCoverage cov;
 
-    BaseCounts() : maxCoverage(std::numeric_limits<TMaxCoverage>::max()), matchCount(0), mismatchCount(0), delCount(0), insCount(0), softClipCount(0), hardClipCount(0) {
+    BaseCounts() : maxCoverage(std::numeric_limits<TMaxCoverage>::max()), maxIndelSize(50), matchCount(0), mismatchCount(0), delCount(0), insCount(0), softClipCount(0), hardClipCount(0) {
       delHomACGTN.resize(5, 0);
       insHomACGTN.resize(5, 0);
       bpWithCoverage.resize(maxCoverage + 1, 0);
+      delSize.resize(maxIndelSize + 1, 0);
+      insSize.resize(maxIndelSize + 1, 0);
       cov.clear();
     }
   };
@@ -513,10 +518,14 @@ namespace bamstats
 	} else if (bam_cigar_op(cigar[i]) == BAM_CDEL) {
 	  ++itRg->second.bc.delCount;
 	  ++itRg->second.bc.delHomACGTN[homopolymerContext(sequence, sp, 3)];
+	  if (bam_cigar_oplen(cigar[i]) < itRg->second.bc.maxIndelSize) ++itRg->second.bc.delSize[bam_cigar_oplen(cigar[i])];
+	  else ++itRg->second.bc.delSize[itRg->second.bc.maxIndelSize];
 	  rp += bam_cigar_oplen(cigar[i]);
 	} else if (bam_cigar_op(cigar[i]) == BAM_CINS) {
 	  ++itRg->second.bc.insCount;
 	  ++itRg->second.bc.insHomACGTN[homopolymerContext(sequence, sp, 3)];
+	  if (bam_cigar_oplen(cigar[i]) < itRg->second.bc.maxIndelSize) ++itRg->second.bc.insSize[bam_cigar_oplen(cigar[i])];
+	  else ++itRg->second.bc.insSize[itRg->second.bc.maxIndelSize];
 	  sp += bam_cigar_oplen(cigar[i]);
 	} else if (bam_cigar_op(cigar[i]) == BAM_CSOFT_CLIP) {
 	  ++itRg->second.bc.softClipCount;
@@ -802,7 +811,18 @@ namespace bamstats
 	rcfile << "\t" << itRg->second.bc.insHomACGTN[i] << "\t" << frac << std::endl;
       }
     }
-    
+
+    // InDel size
+    rcfile << "# InDel size (IZ)." << std::endl;
+    rcfile << "# Use `zgrep ^IZ <outfile> | cut -f 2-` to extract this part." << std::endl;
+    rcfile << "IZ\tSample\tLibrary\tInDel\tSize\tCount" << std::endl;
+    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+      for(uint32_t i = 1; i < itRg->second.bc.delSize.size(); ++i) 
+	rcfile << "IZ\t" << c.sampleName << "\t" << itRg->first << "\tDEL\t" << i << "\t" << itRg->second.bc.delSize[i] << std::endl;
+      for(uint32_t i = 1; i < itRg->second.bc.insSize.size(); ++i) 
+	rcfile << "IZ\t" << c.sampleName << "\t" << itRg->first << "\tINS\t" << i << "\t" << itRg->second.bc.insSize[i] << std::endl;
+    }
+
     if (c.hasRegionFile) {
       // Output avg. bed coverage
       rcfile << "# Avg. target coverage (TC)." << std::endl;

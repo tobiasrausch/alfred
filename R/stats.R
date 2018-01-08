@@ -143,6 +143,24 @@ for(sid in unique(all$Sample)) {
 }
 print(warnings())
 
+print("InDel Size")
+cmd=paste0('zgrep ^IZ ', args[1], ' | cut -f 2-')
+all=read.table(pipe(cmd), header=T)
+for(sid in unique(all$Sample)) {
+	for(rg in unique(all[all$Sample == sid,]$Library)) {	
+	       iz = all[all$Sample == sid & all$Library == rg,]
+	       p1=ggplot(data=iz, aes(x=Size, y=Count))
+       	       p1=p1 + geom_line(aes(group=InDel, color=InDel))
+       	       p1=p1 + xlab("InDel Size") + ylab("InDel Count")
+       	       p1=p1 + scale_y_continuous(labels=comma)
+      	       p1=p1 + scale_x_continuous(labels=comma)
+	       p1=p1 + ggtitle(paste0("InDel Size", "\n", "Sample: ", sid, "\n", "RG: ", rg))
+       	       p1=p1 + theme(legend.position="bottom", legend.direction='horizontal')
+       	       print(p1)
+	}
+}
+print(warnings())
+
 # BED file
 cmd=paste0('zgrep ^OT ', args[1], ' | cut -f 2-')
 all=tryCatch(read.table(pipe(cmd), header=T), error=function(e) NULL)
