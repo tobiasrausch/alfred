@@ -561,7 +561,7 @@ namespace bamstats
     rcfile << "# Use `zgrep ^ME <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "ME\tSample\tLibrary\t#QCFail\tQCFailFraction\t#DuplicateMarked\tDuplicateFraction\t#Unmapped\tUnmappedFraction\t#Mapped\tMappedFraction\t#MappedRead1\t#MappedRead2\tRatioMapped2vsMapped1\t#MappedForward\tMappedForwardFraction\t#MappedReverse\tMappedReverseFraction\t#SecondaryAlignments\tSecondaryAlignmentFraction\t#SupplementaryAlignments\tSupplementaryAlignmentFraction\t#SplicedAlignments\tSplicedAlignmentFraction" << "\t";
     rcfile << "#Pairs\t#MappedPairs\tMappedPairsFraction\t#MappedSameChr\tMappedSameChrFraction" << "\t";
-    rcfile << "#ReferenceBp\t#ReferenceNs\t#AlignedBases\t#MatchedBases\tMatchRate\t#MismatchedBases\tMismatchRate\t#DeletionsCigarD\tDeletionRate\tdelHomopolymerACGTNone\t#InsertionsCigarI\tInsertionRate\tinsHomopolymerACGTNone\t#SoftClippedBases\tSoftClipRate\t#HardClippedBases\tHardClipRate\tErrorRate" << "\t";
+    rcfile << "#ReferenceBp\t#ReferenceNs\t#AlignedBases\t#MatchedBases\tMatchRate\t#MismatchedBases\tMismatchRate\t#DeletionsCigarD\tDeletionRate\tHomopolymerContextDel\t#InsertionsCigarI\tInsertionRate\tHomopolymerContextIns\t#SoftClippedBases\tSoftClipRate\t#HardClippedBases\tHardClipRate\tErrorRate" << "\t";
     rcfile << "MedianReadLength\tDefaultLibraryLayout\tMedianInsertSize\tMedianCoverage\tSDCoverage\tMedianMAPQ";
     if (c.hasRegionFile) rcfile << "\t#TotalBedBp\t#AlignedBasesInBed\tEnrichmentOverBed" << std::endl;
     else rcfile << std::endl;
@@ -588,10 +588,26 @@ namespace bamstats
       double mappedpairedchrfrac = 0;
       if (paired > 0) mappedpairedchrfrac = (double) mappedSameChr / (double) paired;
       rcfile << paired << "\t" << mapped << "\t" << mappedpairedfrac << "\t" << mappedSameChr << "\t" << mappedpairedchrfrac << "\t";
-      
+
+      // Homopolymer Context of InDels
+      double insTotal = 0;
+      for(uint32_t i = 0; i < itRg->second.bc.insHomACGTN.size(); ++i) insTotal += itRg->second.bc.insHomACGTN[i];
+      double insFrac = 0;
+      if (insTotal > 0) {
+	for(uint32_t i = 0; i < itRg->second.bc.insHomACGTN.size() - 1; ++i) insFrac += itRg->second.bc.insHomACGTN[i];
+	insFrac /= insTotal;
+      }
+      double delTotal = 0;
+      for(uint32_t i = 0; i < itRg->second.bc.delHomACGTN.size(); ++i) delTotal += itRg->second.bc.delHomACGTN[i];
+      double delFrac = 0;
+      if (delTotal > 0) {
+	for(uint32_t i = 0; i < itRg->second.bc.delHomACGTN.size() - 1; ++i) delFrac += itRg->second.bc.delHomACGTN[i];
+	delFrac /= delTotal;
+      }
+	
       // Error rates
       uint64_t alignedbases = itRg->second.bc.matchCount + itRg->second.bc.mismatchCount;
-      rcfile << referencebp << "\t" << ncount << "\t" << alignedbases << "\t" << itRg->second.bc.matchCount << "\t" << (double) itRg->second.bc.matchCount / (double) alignedbases << "\t" << itRg->second.bc.mismatchCount << "\t" << (double) itRg->second.bc.mismatchCount / (double) alignedbases << "\t" << itRg->second.bc.delCount << "\t" << (double) itRg->second.bc.delCount / (double) alignedbases << "\t" << itRg->second.bc.delHomACGTN[0] << ',' << itRg->second.bc.delHomACGTN[1] << ',' << itRg->second.bc.delHomACGTN[2] << ',' << itRg->second.bc.delHomACGTN[3] << ',' << itRg->second.bc.delHomACGTN[4] << "\t" << itRg->second.bc.insCount << "\t" << (double) itRg->second.bc.insCount / (double) alignedbases << "\t" << itRg->second.bc.insHomACGTN[0] << ',' << itRg->second.bc.insHomACGTN[1] << ',' << itRg->second.bc.insHomACGTN[2] << ',' << itRg->second.bc.insHomACGTN[3] << ',' << itRg->second.bc.insHomACGTN[4] << "\t" << itRg->second.bc.softClipCount << "\t" << (double) itRg->second.bc.softClipCount / (double) alignedbases << "\t" << itRg->second.bc.hardClipCount << "\t" << (double) itRg->second.bc.hardClipCount / (double) alignedbases << "\t" << (double) (itRg->second.bc.mismatchCount + itRg->second.bc.delCount + itRg->second.bc.insCount + itRg->second.bc.softClipCount + itRg->second.bc.hardClipCount) / (double) alignedbases  << "\t";
+      rcfile << referencebp << "\t" << ncount << "\t" << alignedbases << "\t" << itRg->second.bc.matchCount << "\t" << (double) itRg->second.bc.matchCount / (double) alignedbases << "\t" << itRg->second.bc.mismatchCount << "\t" << (double) itRg->second.bc.mismatchCount / (double) alignedbases << "\t" << itRg->second.bc.delCount << "\t" << (double) itRg->second.bc.delCount / (double) alignedbases << "\t" << delFrac << "\t" << itRg->second.bc.insCount << "\t" << (double) itRg->second.bc.insCount / (double) alignedbases << "\t" << insFrac << "\t" << itRg->second.bc.softClipCount << "\t" << (double) itRg->second.bc.softClipCount / (double) alignedbases << "\t" << itRg->second.bc.hardClipCount << "\t" << (double) itRg->second.bc.hardClipCount / (double) alignedbases << "\t" << (double) (itRg->second.bc.mismatchCount + itRg->second.bc.delCount + itRg->second.bc.insCount + itRg->second.bc.softClipCount + itRg->second.bc.hardClipCount) / (double) alignedbases  << "\t";
 
       // Median coverage, read length, etc.
       int32_t medISize = 0;
@@ -705,7 +721,7 @@ namespace bamstats
 	if (total > 0) frac = (double) itRg->second.qc.qcount[i] / total;
 	rcfile << "MQ\t" << c.sampleName << "\t" << i << "\t" << itRg->second.qc.qcount[i] << "\t" << frac << "\t" << itRg->first << std::endl;
       }
-    }
+    }    
 
     // Output coverage histograms
     rcfile << "# Coverage histogram (CO)." << std::endl;
@@ -752,6 +768,41 @@ namespace bamstats
       }
     }
 
+    // Homopolymer InDel context
+    rcfile << "# InDel context (IC)." << std::endl;
+    rcfile << "# Use `zgrep ^IC <outfile> | cut -f 2-` to extract this part." << std::endl;
+    rcfile << "IC\tSample\tLibrary\tInDel\tHomopolymer\tCount\tFraction" << std::endl;
+    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+      double total = 0;
+      for(uint32_t i = 0; i < itRg->second.bc.delHomACGTN.size(); ++i) total += itRg->second.bc.delHomACGTN[i];
+      for(uint32_t i = 0; i < itRg->second.bc.delHomACGTN.size(); ++i) {
+	double frac = 0;
+	if (total > 0) frac = (double) itRg->second.bc.delHomACGTN[i] / total;
+	rcfile << "IC\t" << c.sampleName << "\t" << itRg->first << "\tDEL\t";
+	if (i == 0) rcfile << 'A';
+	else if (i == 1) rcfile << 'C';
+	else if (i == 2) rcfile << 'G';
+	else if (i == 3) rcfile << 'T';
+	else rcfile << "None";
+	rcfile << "\t" << itRg->second.bc.delHomACGTN[i] << "\t" << frac << std::endl;
+      }
+    }
+    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+      double total = 0;
+      for(uint32_t i = 0; i < itRg->second.bc.insHomACGTN.size(); ++i) total += itRg->second.bc.insHomACGTN[i];
+      for(uint32_t i = 0; i < itRg->second.bc.insHomACGTN.size(); ++i) {
+	double frac = 0;
+	if (total > 0) frac = (double) itRg->second.bc.insHomACGTN[i] / total;
+	rcfile << "IC\t" << c.sampleName << "\t" << itRg->first << "\tINS\t";
+	if (i == 0) rcfile << 'A';
+	else if (i == 1) rcfile << 'C';
+	else if (i == 2) rcfile << 'G';
+	else if (i == 3) rcfile << 'T';
+	else rcfile << "None";
+	rcfile << "\t" << itRg->second.bc.insHomACGTN[i] << "\t" << frac << std::endl;
+      }
+    }
+    
     if (c.hasRegionFile) {
       // Output avg. bed coverage
       rcfile << "# Avg. target coverage (TC)." << std::endl;
