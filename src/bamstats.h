@@ -383,7 +383,7 @@ namespace bamstats
       }
 
       // Alignments behind the reference end
-      if ((!(rec->core.flag & BAM_FUNMAP)) && (((rec->core.pos >= (int32_t) hdr->target_len[refIndex]) || (lastAlignedPosition(rec) >= hdr->target_len[refIndex])))) {
+      if ((!(rec->core.flag & BAM_FUNMAP)) && (((rec->core.pos >= (int32_t) hdr->target_len[refIndex]) || (lastAlignedPosition(rec) > hdr->target_len[refIndex])))) {
 	std::cerr << "Alignment is past the reference end: " << hdr->target_name[refIndex] << ':' << rec->core.pos << std::endl;
 	continue;
       }
