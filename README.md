@@ -52,6 +52,13 @@ For instance, for a human whole-exome data set.
 `Rscript R/stats.R <outfile.tsv.gz>`
 
 
+Web Front End
+-------------
+
+The Genome Analysis Server [GEAR](https://gear.embl.de) has a [web front end](https://gear.embl.de/alfred) for Alfred. Instead of plotting the alignment metrics and statistics with R you can also upload the <outfile.tsv.gz> [here](https://gear.embl.de/alfred).
+
+
+
 BAM Feature Counting
 --------------------
 
