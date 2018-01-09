@@ -3,7 +3,8 @@ library(scales)
 
 # Output pdf
 args=commandArgs(trailingOnly=TRUE)
-pdf(paste0(args[1], ".pdf"))
+if (length(args) > 1) { pdffile = args[2]; } else { pdffile = paste0(args[1], ".pdf"); }
+pdf(pdffile)
 
 print("Base Content")
 cmd=paste0('zgrep ^BC ', args[1], ' | cut -f 2-')
