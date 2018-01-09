@@ -8,4 +8,4 @@
 Alfred Web Application
 ----------------------
 
-This is source code of the [web front end](https://gear.embl.de/alfred) of [Alfred](https://github.com/tobiasrausch/alfred/). It can be used to visualize the alignment statistics, graphs and historgrams computed by [Alfred](https://github.com/tobiasrausch/alfred/).
+This is the source code of the [web front end](https://gear.embl.de/alfred) of [Alfred](https://github.com/tobiasrausch/alfred/). It can be used to visualize the alignment statistics, graphs and historgrams computed by [Alfred](https://github.com/tobiasrausch/alfred/).
