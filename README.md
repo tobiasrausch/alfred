@@ -59,14 +59,26 @@ The Genome Analysis Server [GEAR](https://gear.embl.de) has a [web front end](ht
 
 
 
-BAM Feature Counting
---------------------
+BAM Feature Counting for RNA-Seq
+--------------------------------
 
 Alfred can also assign reads to gene annotation features from a GTF file such as counting reads by gene or transcript identifier. Requires paired-end data.
 
 `cd gtf/ && ./downloadGTF.sh`
 
-`./src/alfred count -g gtf/Homo_sapiens.GRCh37.75.gtf.gz <align.GRCh37.bam>`
+`./src/alfred count_rna -g gtf/Homo_sapiens.GRCh37.75.gtf.gz <align.GRCh37.bam>`
+
+
+BAM Read Counting for DNA-Seq
+-----------------------------
+
+For DNA sequencing, Alfred can be used to calculate the coverage in overlapping or non-overlapping windows or in given set of intervals. Requires paired-end data.
+
+`./src/alfred count_dna -o <cov.gz> <align.GRCh37.bam>`
+
+To plot the whole-chromosome coverage profile for chr1-22 and chrX:
+
+`Rscript R/rd.R <cov.gz>`
 
 
 Example E. coli data set
@@ -91,4 +103,4 @@ Example QC plots
 
 Credits
 -------
-[htseq-count](http://htseq.readthedocs.io) was used to benchmark and validate the read counting.
+[htseq-count](http://htseq.readthedocs.io) was used to benchmark and validate the RNA read counting.

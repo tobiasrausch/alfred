@@ -277,7 +277,7 @@ namespace bamstats
     boost::program_options::options_description window("Window options");
     window.add_options()
       ("window-size,s", boost::program_options::value<uint32_t>(&c.window_size)->default_value(10000), "window size")
-      ("window-offset,o", boost::program_options::value<uint32_t>(&c.window_offset)->default_value(10000), "window offset")
+      ("window-offset,t", boost::program_options::value<uint32_t>(&c.window_offset)->default_value(10000), "window offset")
       ("window-num,n", boost::program_options::value<uint32_t>(&c.window_num)->default_value(0), "#windows per chr, used if #n>0")
       ("interval-file,i", boost::program_options::value<boost::filesystem::path>(&c.int_file), "interval file, used if present")
       ;
