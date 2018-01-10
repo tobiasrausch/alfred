@@ -2,7 +2,7 @@
 ============================================================================
 Alfred: BAM alignment statistics
 ============================================================================
-Copyright (C) 2017 Tobias Rausch
+Copyright (C) 2017,2018 Tobias Rausch
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -21,8 +21,8 @@ Contact: Tobias Rausch (rausch@embl.de)
 ============================================================================
 */
 
-#ifndef COUNT_H
-#define COUNT_H
+#ifndef COUNT_RNA_H
+#define COUNT_RNA_H
 
 #include <limits>
 
@@ -45,7 +45,7 @@ Contact: Tobias Rausch (rausch@embl.de)
 namespace bamstats
 {
 
-  struct CountConfig {
+  struct CountRNAConfig {
     bool stranded;
     unsigned short minQual;
     uint8_t inputFileFormat;   // 0 = gtf, 1 = bed
@@ -313,7 +313,7 @@ namespace bamstats
   
   template<typename TConfig>
   inline int32_t
-  countRun(TConfig const& c) {
+  countRNARun(TConfig const& c) {
 
 #ifdef PROFILE
     ProfilerStart("alfred.prof");
@@ -364,8 +364,8 @@ namespace bamstats
   }
 
 
-  int count(int argc, char **argv) {
-    CountConfig c;
+  int count_rna(int argc, char **argv) {
+    CountRNAConfig c;
 
     // Parameter
     boost::program_options::options_description generic("Generic options");
@@ -492,7 +492,7 @@ namespace bamstats
     for(int i=0; i<argc; ++i) { std::cout << argv[i] << ' '; }
     std::cout << std::endl;
 
-    return countRun(c);
+    return countRNARun(c);
   }
   
 
