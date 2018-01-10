@@ -62,7 +62,7 @@ namespace bamstats
     char strand;
     int32_t lid;
 
-    IntervalLabel(int32_t s) : start(s), end(s+1), strand('*'), lid(-1) {}
+    explicit IntervalLabel(int32_t s) : start(s), end(s+1), strand('*'), lid(-1) {}
     IntervalLabel(int32_t s, int32_t e, char t, int32_t l) : start(s), end(e), strand(t), lid(l) {}
   };
 
@@ -131,8 +131,8 @@ namespace bamstats
     boost::iostreams::filtering_istream gzin;
     gzin.push(boost::iostreams::gzip_decompressor());
     gzin.push(boost::iostreams::file_source(f.string().c_str()), std::ios_base::in | std::ios_base::binary);
-    char c;
     try {
+      char c;
       gzin >> c;
     } catch (boost::iostreams::gzip_error& e) {
       gzin.pop();

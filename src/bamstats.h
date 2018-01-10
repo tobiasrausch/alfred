@@ -128,7 +128,7 @@ namespace bamstats
     TISizePairCount rMinus;
     
     
-    PairCounts() : maxInsertSize(std::numeric_limits<TMaxInsertSize>::max()), paired(0), mapped(0), mappedSameChr(0) {
+    PairCounts() : maxInsertSize(std::numeric_limits<TMaxInsertSize>::max()), paired(0), mapped(0), mappedSameChr(0), totalISizeCount(0) {
       orient[0] = 0;
       orient[1] = 0;
       orient[2] = 0;
