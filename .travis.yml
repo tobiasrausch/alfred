@@ -41,7 +41,8 @@ matrix:
 
 
 before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo rm /etc/apt/sources.list.d/mongodb-3.4.list -qq; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo rm /etc/apt/sources.list.d/mongodb-3.4.list; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo ls /etc/apt/sources.list.d/mongodb*; fi	
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update -qq; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install -qq liblzma-dev libbz2-dev; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
