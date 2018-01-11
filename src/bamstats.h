@@ -390,8 +390,10 @@ namespace bamstats
 	seq = faidx_fetch_seq(fai, tname.c_str(), 0, hdr->target_len[refIndex], &seqlen);
 
 	// Set N-mask
-	nrun.resize(hdr->target_len[refIndex], 0);
-	gcref.resize(hdr->target_len[refIndex], 0);
+	nrun.clear();
+	nrun.resize(hdr->target_len[refIndex], false);
+	gcref.clear();
+	gcref.resize(hdr->target_len[refIndex], false);
 	referencebp += hdr->target_len[refIndex];
 	for(uint32_t i = 0; i < hdr->target_len[refIndex]; ++i) {
 	  if ((seq[i] == 'c') || (seq[i] == 'C') || (seq[i] == 'g') || (seq[i] == 'G')) gcref[i] = 1;
@@ -425,7 +427,7 @@ namespace bamstats
 	// Resize coverage vectors
 	for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) itRg->second.bc.cov.resize(hdr->target_len[refIndex], 0);
       }
-
+      
       // Get the library information
       std::string rG = "DefaultLib";
       uint8_t *rgptr = bam_aux_get(rec, "RG");
