@@ -76,7 +76,7 @@ For DNA sequencing, Alfred can be used to calculate the coverage in overlapping 
 
 `./src/alfred count_dna -o <cov.gz> <align.GRCh37.bam>`
 
-To plot the whole-chromosome coverage profile for chr1-22 and chrX:
+To plot the whole-chromosome coverage profile for chr1-22 and chrX.
 
 `Rscript R/rd.R <cov.gz>`
 
