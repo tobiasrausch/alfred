@@ -341,6 +341,26 @@ namespace bamstats
     uint16_t gcRunnerCount = 0;
     std::vector<ChrGC> chrGC(hdr->n_targets, ChrGC());
     ReadCounts::TGCContent refGcContent(101, 0);
+
+    // Find N90 chromosome length
+    uint32_t minChrLen = 0;
+    {
+      std::vector<uint32_t> chrlen(hdr->n_targets, 0);
+      uint64_t genomelen = 0;
+      for(int32_t refIndex = 0; refIndex < hdr->n_targets; ++refIndex) {
+	chrlen[refIndex] = hdr->target_len[refIndex];
+	genomelen += hdr->target_len[refIndex];
+      }
+      std::sort(chrlen.begin(), chrlen.end(), std::greater<uint32_t>());
+      uint64_t cumsum = 0;
+      for(uint32_t i = 0; i < chrlen.size(); ++i) {
+	cumsum += chrlen[i];
+	if (cumsum > genomelen * 0.9) {
+	  minChrLen = chrlen[i];
+	  break;
+	}
+      }
+    }
     
     // Parse genome
     int32_t refIndex = -1;
@@ -383,7 +403,7 @@ namespace bamstats
 	// Reference GC
 	chrGC[refIndex].ncount = nrun.count();
 	chrGC[refIndex].gccount = gcref.count();
-	if (hdr->target_len[refIndex] > 100) {
+	if ((hdr->target_len[refIndex] > 100) && (hdr->target_len[refIndex] >= minChrLen)) {
 	  uint32_t nsum = 0;
 	  uint32_t gcsum = 0;
 	  for(uint32_t pos = 0; pos < hdr->target_len[refIndex] - 100; ++pos) {
