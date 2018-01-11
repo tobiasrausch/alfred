@@ -44,6 +44,11 @@ Contact: Tobias Rausch (rausch@embl.de)
 namespace bamstats
 {
 
+  struct ChrGC {
+    uint32_t ncount;
+    uint32_t gccount;
+  };
+  
   struct BaseCounts {
     typedef uint32_t TCountType;
     typedef std::vector<TCountType> TCoverageBp;
@@ -81,6 +86,7 @@ namespace bamstats
     typedef uint32_t TCountType;
     typedef std::vector<TCountType> TLengthReadCount;
     typedef std::vector<uint64_t> TBaseQualitySum;
+    typedef std::vector<uint64_t> TGCContent;
     
     int32_t maxReadLength;
     int64_t secondary;
@@ -100,6 +106,8 @@ namespace bamstats
     TLengthReadCount gCount;
     TLengthReadCount tCount;
     TBaseQualitySum bqCount;
+    TGCContent gcContent;
+    
 
     ReadCounts() : maxReadLength(std::numeric_limits<TMaxReadLength>::max()), secondary(0), qcfail(0), dup(0), supplementary(0), unmap(0), forward(0), reverse(0), spliced(0), mapped1(0), mapped2(0) {
       lRc.resize(maxReadLength + 1, 0);
@@ -109,6 +117,7 @@ namespace bamstats
       tCount.resize(maxReadLength + 1, 0);
       nCount.resize(maxReadLength + 1, 0);
       bqCount.resize(maxReadLength + 1, 0);
+      gcContent.resize(101, 0);
     }
   };
 
@@ -322,11 +331,16 @@ namespace bamstats
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "BAM file parsing" << std::endl;
     boost::progress_display show_progress( hdr->n_targets );
 
-    // N-content
+    // GC- and N-content
     typedef boost::dynamic_bitset<> TBitSet;
     TBitSet nrun;
+    TBitSet gcref;
     uint64_t referencebp = 0;
     uint64_t ncount = 0;
+    uint16_t gcRunnerIdx = 0;
+    uint16_t gcRunnerCount = 0;
+    std::vector<ChrGC> chrGC(hdr->n_targets, ChrGC());
+    ReadCounts::TGCContent refGcContent(101, 0);
     
     // Parse genome
     int32_t refIndex = -1;
@@ -357,11 +371,34 @@ namespace bamstats
 
 	// Set N-mask
 	nrun.resize(hdr->target_len[refIndex], 0);
+	gcref.resize(hdr->target_len[refIndex], 0);
 	referencebp += hdr->target_len[refIndex];
 	for(uint32_t i = 0; i < hdr->target_len[refIndex]; ++i) {
+	  if ((seq[i] == 'c') || (seq[i] == 'C') || (seq[i] == 'g') || (seq[i] == 'G')) gcref[i] = 1;
 	  if ((seq[i] == 'n') || (seq[i] == 'N')) {
 	    nrun[i] = 1;
 	    ++ncount;
+	  }
+	}
+	// Reference GC
+	chrGC[refIndex].ncount = nrun.count();
+	chrGC[refIndex].gccount = gcref.count();
+	if (hdr->target_len[refIndex] > 100) {
+	  uint32_t nsum = 0;
+	  uint32_t gcsum = 0;
+	  for(uint32_t pos = 0; pos < hdr->target_len[refIndex] - 100; ++pos) {
+	    if (pos == 0) {
+	      for(uint32_t i = 0; i < 100; ++i) {
+		nsum += nrun[i];
+		gcsum += gcref[i];
+	      }
+	    } else {
+	      nsum -= nrun[pos - 1];
+	      gcsum -= gcref[pos - 1];
+	      nsum += nrun[pos + 99];
+	      gcsum += gcref[pos + 99];
+	    }
+	    if (!nsum) ++refGcContent[gcsum];
 	  }
 	}
 	
@@ -489,6 +526,29 @@ namespace bamstats
 	  }
 	}
       }
+
+      // Sequence GC content
+      if (sequence.size() > 100) {
+	uint32_t offset = (sequence.size() - 100) / 2;
+	int32_t gccont = 0;
+	for(uint32_t i = offset; i < (offset + 100); ++i) {
+	  if ((sequence[i] == 'c') || (sequence[i] == 'C') || (sequence[i] == 'g') || (sequence[i] == 'G')) ++gccont;
+	}
+	++itRg->second.rc.gcContent[gccont];
+      } else {
+	if (sequence.size() > 25) {
+	  uint32_t offset = (sequence.size() - 25) / 2;
+	  ++gcRunnerIdx;
+	  for(uint32_t i = offset; i < (offset + 25); ++i) {
+	    if ((sequence[i] == 'c') || (sequence[i] == 'C') || (sequence[i] == 'g') || (sequence[i] == 'G')) ++gcRunnerCount;
+	  }
+	  if (gcRunnerIdx == 4) {
+	    ++itRg->second.rc.gcContent[gcRunnerCount];
+	    gcRunnerIdx = 0;
+	    gcRunnerCount = 0;
+	  }
+	}
+      }
       
       // Get the reference slice
       std::string refslice = boost::to_upper_copy(std::string(seq + rec->core.pos, seq + lastAlignedPosition(rec)));
@@ -497,7 +557,7 @@ namespace bamstats
       //std::cout << matchCount << ',' << mismatchCount << ',' << delCount << ',' << insCount << ',' << softClipCount << ',' << hardClipCount << std::endl;
       //std::cout << refslice << std::endl;
       //std::cout << sequence << std::endl;
-	
+
       uint32_t rp = 0; // reference pointer
       uint32_t sp = 0; // sequence pointer
       
@@ -821,6 +881,43 @@ namespace bamstats
 	rcfile << "IZ\t" << c.sampleName << "\t" << itRg->first << "\tDEL\t" << i << "\t" << itRg->second.bc.delSize[i] << std::endl;
       for(uint32_t i = 1; i < itRg->second.bc.insSize.size(); ++i) 
 	rcfile << "IZ\t" << c.sampleName << "\t" << itRg->first << "\tINS\t" << i << "\t" << itRg->second.bc.insSize[i] << std::endl;
+    }
+
+    // Reference GC content
+    rcfile << "# Chromosome GC-content (CG)." << std::endl;
+    rcfile << "# Use `zgrep ^CG <outfile> | cut -f 2-` to extract this part." << std::endl;
+    rcfile << "CG\tChromosome\tSize\tnumN\tnumGC\tGCfraction" << std::endl;
+    for(uint32_t i = 0; i < chrGC.size(); ++i) {
+      if (chrGC[i].ncount + chrGC[i].gccount > 0) {
+	// Only chromosomes with mapped data
+	double frac = 0;
+	double total = hdr->target_len[i] - chrGC[i].ncount;
+	if (total > 0) frac = (double) chrGC[i].gccount / total;
+	rcfile << "CG\t" << hdr->target_name[i] << "\t" << hdr->target_len[i] << "\t" << chrGC[i].ncount << "\t" << chrGC[i].gccount << "\t" << frac << std::endl;
+      }
+    }
+
+    // GC-content
+    rcfile << "# GC-content (GC)." << std::endl;
+    rcfile << "# Use `zgrep ^GC <outfile> | cut -f 2-` to extract this part." << std::endl;
+    rcfile << "GC\tSample\tLibrary\tGCcontent\tfractionOfReads" << std::endl;
+    {
+      double total = 0;
+      for(uint32_t i = 0; i < 101; ++i) total += refGcContent[i];
+      for(uint32_t i = 0; i < 101; ++i) {
+	double frac = 0;
+	if (total > 0) frac = (double) refGcContent[i] / total;
+	rcfile << "GC\tReference\tReference\t" << (double) i / (double) 100 << "\t" << frac << std::endl;
+      }
+    }
+    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+      double total = 0;
+      for(uint32_t i = 0; i < 101; ++i) total += itRg->second.rc.gcContent[i];
+      for(uint32_t i = 0; i < 101; ++i) {
+	double frac = 0;
+	if (total > 0) frac = (double) itRg->second.rc.gcContent[i] / total;
+	rcfile << "GC\t" << c.sampleName << "\t" << itRg->first << "\t" << (double) i / (double) 100 << "\t" << frac << std::endl;
+      }
     }
 
     if (c.hasRegionFile) {
