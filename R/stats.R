@@ -162,6 +162,21 @@ for(sid in unique(all$Sample)) {
 }
 print(warnings())
 
+print("GC Content")
+cmd=paste0('zgrep ^GC ', args[1], ' | cut -f 2-')
+all=read.table(pipe(cmd), header=T)
+if (1) {
+      p1=ggplot(data=all, aes(x=GCcontent, y=fractionOfReads))
+      p1=p1 + geom_line(aes(group=Library, color=Library))
+      p1=p1 + xlab("GC content") + ylab("Fraction of reads or reference windows")
+      p1=p1 + scale_y_continuous(labels=comma)
+      p1=p1 + ggtitle("GC-Content Distribution")
+      p1=p1 + scale_x_continuous(labels=comma)
+      p1=p1 + theme(legend.position="bottom", legend.direction='horizontal')
+      print(p1)
+}
+print(warnings())
+
 # BED file
 cmd=paste0('zgrep ^OT ', args[1], ' | cut -f 2-')
 all=tryCatch(read.table(pipe(cmd), header=T), error=function(e) NULL)
