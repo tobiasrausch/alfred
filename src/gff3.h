@@ -21,8 +21,8 @@ Contact: Tobias Rausch (rausch@embl.de)
 ============================================================================
 */
 
-#ifndef GTF_H
-#define GTF_H
+#ifndef GFF3_H
+#define GFF3_H
 
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
@@ -41,20 +41,102 @@ Contact: Tobias Rausch (rausch@embl.de)
 namespace bamstats
 {
 
+  template<typename TConfig, typename TParentIdMap>
+  inline void
+  _buildIDdict(TConfig const& c, TParentIdMap& pId) {
+    TParentIdMap tree;
+    std::ifstream file(c.gtfFile.string().c_str(), std::ios_base::in | std::ios_base::binary);
+    boost::iostreams::filtering_streambuf<boost::iostreams::input> dataIn;
+    dataIn.push(boost::iostreams::gzip_decompressor());
+    dataIn.push(file);
+    std::istream instream(&dataIn);
+    std::string gline;
+    while(std::getline(instream, gline)) {
+      if ((gline.size()) && (gline[0] == '#')) continue;
+      typedef boost::tokenizer< boost::char_separator<char> > Tokenizer;
+      boost::char_separator<char> sep("\t");
+      Tokenizer tokens(gline, sep);
+      Tokenizer::iterator tokIter = tokens.begin();
+      uint32_t idx = 0;
+      for(;tokIter!=tokens.end();++tokIter) ++idx;
+      if (idx >= 9) {
+	std::string attr = *tokIter;
+	std::size_t found = attr.find(c.idname);
+	if (found != std::string::npos) {
+	  std::string kval = "";
+	  std::string ival = "";
+	  boost::char_separator<char> sepAttr(";");
+	  Tokenizer attrTokens(attr, sepAttr);
+	  for(Tokenizer::iterator attrIter = attrTokens.begin(); attrIter != attrTokens.end(); ++attrIter) {
+	    std::string keyval = *attrIter;
+	    boost::trim(keyval);
+	    boost::char_separator<char> sepKeyVal("=");
+	    Tokenizer kvTokens(keyval, sepKeyVal);
+	    Tokenizer::iterator kvTokensIt = kvTokens.begin();
+	    std::string key = *kvTokensIt++;
+	    if (key == "ID") ival = *kvTokensIt;
+	    else if (key == c.idname) kval = *kvTokensIt;
+	  }
+	  pId[ival] = kval;
+	}
+	// Make sure we also find grand-children
+	found = attr.find("Parent");
+	if (found != std::string::npos) {
+	  std::string pval = "";
+	  std::string ival = "";
+	  boost::char_separator<char> sepAttr(";");
+	  Tokenizer attrTokens(attr, sepAttr);
+	  for(Tokenizer::iterator attrIter = attrTokens.begin(); attrIter != attrTokens.end(); ++attrIter) {
+	    std::string keyval = *attrIter;
+	    boost::trim(keyval);
+	    boost::char_separator<char> sepKeyVal("=");
+	    Tokenizer kvTokens(keyval, sepKeyVal);
+	    Tokenizer::iterator kvTokensIt = kvTokens.begin();
+	    std::string key = *kvTokensIt++;
+	    if (key == "ID") ival = *kvTokensIt;
+	    else if (key == "Parent") pval = *kvTokensIt;
+	  }
+	  tree[ival] = pval;
+	}
+      }
+    }
+    file.close();
+
+    // Now flatten the parent-child hierarchy
+    if (!tree.empty()) {
+      for(typename TParentIdMap::iterator pit = tree.begin(); pit!= tree.end(); ++pit) {
+	std::string newParent = pit->second;
+	bool carryOn = true;
+	do {
+	  if (pId.find(newParent) != pId.end()) pId[pit->first] = pId[newParent];
+	  if (tree.find(newParent) == tree.end()) carryOn = false;
+	  else newParent = tree.find(newParent)->second;
+	} while (carryOn);
+      }
+    }
+  }
+
   template<typename TConfig, typename TGenomicRegions, typename TGeneIds>
   inline int32_t
-  parseGTF(TConfig const& c, TGenomicRegions& gRegions, TGeneIds& geneIds) {
+  parseGFF3(TConfig const& c, TGenomicRegions& gRegions, TGeneIds& geneIds) {
     typedef typename TGenomicRegions::value_type TChromosomeRegions;
 
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
-    std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "GTF feature parsing" << std::endl;
+    std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "GFF3 feature parsing" << std::endl;
     
     TGenomicRegions overlappingRegions;
     overlappingRegions.resize(gRegions.size(), TChromosomeRegions());
     if (!is_gz(c.gtfFile)) {
-      std::cerr << "GTF file is not gzipped!" << std::endl;
+      std::cerr << "GFF3 file is not gzipped!" << std::endl;
       return 0;
     }
+
+    // ID dictionary
+    typedef std::map<std::string, std::string> TParentIdMap;
+    TParentIdMap pId;
+    _buildIDdict(c, pId);
+
+    // Parse GFF3
     typedef std::map<std::string, int32_t> TIdMap;
     TIdMap idMap;
     std::ifstream file(c.gtfFile.string().c_str(), std::ios_base::in | std::ios_base::binary);
@@ -70,19 +152,19 @@ namespace bamstats
       Tokenizer tokens(gline, sep);
       Tokenizer::iterator tokIter = tokens.begin();
       if (tokIter==tokens.end()) {
-	std::cerr << "Empty line in GTF file!" << std::endl;
+	std::cerr << "Empty line in GFF3 file!" << std::endl;
 	return 0;
       }
       std::string chrName=*tokIter++;
       if (c.nchr.find(chrName) == c.nchr.end()) continue;
       int32_t chrid = c.nchr.find(chrName)->second;      
       if (tokIter == tokens.end()) {
-	std::cerr << "Corrupted GTF file!" << std::endl;
+	std::cerr << "Corrupted GFF3 file!" << std::endl;
 	return 0;
       }
       ++tokIter;
       if (tokIter == tokens.end()) {
-	std::cerr << "Corrupted GTF file!" << std::endl;
+	std::cerr << "Corrupted GFF3 file!" << std::endl;
 	return 0;
       }
       std::string ft = *tokIter++;
@@ -92,41 +174,43 @@ namespace bamstats
 	  int32_t end = boost::lexical_cast<int32_t>(*tokIter++);
 	  ++tokIter; // score
 	  if (tokIter == tokens.end()) {
-	    std::cerr << "Corrupted GTF file!" << std::endl;
+	    std::cerr << "Corrupted GFF3 file!" << std::endl;
 	    return 0;
 	  }
 	  char strand = boost::lexical_cast<char>(*tokIter++);
-	  ++tokIter; // frame
+	  ++tokIter; // frame or phase
 	  std::string attr = *tokIter;
 	  boost::char_separator<char> sepAttr(";");
 	  Tokenizer attrTokens(attr, sepAttr);
 	  for(Tokenizer::iterator attrIter = attrTokens.begin(); attrIter != attrTokens.end(); ++attrIter) {
 	    std::string keyval = *attrIter;
 	    boost::trim(keyval);
-	    boost::char_separator<char> sepKeyVal(" ");
+	    boost::char_separator<char> sepKeyVal("=");
 	    Tokenizer kvTokens(keyval, sepKeyVal);
 	    Tokenizer::iterator kvTokensIt = kvTokens.begin();
 	    std::string key = *kvTokensIt++;
-	    if (key == c.idname) {
-	      std::string val = *kvTokensIt;
-	      if (val.size() >= 3) val = val.substr(1, val.size()-2); // Trim off the bloody "
-	      int32_t idval = geneIds.size();
-	      typename TIdMap::const_iterator idIter = idMap.find(val);
-	      if (idIter == idMap.end()) {
-		idMap.insert(std::make_pair(val, idval));
-		geneIds.push_back(val);
-	      } else idval = idIter->second;
-	      // Convert to 0-based and right-open
-	      if (start == 0) {
-		std::cerr << "GTF is 1-based format!" << std::endl;
-		return 0;
+	    if ((key == "ID") || (key == "Parent")) {
+	      std::string ivl = *kvTokensIt;         
+	      if (pId.find(ivl) != pId.end()) {
+		std::string val = pId[ivl];
+		int32_t idval = geneIds.size();
+		typename TIdMap::const_iterator idIter = idMap.find(val);
+		if (idIter == idMap.end()) {
+		  idMap.insert(std::make_pair(val, idval));
+		  geneIds.push_back(val);
+		} else idval = idIter->second;
+		// Convert to 0-based and right-open
+		if (start == 0) {
+		  std::cerr << "GFF3 is 1-based format!" << std::endl;
+		  return 0;
+		}
+		if (start > end) {
+		  std::cerr << "Feature start is greater than feature end!" << std::endl;
+		  return 0;
+		}
+		//std::cerr << geneIds[idval] << "\t" << start << "\t" << end << std::endl;
+		overlappingRegions[chrid].push_back(IntervalLabel(start - 1, end, strand, idval));
 	      }
-	      if (start > end) {
-		std::cerr << "Feature start is greater than feature end!" << std::endl;
-		return 0;
-	      }
-	      //std::cerr << geneIds[idval] << "\t" << start << "\t" << end << std::endl;
-	      overlappingRegions[chrid].push_back(IntervalLabel(start - 1, end, strand, idval));
 	    }
 	  }
 	}

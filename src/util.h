@@ -2,7 +2,7 @@
 ============================================================================
 Alfred: BAM alignment statistics
 ============================================================================
-Copyright (C) 2017 Tobias Rausch
+Copyright (C) 2017-2018 Tobias Rausch
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -122,7 +122,25 @@ namespace bamstats
     return seed;
   }
 
+  inline bool is_gff3(boost::filesystem::path const& f) {
+    std::ifstream in(f.string().c_str());
+    if (!in) return false;
+    in.close();
+
+    std::ifstream file(f.string().c_str(), std::ios_base::in | std::ios_base::binary);
+    boost::iostreams::filtering_streambuf<boost::iostreams::input> dataIn;
+    dataIn.push(boost::iostreams::gzip_decompressor());
+    dataIn.push(file);
+    std::istream instream(&dataIn);
+    std::string gline;
+    std::getline(instream, gline);
+    bool gff = false;
+    if ((gline.size()) && (gline == "##gff-version 3")) gff = true;
+    file.close();
+    return gff;
+  }
     
+  
   inline bool is_gz(boost::filesystem::path const& f) {
     std::ifstream in(f.string().c_str());
     if (!in) return false;

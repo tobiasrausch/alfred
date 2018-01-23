@@ -2,7 +2,7 @@
 ============================================================================
 Alfred: BAM alignment statistics
 ============================================================================
-Copyright (C) 2017,2018 Tobias Rausch
+Copyright (C) 2017-2018 Tobias Rausch
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -39,6 +39,7 @@ Contact: Tobias Rausch (rausch@embl.de)
 #include "version.h"
 #include "util.h"
 #include "gtf.h"
+#include "gff3.h"
 #include "bed.h"
 
 
@@ -48,7 +49,7 @@ namespace bamstats
   struct CountRNAConfig {
     bool stranded;
     unsigned short minQual;
-    uint8_t inputFileFormat;   // 0 = gtf, 1 = bed
+    uint8_t inputFileFormat;   // 0 = gtf, 1 = bed, 2 = gff3
     uint8_t inputBamFormat; // 0 = bam, 1 = bed
     std::map<std::string, int32_t> nchr;
     std::string sampleName;
@@ -329,8 +330,9 @@ namespace bamstats
     int32_t tf = 0;
     if (c.inputFileFormat == 0) tf = parseGTF(c, gRegions, geneIds);
     else if (c.inputFileFormat == 1) tf = parseBED(c, gRegions, geneIds);
+    else if (c.inputFileFormat == 2) tf = parseGFF3(c, gRegions, geneIds);
     if (tf == 0) {
-      std::cerr << "Error parsing GTF/BED file!" << std::endl;
+      std::cerr << "Error parsing GTF/GFF3/BED file!" << std::endl;
       return 1;
     }
 
@@ -376,11 +378,11 @@ namespace bamstats
       ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("gene.count"), "output file")
       ;
 
-    boost::program_options::options_description gtfopt("GTF input file options");
+    boost::program_options::options_description gtfopt("GTF/GFF3 input file options");
     gtfopt.add_options()
-      ("gtf,g", boost::program_options::value<boost::filesystem::path>(&c.gtfFile), "gtf file")
-      ("id,i", boost::program_options::value<std::string>(&c.idname)->default_value("gene_id"), "GTF attribute")
-      ("feature,f", boost::program_options::value<std::string>(&c.feature)->default_value("exon"), "GTF feature")
+      ("gtf,g", boost::program_options::value<boost::filesystem::path>(&c.gtfFile), "gtf/gff3 file")
+      ("id,i", boost::program_options::value<std::string>(&c.idname)->default_value("gene_id"), "gtf/gff3 attribute")
+      ("feature,f", boost::program_options::value<std::string>(&c.feature)->default_value("exon"), "gtf/gff3 feature")
       ;
     
     boost::program_options::options_description bedopt("BED input file options, columns chr, start, end, name [, score, strand]");
@@ -483,7 +485,10 @@ namespace bamstats
 	std::cerr << "Input gtf/bed file is missing." << std::endl;
 	return 1;
       } else c.inputFileFormat = 1;
-    } else c.inputFileFormat = 0;
+    } else {
+      if (is_gff3(c.gtfFile)) c.inputFileFormat = 2;
+      else c.inputFileFormat = 0;
+    }
 
     // Show cmd
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
