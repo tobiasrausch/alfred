@@ -90,7 +90,7 @@ int qc(int argc, char **argv) {
 
   // Check command line arguments
   if ((vm.count("help")) || (!vm.count("input-file")) || (!vm.count("reference"))) {
-    printTitle("Alfred");
+    std::cout << std::endl;
     std::cout << "Usage: alfred " << argv[0] << " [OPTIONS] -r <ref.fa> <aligned.bam>" << std::endl;
     std::cout << visible_options << "\n";
     return 1;

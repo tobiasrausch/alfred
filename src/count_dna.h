@@ -303,7 +303,7 @@ namespace bamstats
 
     // Check command line arguments
     if ((vm.count("help")) || (!vm.count("input-file"))) {
-      printTitle("Alfred");
+      std::cout << std::endl;
       std::cout << "Usage: alfred " << argv[0] << " [OPTIONS] <aligned.bam>" << std::endl;
       std::cout << visible_options << "\n";
       return 1;
