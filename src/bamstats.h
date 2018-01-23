@@ -129,6 +129,7 @@ namespace bamstats
     int64_t paired;
     int64_t mapped;
     int64_t mappedSameChr;
+    int64_t mappedProper;
     int64_t orient[4];
     int64_t totalISizeCount;
     TISizePairCount fPlus;
@@ -137,7 +138,7 @@ namespace bamstats
     TISizePairCount rMinus;
     
     
-    PairCounts() : maxInsertSize(std::numeric_limits<TMaxInsertSize>::max()), paired(0), mapped(0), mappedSameChr(0), totalISizeCount(0) {
+    PairCounts() : maxInsertSize(std::numeric_limits<TMaxInsertSize>::max()), paired(0), mapped(0), mappedSameChr(0), mappedProper(0), totalISizeCount(0) {
       orient[0] = 0;
       orient[1] = 0;
       orient[2] = 0;
@@ -452,7 +453,10 @@ namespace bamstats
 	++itRg->second.pc.paired;
 	if (!((rec->core.flag & BAM_FUNMAP) || (rec->core.flag & BAM_FMUNMAP))) {
 	  ++itRg->second.pc.mapped;
-	  if (rec->core.tid == rec->core.mtid) ++itRg->second.pc.mappedSameChr;
+	  if (rec->core.tid == rec->core.mtid) {
+	    ++itRg->second.pc.mappedSameChr;
+	    if (rec->core.flag & BAM_FPROPER_PAIR) ++itRg->second.pc.mappedProper;
+	  }
 	  if (rec->core.pos > rec->core.mpos) {
 	    ++itRg->second.pc.totalISizeCount;
 	    int32_t outerISize = rec->core.pos - rec->core.mpos + alignmentLength(rec);
@@ -651,7 +655,7 @@ namespace bamstats
     rcfile << "# Alignment summary metrics (ME)." << std::endl;
     rcfile << "# Use `zgrep ^ME <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "ME\tSample\tLibrary\t#QCFail\tQCFailFraction\t#DuplicateMarked\tDuplicateFraction\t#Unmapped\tUnmappedFraction\t#Mapped\tMappedFraction\t#MappedRead1\t#MappedRead2\tRatioMapped2vsMapped1\t#MappedForward\tMappedForwardFraction\t#MappedReverse\tMappedReverseFraction\t#SecondaryAlignments\tSecondaryAlignmentFraction\t#SupplementaryAlignments\tSupplementaryAlignmentFraction\t#SplicedAlignments\tSplicedAlignmentFraction" << "\t";
-    rcfile << "#Pairs\t#MappedPairs\tMappedPairsFraction\t#MappedSameChr\tMappedSameChrFraction" << "\t";
+    rcfile << "#Pairs\t#MappedPairs\tMappedPairsFraction\t#MappedSameChr\tMappedSameChrFraction\t#MappedProperPair\tMappedProperFraction" << "\t";
     rcfile << "#ReferenceBp\t#ReferenceNs\t#AlignedBases\t#MatchedBases\tMatchRate\t#MismatchedBases\tMismatchRate\t#DeletionsCigarD\tDeletionRate\tHomopolymerContextDel\t#InsertionsCigarI\tInsertionRate\tHomopolymerContextIns\t#SoftClippedBases\tSoftClipRate\t#HardClippedBases\tHardClipRate\tErrorRate" << "\t";
     rcfile << "MedianReadLength\tDefaultLibraryLayout\tMedianInsertSize\tMedianCoverage\tSDCoverage\tMedianMAPQ";
     if (c.hasRegionFile) rcfile << "\t#TotalBedBp\t#AlignedBasesInBed\tEnrichmentOverBed" << std::endl;
@@ -666,6 +670,7 @@ namespace bamstats
       int64_t paired = itRg->second.pc.paired / 2;
       int64_t mapped = itRg->second.pc.mapped / 2;
       int64_t mappedSameChr = itRg->second.pc.mappedSameChr / 2;
+      int64_t mappedProper = itRg->second.pc.mappedProper / 2;
       int32_t deflayout = 0;
       int32_t maxcount = itRg->second.pc.orient[0];
       for(int32_t i = 1; i<4; ++i) {
@@ -678,7 +683,9 @@ namespace bamstats
       if (paired > 0) mappedpairedfrac = (double) mapped / (double) paired;
       double mappedpairedchrfrac = 0;
       if (paired > 0) mappedpairedchrfrac = (double) mappedSameChr / (double) paired;
-      rcfile << paired << "\t" << mapped << "\t" << mappedpairedfrac << "\t" << mappedSameChr << "\t" << mappedpairedchrfrac << "\t";
+      double mappedproperfrac = 0;
+      if (paired > 0) mappedproperfrac = (double) mappedProper / (double) paired;
+      rcfile << paired << "\t" << mapped << "\t" << mappedpairedfrac << "\t" << mappedSameChr << "\t" << mappedpairedchrfrac << "\t" << mappedProper << "\t" << mappedproperfrac << "\t";
 
       // Homopolymer Context of InDels
       double insTotal = 0;
