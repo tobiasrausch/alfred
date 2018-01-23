@@ -227,6 +227,7 @@ namespace bamstats
   bamStatsRun(TConfig const& c) {
     // Load bam file
     samFile* samfile = sam_open(c.bamFile.string().c_str(), "r");
+    hts_set_fai_filename(samfile, c.genome.string().c_str());
     bam_hdr_t* hdr = sam_hdr_read(samfile);
 
     // One list of regions for every chromosome

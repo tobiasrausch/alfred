@@ -59,6 +59,7 @@ namespace bamstats
 
   struct SplitConfig {
     bool assign;
+    bool interleaved;
     unsigned short minMapQual;
     std::string sample;
     boost::filesystem::path genome;
@@ -78,6 +79,7 @@ namespace bamstats
 
     // Load bam files
     samFile* samfile = sam_open(c.bamfile.string().c_str(), "r");
+    hts_set_fai_filename(samfile, c.genome.string().c_str());
     hts_idx_t* idx = sam_index_load(samfile, c.bamfile.string().c_str());
     bam_hdr_t* hdr = sam_hdr_read(samfile);
 
@@ -97,10 +99,13 @@ namespace bamstats
       return -1;
     }
 
-    samFile* h2bam = sam_open(c.h2bam.string().c_str(), "wb");
-    if (sam_hdr_write(h2bam, hdr) != 0) {
-      std::cerr << "Could not write ouptut file header!" << std::endl;
-      return -1;
+    samFile* h2bam = NULL;
+    if (!c.interleaved) {
+      samFile* h2bam = sam_open(c.h2bam.string().c_str(), "wb");
+      if (sam_hdr_write(h2bam, hdr) != 0) {
+	std::cerr << "Could not write ouptut file header!" << std::endl;
+	return -1;
+      }
     }
 
     // Assign reads to SNPs
@@ -268,9 +273,16 @@ namespace bamstats
 	      }
 	    } else {
 	      bam_aux_append(r, "HP", 'i', 4, (uint8_t*)&hrnd);
-	      if (!sam_write1(h2bam, hdr, r)) {
-		std::cerr << "Could not write to bam file!" << std::endl;
-		return -1;
+	      if (c.interleaved) {
+		if (!sam_write1(h1bam, hdr, r)) {
+		  std::cerr << "Could not write to bam file!" << std::endl;
+		  return -1;
+		}
+	      } else {
+		if (!sam_write1(h2bam, hdr, r)) {
+		  std::cerr << "Could not write to bam file!" << std::endl;
+		  return -1;
+		}
 	      }
 	    }
 	  }
@@ -286,9 +298,16 @@ namespace bamstats
 	  int32_t hp = 2;
 	  ++assignedReadsH2;
 	  bam_aux_append(r, "HP", 'i', 4, (uint8_t*)&hp);
-	  if (!sam_write1(h2bam, hdr, r)) {
-	    std::cerr << "Could not write to bam file!" << std::endl;
-	    return -1;
+	  if (c.interleaved) {
+	    if (!sam_write1(h1bam, hdr, r)) {
+	      std::cerr << "Could not write to bam file!" << std::endl;
+	      return -1;
+	    }
+	  } else {
+	    if (!sam_write1(h2bam, hdr, r)) {
+	      std::cerr << "Could not write to bam file!" << std::endl;
+	      return -1;
+	    }
 	  }
 	}
       }
@@ -305,9 +324,11 @@ namespace bamstats
     
     // Close output BAMs
     sam_close(h1bam);
-    sam_close(h2bam);
     bam_index_build(c.h1bam.string().c_str(), 0);
-    bam_index_build(c.h2bam.string().c_str(), 0);
+    if (!c.interleaved) {
+      sam_close(h2bam);
+      bam_index_build(c.h2bam.string().c_str(), 0);
+    }
     
     // Close BCF
     bcf_hdr_destroy(bcfhdr);
@@ -343,6 +364,7 @@ namespace bamstats
       ("sample,s", boost::program_options::value<std::string>(&c.sample)->default_value("NA12878"), "sample name (as in BCF)")
       ("vcffile,v", boost::program_options::value<boost::filesystem::path>(&c.vcffile), "input phased VCF/BCF file")
       ("assign,a", "assign unphased reads randomly")
+      ("interleaved,i", "single haplotype-tagged BAM")
       ;
 
     boost::program_options::options_description hidden("Hidden options");
@@ -374,6 +396,10 @@ namespace bamstats
     // Assign unphased reads randomly?
     if (!vm.count("assign")) c.assign = false;
     else c.assign = true;
+
+    // single BAM
+    if (!vm.count("interleaved")) c.interleaved = false;
+    else c.interleaved = true;
 
     // Check input BAM file
     if (vm.count("input-file")) {
