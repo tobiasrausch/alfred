@@ -251,7 +251,7 @@ namespace bamstats
       while (sam_itr_next(samfile, itr, r) >= 0) {
 	if (r->core.flag & (BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP | BAM_FSUPPLEMENTARY | BAM_FUNMAP)) continue;
 	if ((r->core.qual < c.minMapQual) || (r->core.tid<0)) continue;
-	if ((rec->core.flag & BAM_FPAIRED) && (rec->core.flag & BAM_FMUNMAP)) continue;
+	if ((r->core.flag & BAM_FPAIRED) && (r->core.flag & BAM_FMUNMAP)) continue;
 	bool h1Found = false;
 	bool h2Found = false;
 	if (h1.find(hash_pair(r)) != h1.end()) h1Found = true;
