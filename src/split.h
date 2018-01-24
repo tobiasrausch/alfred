@@ -101,7 +101,7 @@ namespace bamstats
 
     samFile* h2bam = NULL;
     if (!c.interleaved) {
-      samFile* h2bam = sam_open(c.h2bam.string().c_str(), "wb");
+      h2bam = sam_open(c.h2bam.string().c_str(), "wb");
       if (sam_hdr_write(h2bam, hdr) != 0) {
 	std::cerr << "Could not write ouptut file header!" << std::endl;
 	return -1;
@@ -273,13 +273,13 @@ namespace bamstats
 	      }
 	    } else {
 	      bam_aux_append(r, "HP", 'i', 4, (uint8_t*)&hrnd);
-	      if (c.interleaved) {
-		if (!sam_write1(h1bam, hdr, r)) {
+	      if (!c.interleaved) {
+		if (!sam_write1(h2bam, hdr, r)) {
 		  std::cerr << "Could not write to bam file!" << std::endl;
 		  return -1;
 		}
 	      } else {
-		if (!sam_write1(h2bam, hdr, r)) {
+		if (!sam_write1(h1bam, hdr, r)) {
 		  std::cerr << "Could not write to bam file!" << std::endl;
 		  return -1;
 		}
@@ -298,13 +298,13 @@ namespace bamstats
 	  int32_t hp = 2;
 	  ++assignedReadsH2;
 	  bam_aux_append(r, "HP", 'i', 4, (uint8_t*)&hp);
-	  if (c.interleaved) {
-	    if (!sam_write1(h1bam, hdr, r)) {
+	  if (!c.interleaved) {
+	    if (!sam_write1(h2bam, hdr, r)) {
 	      std::cerr << "Could not write to bam file!" << std::endl;
 	      return -1;
 	    }
 	  } else {
-	    if (!sam_write1(h2bam, hdr, r)) {
+	    if (!sam_write1(h1bam, hdr, r)) {
 	      std::cerr << "Could not write to bam file!" << std::endl;
 	      return -1;
 	    }
