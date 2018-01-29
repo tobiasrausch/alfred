@@ -90,7 +90,7 @@ namespace bamstats
     typedef std::vector<uint64_t> TGCContent;
     typedef boost::dynamic_bitset<> TBitSet;
     typedef std::pair<int32_t, int32_t> TStartEndPair;
-    typedef std::vector<TStartEndPair> TBlockRange;
+    typedef std::map<int32_t, TStartEndPair> TBlockRange;
     typedef std::vector<TBlockRange> TGenomicBlockRange;
     
     int32_t maxReadLength;
@@ -542,11 +542,12 @@ namespace bamstats
 	uint8_t* psptr = bam_aux_get(rec, "PS");
 	if (psptr) psId = bam_aux2i(psptr);
 	if ((int32_t) itRg->second.rc.brange.size() <= refIndex) itRg->second.rc.brange.resize(refIndex + 1, ReadCounts::TBlockRange());
-	if ((int32_t) itRg->second.rc.brange[refIndex].size() <= psId) itRg->second.rc.brange[refIndex].resize(psId + 1, std::make_pair(-1, -1));
-	if (itRg->second.rc.brange[refIndex][psId].first == -1) itRg->second.rc.brange[refIndex][psId].first = rec->core.pos;
-	else itRg->second.rc.brange[refIndex][psId].first = std::min(rec->core.pos, itRg->second.rc.brange[refIndex][psId].first);
-	if (itRg->second.rc.brange[refIndex][psId].second == -1) itRg->second.rc.brange[refIndex][psId].second = lastAlignedPosition(rec);
-	else itRg->second.rc.brange[refIndex][psId].second = std::max((int32_t) lastAlignedPosition(rec), itRg->second.rc.brange[refIndex][psId].second);
+	if (itRg->second.rc.brange[refIndex].find(psId) == itRg->second.rc.brange[refIndex].end()) {
+	  itRg->second.rc.brange[refIndex].insert(std::make_pair(psId, std::make_pair(rec->core.pos, lastAlignedPosition(rec))));
+	} else {
+	  itRg->second.rc.brange[refIndex][psId].first = std::min(rec->core.pos, itRg->second.rc.brange[refIndex][psId].first);
+	  itRg->second.rc.brange[refIndex][psId].second = std::max((int32_t) lastAlignedPosition(rec), itRg->second.rc.brange[refIndex][psId].second);
+	}
       }
       
       // Get the read sequence
@@ -1037,9 +1038,9 @@ namespace bamstats
       rcfile << "PS\tSample\tChr\tStart\tEnd\tPSid\tSize\tLibrary" << std::endl;
       for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
 	for(int32_t refIndex = 0; refIndex < (int32_t) itRg->second.rc.brange.size(); ++refIndex) {
-	  for(int32_t i = 0; i < (int32_t) itRg->second.rc.brange[refIndex].size(); ++i) {
-	    if (itRg->second.rc.brange[refIndex][i].first < itRg->second.rc.brange[refIndex][i].second) {
-	      rcfile << "PS\t" << c.sampleName << "\t" <<  hdr->target_name[refIndex] << "\t" << itRg->second.rc.brange[refIndex][i].first << "\t" << itRg->second.rc.brange[refIndex][i].second << "\t" << i << "\t" << (itRg->second.rc.brange[refIndex][i].second - itRg->second.rc.brange[refIndex][i].first) << "\t" << itRg->first << std::endl;
+	  for(typename ReadCounts::TBlockRange::const_iterator itBR = itRg->second.rc.brange[refIndex].begin(); itBR != itRg->second.rc.brange[refIndex].end(); ++itBR) {
+	    if (itBR->second.first < itBR->second.second) {
+	      rcfile << "PS\t" << c.sampleName << "\t" <<  hdr->target_name[refIndex] << "\t" << itBR->second.first << "\t" << itBR->second.second << "\t" << itBR->first << "\t" << (itBR->second.second - itBR->second.first) << "\t" << itRg->first << std::endl;
 	    }
 	  }
 	}
