@@ -236,6 +236,24 @@ if (!is.null(all)) {
    print(warnings())	
 }
 
+cmd=paste0('zgrep ^PS ', args[1], ' | cut -f 2-')
+all=tryCatch(read.table(pipe(cmd), header=T), error=function(e) NULL)
+if (!is.null(all)) {
+   print("Phased block length");
+   for(sid in unique(all$Sample)) {
+     for(rg in unique(all[all$Sample == sid,]$Library)) {
+      	x = all[all$Sample == sid & all$Library == rg,]
+    	p1=ggplot(data=x, aes(x=Size))
+    	p1=p1 + geom_histogram(bins=50)
+    	p1=p1 + scale_y_continuous(labels=comma)
+	p1=p1 + ggtitle(paste0("Phased block length distribution", "\n", "Sample: ", sid, "\n", "RG: ", rg))
+   	p1=p1 + scale_x_continuous(labels=comma) + xlab("Phased block size") + ylab("Count")
+    	print(p1)
+     }
+   }
+   print(warnings())
+}
+
 
 print("Metrics")
 cmd=paste0('zgrep ^ME ', args[1], ' | cut -f 2-')

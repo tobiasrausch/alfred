@@ -1030,6 +1030,23 @@ namespace bamstats
       }
     }
 
+    if (isHaplotagged) {
+      // Output phased block length histogram
+      rcfile << "# Phased block length (PS)." << std::endl;
+      rcfile << "# Use `zgrep ^PS <outfile> | cut -f 2-` to extract this part." << std::endl;
+      rcfile << "PS\tSample\tChr\tStart\tEnd\tPSid\tSize\tLibrary" << std::endl;
+      for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+	for(int32_t refIndex = 0; refIndex < (int32_t) itRg->second.rc.brange.size(); ++refIndex) {
+	  for(int32_t i = 0; i < (int32_t) itRg->second.rc.brange[refIndex].size(); ++i) {
+	    if (itRg->second.rc.brange[refIndex][i].first < itRg->second.rc.brange[refIndex][i].second) {
+	      rcfile << "PS\t" << c.sampleName << "\t" <<  hdr->target_name[refIndex] << "\t" << itRg->second.rc.brange[refIndex][i].first << "\t" << itRg->second.rc.brange[refIndex][i].second << "\t" << i << "\t" << (itRg->second.rc.brange[refIndex][i].second - itRg->second.rc.brange[refIndex][i].first) << "\t" << itRg->first << std::endl;
+	    }
+	  }
+	}
+      }
+    }
+  
+
     // clean-up
     bam_destroy1(rec);
     fai_destroy(fai);
