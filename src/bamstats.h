@@ -87,8 +87,10 @@ namespace bamstats
     typedef std::vector<TCountType> TLengthReadCount;
     typedef std::vector<uint64_t> TBaseQualitySum;
     typedef std::vector<uint64_t> TGCContent;
+    typedef boost::dynamic_bitset<> TBitSet;
     
     int32_t maxReadLength;
+    int32_t maxUMI;
     int64_t secondary;
     int64_t qcfail;
     int64_t dup;
@@ -99,6 +101,8 @@ namespace bamstats
     int64_t spliced;
     int64_t mapped1;
     int64_t mapped2;
+    int64_t haplotagged;
+    int64_t mitagged;
     TLengthReadCount lRc;
     TLengthReadCount nCount;
     TLengthReadCount aCount;
@@ -107,9 +111,11 @@ namespace bamstats
     TLengthReadCount tCount;
     TBaseQualitySum bqCount;
     TGCContent gcContent;
+    TBitSet umi;
+
     
 
-    ReadCounts() : maxReadLength(std::numeric_limits<TMaxReadLength>::max()), secondary(0), qcfail(0), dup(0), supplementary(0), unmap(0), forward(0), reverse(0), spliced(0), mapped1(0), mapped2(0) {
+    ReadCounts() : maxReadLength(std::numeric_limits<TMaxReadLength>::max()), maxUMI(10000000), secondary(0), qcfail(0), dup(0), supplementary(0), unmap(0), forward(0), reverse(0), spliced(0), mapped1(0), mapped2(0), haplotagged(0), mitagged(0) {
       lRc.resize(maxReadLength + 1, 0);
       aCount.resize(maxReadLength + 1, 0);
       cCount.resize(maxReadLength + 1, 0);
@@ -344,6 +350,10 @@ namespace bamstats
     std::vector<ChrGC> chrGC(hdr->n_targets, ChrGC());
     ReadCounts::TGCContent refGcContent(101, 0);
 
+    // Haplotyping, Molecular identifier
+    bool isHaplotagged = false;
+    bool isMitagged = false;
+    
     // Find N90 chromosome length
     uint32_t minChrLen = 0;
     {
@@ -448,7 +458,7 @@ namespace bamstats
 	std::cerr << "Alignment is past the reference end: " << hdr->target_name[refIndex] << ':' << rec->core.pos << std::endl;
 	continue;
       }
-	    
+
       // Paired counts
       if (rec->core.flag & BAM_FPAIRED) {
 	++itRg->second.pc.paired;
@@ -504,6 +514,32 @@ namespace bamstats
       else ++itRg->second.rc.forward;
       if (rec->core.l_qseq < itRg->second.rc.maxReadLength) ++itRg->second.rc.lRc[rec->core.l_qseq];
       else ++itRg->second.rc.lRc[itRg->second.rc.maxReadLength];
+
+      // Fetch molecule identifier
+      uint8_t* miptr = bam_aux_get(rec, "HP");
+      if (miptr) {
+	isMitagged = true;
+	++itRg->second.rc.mitagged;
+	int32_t mitag = bam_aux2i(miptr);
+	if ((mitag>=0) && (mitag < itRg->second.rc.maxUMI)) {
+	  // Lazy resize
+	  if (itRg->second.rc.umi.empty()) itRg->second.rc.umi.resize(itRg->second.rc.maxUMI, false);
+	  itRg->second.rc.umi[mitag] = true;
+	}
+      }
+      
+      // Fetch haplotype tag
+      uint8_t* hpptr = bam_aux_get(rec, "HP");
+      if (hpptr) {
+	isHaplotagged = true;
+	++itRg->second.rc.haplotagged;
+
+	// If no phased block assume all in one phased block
+	//int32_t psId = 0;
+	//uint8_t* psptr = bam_aux_get(rec, "PS");
+	//if (psptr) psId = bam_aux2i(psptr);
+      }
+
       
       // Get the read sequence
       typedef std::vector<uint8_t> TQuality;
@@ -659,8 +695,9 @@ namespace bamstats
     rcfile << "#Pairs\t#MappedPairs\tMappedPairsFraction\t#MappedSameChr\tMappedSameChrFraction\t#MappedProperPair\tMappedProperFraction" << "\t";
     rcfile << "#ReferenceBp\t#ReferenceNs\t#AlignedBases\t#MatchedBases\tMatchRate\t#MismatchedBases\tMismatchRate\t#DeletionsCigarD\tDeletionRate\tHomopolymerContextDel\t#InsertionsCigarI\tInsertionRate\tHomopolymerContextIns\t#SoftClippedBases\tSoftClipRate\t#HardClippedBases\tHardClipRate\tErrorRate" << "\t";
     rcfile << "MedianReadLength\tDefaultLibraryLayout\tMedianInsertSize\tMedianCoverage\tSDCoverage\tMedianMAPQ";
-    if (c.hasRegionFile) rcfile << "\t#TotalBedBp\t#AlignedBasesInBed\tEnrichmentOverBed" << std::endl;
-    else rcfile << std::endl;
+    if (c.hasRegionFile) rcfile << "\t#TotalBedBp\t#AlignedBasesInBed\tEnrichmentOverBed";
+    if (isMitagged) rcfile << "\t#MItagged\tFractionMItagged\t#UMIs"; 
+    rcfile << std::endl;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       // Read counts
       uint64_t totalReadCount = itRg->second.rc.qcfail + itRg->second.rc.dup + itRg->second.rc.unmap + itRg->second.rc.mapped1 + itRg->second.rc.mapped2;
@@ -738,8 +775,12 @@ namespace bamstats
 	typename BedCounts::TOnTargetMap::iterator itOT = be.onTarget.find(itRg->first);
 	uint64_t alignedBedBases = itOT->second[0];
 	double enrichment = ((double) alignedBedBases / (double) alignedbases) / ((double) totalBedSize / (double) nonN);
-	rcfile << "\t" << totalBedSize << "\t" << alignedBedBases << "\t" << enrichment << std::endl;
-      } else rcfile << std::endl;
+	rcfile << "\t" << totalBedSize << "\t" << alignedBedBases << "\t" << enrichment;
+      }
+      if (isMitagged) {
+	rcfile << "\t" << itRg->second.rc.mitagged << "\t" << (double) itRg->second.rc.mitagged / (double) totalReadCount << "\t" << itRg->second.rc.umi.count();
+      }
+      rcfile << std::endl;
     }
 
     // Output read length histogram

@@ -231,8 +231,7 @@ namespace bamstats
     bam_hdr_destroy(hdr);
     hts_idx_destroy(idx);
     sam_close(samfile);
-
-
+    dataOut.pop();
     
     return 0;
   }

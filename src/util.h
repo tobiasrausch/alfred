@@ -32,6 +32,7 @@ Contact: Tobias Rausch (rausch@embl.de)
 #include <boost/iostreams/copy.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/device/file.hpp>
+#include <boost/math/distributions/binomial.hpp>
 
 #include <htslib/sam.h>
 
@@ -46,6 +47,21 @@ namespace bamstats
     Interval(int32_t s, int32_t e) : start(s), end(e) {}
   };
 
+
+  inline double
+  binomTest(uint32_t x, uint32_t n, double p) {
+    boost::math::binomial binomialdist(n, p);
+    double cutoff = pdf(binomialdist, x);
+    double pval = 0.0;
+    for(uint32_t k = 0; k <= n; ++k) {
+      double p = pdf(binomialdist, k);
+      if (p <= cutoff) pval +=p;
+    }
+    return pval;
+  }
+
+
+  
   inline unsigned hash_string(const char *s) {
     unsigned h = 37;
     while (*s) {
