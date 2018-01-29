@@ -39,6 +39,7 @@ Contact: Tobias Rausch (rausch@embl.de)
 #include <htslib/sam.h>
 #include <htslib/faidx.h>
 
+#include "tenX.h"
 #include "util.h"
 
 namespace bamstats
@@ -88,6 +89,9 @@ namespace bamstats
     typedef std::vector<uint64_t> TBaseQualitySum;
     typedef std::vector<uint64_t> TGCContent;
     typedef boost::dynamic_bitset<> TBitSet;
+    typedef std::pair<int32_t, int32_t> TStartEndPair;
+    typedef std::vector<TStartEndPair> TBlockRange;
+    typedef std::vector<TBlockRange> TGenomicBlockRange;
     
     int32_t maxReadLength;
     int32_t maxUMI;
@@ -112,8 +116,7 @@ namespace bamstats
     TBaseQualitySum bqCount;
     TGCContent gcContent;
     TBitSet umi;
-
-    
+    TGenomicBlockRange brange;
 
     ReadCounts() : maxReadLength(std::numeric_limits<TMaxReadLength>::max()), maxUMI(10000000), secondary(0), qcfail(0), dup(0), supplementary(0), unmap(0), forward(0), reverse(0), spliced(0), mapped1(0), mapped2(0), haplotagged(0), mitagged(0) {
       lRc.resize(maxReadLength + 1, 0);
@@ -516,7 +519,7 @@ namespace bamstats
       else ++itRg->second.rc.lRc[itRg->second.rc.maxReadLength];
 
       // Fetch molecule identifier
-      uint8_t* miptr = bam_aux_get(rec, "HP");
+      uint8_t* miptr = bam_aux_get(rec, "MI");
       if (miptr) {
 	isMitagged = true;
 	++itRg->second.rc.mitagged;
@@ -535,11 +538,16 @@ namespace bamstats
 	++itRg->second.rc.haplotagged;
 
 	// If no phased block assume all in one phased block
-	//int32_t psId = 0;
-	//uint8_t* psptr = bam_aux_get(rec, "PS");
-	//if (psptr) psId = bam_aux2i(psptr);
+	int32_t psId = 0;
+	uint8_t* psptr = bam_aux_get(rec, "PS");
+	if (psptr) psId = bam_aux2i(psptr);
+	if ((int32_t) itRg->second.rc.brange.size() <= refIndex) itRg->second.rc.brange.resize(refIndex + 1, ReadCounts::TBlockRange());
+	if ((int32_t) itRg->second.rc.brange[refIndex].size() <= psId) itRg->second.rc.brange[refIndex].resize(psId + 1, std::make_pair(-1, -1));
+	if (itRg->second.rc.brange[refIndex][psId].first == -1) itRg->second.rc.brange[refIndex][psId].first = rec->core.pos;
+	else itRg->second.rc.brange[refIndex][psId].first = std::min(rec->core.pos, itRg->second.rc.brange[refIndex][psId].first);
+	if (itRg->second.rc.brange[refIndex][psId].second == -1) itRg->second.rc.brange[refIndex][psId].second = lastAlignedPosition(rec);
+	else itRg->second.rc.brange[refIndex][psId].second = std::max((int32_t) lastAlignedPosition(rec), itRg->second.rc.brange[refIndex][psId].second);
       }
-
       
       // Get the read sequence
       typedef std::vector<uint8_t> TQuality;
@@ -696,7 +704,8 @@ namespace bamstats
     rcfile << "#ReferenceBp\t#ReferenceNs\t#AlignedBases\t#MatchedBases\tMatchRate\t#MismatchedBases\tMismatchRate\t#DeletionsCigarD\tDeletionRate\tHomopolymerContextDel\t#InsertionsCigarI\tInsertionRate\tHomopolymerContextIns\t#SoftClippedBases\tSoftClipRate\t#HardClippedBases\tHardClipRate\tErrorRate" << "\t";
     rcfile << "MedianReadLength\tDefaultLibraryLayout\tMedianInsertSize\tMedianCoverage\tSDCoverage\tMedianMAPQ";
     if (c.hasRegionFile) rcfile << "\t#TotalBedBp\t#AlignedBasesInBed\tEnrichmentOverBed";
-    if (isMitagged) rcfile << "\t#MItagged\tFractionMItagged\t#UMIs"; 
+    if (isMitagged) rcfile << "\t#MItagged\tFractionMItagged\t#UMIs";
+    if (isHaplotagged) rcfile << "\t#HaploTagged\tFractionHaploTagged\t#PhasedBlocks\tN50PhasedBlockLength"; 
     rcfile << std::endl;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       // Read counts
@@ -779,6 +788,10 @@ namespace bamstats
       }
       if (isMitagged) {
 	rcfile << "\t" << itRg->second.rc.mitagged << "\t" << (double) itRg->second.rc.mitagged / (double) totalReadCount << "\t" << itRg->second.rc.umi.count();
+      }
+      if (isHaplotagged) {
+	int32_t n50ps = n50PhasedBlockLength(itRg->second.rc.brange);
+	rcfile << "\t" << itRg->second.rc.haplotagged << "\t" << (double) itRg->second.rc.haplotagged / (double) totalReadCount << "\t" << phasedBlocks(itRg->second.rc.brange) << "\t" << n50ps;
       }
       rcfile << std::endl;
     }
