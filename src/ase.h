@@ -57,7 +57,8 @@ namespace bamstats {
 
 
   struct AseConfig {
-    bool assign;
+    bool isPhased;
+    bool outputAll;
     unsigned short minMapQual;
     unsigned short minBaseQual;
     std::string sample;
@@ -94,7 +95,7 @@ namespace bamstats {
     boost::iostreams::filtering_ostream dataOut;
     dataOut.push(boost::iostreams::gzip_compressor());
     dataOut.push(boost::iostreams::file_sink(c.as.string().c_str(), std::ios_base::out | std::ios_base::binary));
-    dataOut << "chr\tpos\tid\tref\talt\tdepth\trefsupport\taltsupport\tgt\tvaf\th1af\tpvalue" << std::endl;
+    dataOut << "chr\tpos\tid\tref\talt\tdepth\trefsupport\taltsupport\tgt\taf\tpvalue" << std::endl;
   
     // Assign reads to SNPs
     faidx_t* fai = fai_load(c.genome.string().c_str());
@@ -106,7 +107,6 @@ namespace bamstats {
       typedef std::vector<BiallelicVariant> TPhasedVariants;
       TPhasedVariants pv;
       if (!_loadVariants(ibcffile, bcfidx, bcfhdr, c.sample, chrName, pv)) continue;
-      std::cout << chrName << ',' << pv.size() << std::endl;
       if (pv.empty()) continue;
 
       // Sort variants
@@ -129,8 +129,6 @@ namespace bamstats {
 	if ((r->core.flag & BAM_FPAIRED) && (r->core.flag & BAM_FMUNMAP)) continue;
 
 	// Fetch contained variants
-	uint32_t hp1votes = 0;
-	uint32_t hp2votes = 0;
 	TPhasedVariants::const_iterator vIt = std::lower_bound(pv.begin(), pv.end(), BiallelicVariant(r->core.pos), SortVariants<BiallelicVariant>());
 	TPhasedVariants::const_iterator vItEnd = std::upper_bound(pv.begin(), pv.end(), BiallelicVariant(lastAlignedPosition(r)), SortVariants<BiallelicVariant>());
 	if (vIt != vItEnd) {
@@ -178,12 +176,8 @@ namespace bamstats {
 			      // SNP
 			      if ((sequence.substr(sp, vIt->alt.size()) == vIt->alt) && (sequence.substr(sp, vIt->ref.size()) != vIt->ref)) {
 				++alt[vIt-pv.begin()];
-				if (vIt->hap) ++hp1votes;
-				else ++hp2votes;
 			      } else if ((sequence.substr(sp, vIt->alt.size()) != vIt->alt) && (sequence.substr(sp, vIt->ref.size()) == vIt->ref)) {
 				++ref[vIt-pv.begin()];
-				if (vIt->hap) ++hp2votes;
-				else ++hp1votes;
 			      }
 			    }
 			  } else if (vIt->ref.size() < vIt->alt.size()) {
@@ -192,12 +186,8 @@ namespace bamstats {
 			    std::string refProbe = vIt->ref + std::string(seq + gp + vIt->ref.size(), seq + gp + vIt->ref.size() + diff);
 			    if ((sequence.substr(sp, vIt->alt.size()) == vIt->alt) && (sequence.substr(sp, vIt->alt.size()) != refProbe)) {
 			      ++alt[vIt-pv.begin()];
-			      if (vIt->hap) ++hp1votes;
-			      else ++hp2votes;
 			    } else if ((sequence.substr(sp, vIt->alt.size()) != vIt->alt) && (sequence.substr(sp, vIt->alt.size()) == refProbe)) {
 			      ++ref[vIt-pv.begin()];
-			      if (vIt->hap) ++hp2votes;
-			      else ++hp1votes;
 			    }
 			  } else {
 			    // Deletion
@@ -205,12 +195,8 @@ namespace bamstats {
 			    std::string altProbe = vIt->alt + std::string(seq + gp + vIt->ref.size(), seq + gp + vIt->ref.size() + diff);
 			    if ((sequence.substr(sp, vIt->ref.size()) == altProbe) && (sequence.substr(sp, vIt->ref.size()) != vIt->ref)) {
 			      ++alt[vIt-pv.begin()];
-			      if (vIt->hap) ++hp1votes;
-			      else ++hp2votes;
 			    } else if ((sequence.substr(sp, vIt->ref.size()) != altProbe) && (sequence.substr(sp, vIt->ref.size()) == vIt->ref)) {
 			      ++ref[vIt-pv.begin()];
-			      if (vIt->hap) ++hp2votes;
-			      else ++hp1votes;
 			    }
 			  }
 			}
@@ -224,9 +210,6 @@ namespace bamstats {
 		return 1;
 	      }
 	    }
-	    int32_t hp = 0;
-	    if (hp1votes > 2*hp2votes) hp = 1;
-	    else if (hp2votes > 2*hp1votes) hp = 2;
 	  }
 	}
       }
@@ -254,21 +237,27 @@ namespace bamstats {
 	    }
 	  } while (itrRet >= 0);
 	  uint32_t totalcov = ref[i] + alt[i];
-	  std::string hapstr;
-	  if (pv[i].hap) hapstr = "1|0";
-	  else hapstr = "0|1";
+	  std::string hapstr = "0/1";
+	  if (c.isPhased) {
+	    if (pv[i].hap) hapstr = "1|0";
+	    else hapstr = "0|1";
+	  }
 	  if (totalcov > 0) {
 	    double h1af = 0;
 	    double vaf = (double) alt[i] / (double) totalcov;
 	    if (pv[i].hap) h1af = (double) alt[i] / (double) totalcov;
 	    else h1af = (double) ref[i] / (double) totalcov;
 	    double pval = binomTest(alt[i], totalcov, 0.5);
-	    dataOut << chrName << "\t" << (pv[i].pos + 1) << "\t" << recvcf->d.id << "\t" << pv[i].ref << "\t" << pv[i].alt << "\t" << totalcov << "\t" << ref[i] << "\t" << alt[i] << "\t" << hapstr << "\t" << vaf << "\t" << h1af << "\t" << pval;
+	    dataOut << chrName << "\t" << (pv[i].pos + 1) << "\t" << recvcf->d.id << "\t" << pv[i].ref << "\t" << pv[i].alt << "\t" << totalcov << "\t" << ref[i] << "\t" << alt[i] << "\t" << hapstr << "\t";
+	    if (c.isPhased) dataOut << h1af << "\t";
+	    else dataOut << vaf << "\t";
+	    dataOut << pval << std::endl;
 	  } else {
-	    // No coverage
-	    dataOut << chrName << "\t" << (pv[i].pos + 1) << "\t" << recvcf->d.id << "\t" << pv[i].ref << "\t" << pv[i].alt << "\t" << totalcov << "\t" << ref[i] << "\t" << alt[i] << "\t" << hapstr << "\tNA\tNA\tNA";
+	    if (c.outputAll) {
+	      // No coverage
+	      dataOut << chrName << "\t" << (pv[i].pos + 1) << "\t" << recvcf->d.id << "\t" << pv[i].ref << "\t" << pv[i].alt << "\t" << totalcov << "\t" << ref[i] << "\t" << alt[i] << "\t" << hapstr << "\tNA\tNA\tNA" << std::endl;
+	    }
 	  }
-	  dataOut << std::endl;
 	}
 	bcf_destroy(recvcf);
 	hts_itr_destroy(itervcf);
@@ -314,6 +303,8 @@ namespace bamstats {
       ("sample,s", boost::program_options::value<std::string>(&c.sample)->default_value("NA12878"), "sample name")
       ("ase,a", boost::program_options::value<boost::filesystem::path>(&c.as)->default_value("as.tsv.gz"), "allele-specific output file")
       ("vcffile,v", boost::program_options::value<boost::filesystem::path>(&c.vcffile), "input (phased) BCF file")
+      ("phased,p", "BCF file is phased and BAM is haplo-tagged")
+      ("full,f", "output all het. input SNPs")
       ;
     
     boost::program_options::options_description hidden("Hidden options");
@@ -338,6 +329,14 @@ namespace bamstats {
       std::cout << visible_options << "\n";
       return 1;
     }
+
+    // Phased running mode?
+    if (!vm.count("phased")) c.isPhased = false;
+    else c.isPhased = true;
+
+    // Output all input het. SNPs
+    if (!vm.count("full")) c.outputAll = false;
+    else c.outputAll = true;
     
     // Check input BAM file
     if (vm.count("input-file")) {
