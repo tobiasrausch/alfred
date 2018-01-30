@@ -325,15 +325,22 @@ namespace bamstats
     typedef std::set<std::string> TRgSet;
     TRgSet rgs;
     getRGs(std::string(hdr->text), rgs);
+    if (c.ignoreRG) rgs.insert("DefaultLib");
+    if ((c.singleRG) && (rgs.find(c.rgname) == rgs.end())) {
+	std::cerr << "Read group is not present in BAM file: " << c.rgname << std::endl;
+	return 1;
+    }
     typedef boost::unordered_map<std::string, ReadGroupStats> TRGMap;
     TRGMap rgMap;
     for(typename TRgSet::const_iterator itRg = rgs.begin(); itRg != rgs.end(); ++itRg) {
-      rgMap.insert(std::make_pair(*itRg, ReadGroupStats()));
-      for(int32_t refIndex = 0; refIndex < hdr->n_targets; ++refIndex) {
-	typename BedCounts::TRgBpMap::iterator itChr = be.gCov[refIndex].insert(std::make_pair(*itRg, typename BedCounts::TBpCov())).first;
-	itChr->second.resize(gRegions[refIndex].size());
-	typename BedCounts::TOnTargetMap::iterator itOT = be.onTarget.insert(std::make_pair(*itRg, typename BedCounts::TOnTargetBp())).first;
-	itOT->second.resize(be.onTSize, 0);
+      if (((c.ignoreRG) && (*itRg == "DefaultLib")) || ((c.singleRG) && (*itRg == c.rgname)) || ((!c.ignoreRG) && (!c.singleRG))) {
+	rgMap.insert(std::make_pair(*itRg, ReadGroupStats()));
+	for(int32_t refIndex = 0; refIndex < hdr->n_targets; ++refIndex) {
+	  typename BedCounts::TRgBpMap::iterator itChr = be.gCov[refIndex].insert(std::make_pair(*itRg, typename BedCounts::TBpCov())).first;
+	  itChr->second.resize(gRegions[refIndex].size());
+	  typename BedCounts::TOnTargetMap::iterator itOT = be.onTarget.insert(std::make_pair(*itRg, typename BedCounts::TOnTargetBp())).first;
+	  itOT->second.resize(be.onTSize, 0);
+	}
       }
     }
 
@@ -445,10 +452,13 @@ namespace bamstats
       
       // Get the library information
       std::string rG = "DefaultLib";
-      uint8_t *rgptr = bam_aux_get(rec, "RG");
-      if (rgptr) {
-	char* rg = (char*) (rgptr + 1);
-	rG = std::string(rg);
+      if (!c.ignoreRG) {
+	uint8_t *rgptr = bam_aux_get(rec, "RG");
+	if (rgptr) {
+	  char* rg = (char*) (rgptr + 1);
+	  rG = std::string(rg);
+	}
+	if ((c.singleRG) && (rG != c.rgname)) continue;
       }
       typename TRGMap::iterator itRg = rgMap.find(rG);
       if (itRg == rgMap.end()) {

@@ -50,6 +50,9 @@ namespace bamstats
 
 struct Config {
   bool hasRegionFile;
+  bool ignoreRG;
+  bool singleRG;
+  std::string rgname;
   std::string sampleName;
   boost::filesystem::path outfile;
   boost::filesystem::path genome;
@@ -66,8 +69,14 @@ int qc(int argc, char **argv) {
   generic.add_options()
     ("help,?", "show help message")
     ("reference,r", boost::program_options::value<boost::filesystem::path>(&c.genome), "reference fasta file (required)")
-    ("bed,b", boost::program_options::value<boost::filesystem::path>(&c.regionFile), "bed file with regions to analyze (optional)")
+    ("bed,b", boost::program_options::value<boost::filesystem::path>(&c.regionFile), "bed file with target regions (optional)")
     ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("stats.tsv.gz"), "gzipped output file")
+    ;
+
+  boost::program_options::options_description rgopt("Read-group options");
+  rgopt.add_options()
+    ("rg,g", boost::program_options::value<std::string>(&c.rgname), "only analyze this read group (optional)")
+    ("ignore,i", "ignore read-groups")
     ;
 
   boost::program_options::options_description hidden("Hidden options");
@@ -79,9 +88,9 @@ int qc(int argc, char **argv) {
   pos_args.add("input-file", -1);
 
   boost::program_options::options_description cmdline_options;
-  cmdline_options.add(generic).add(hidden);
+  cmdline_options.add(generic).add(rgopt).add(hidden);
   boost::program_options::options_description visible_options;
-  visible_options.add(generic);
+  visible_options.add(generic).add(rgopt);
 
   // Parse command-line
   boost::program_options::variables_map vm;
@@ -96,6 +105,16 @@ int qc(int argc, char **argv) {
     return 1;
   }
 
+  // Ignore read groups
+  if (vm.count("ignore")) {
+    c.ignoreRG = true;
+    c.singleRG = false;
+  } else {
+    c.ignoreRG = false;
+    if (vm.count("rg")) c.singleRG = true;
+    else c.singleRG = false;
+  }
+  
   // Check genome
   if (!(boost::filesystem::exists(c.genome) && boost::filesystem::is_regular_file(c.genome) && boost::filesystem::file_size(c.genome))) {
     std::cerr << "Input reference file is missing: " << c.genome.string() << std::endl;
