@@ -65,11 +65,51 @@ namespace bamstats
   inline bool
   createIntervals(TConfig const& c, std::string const& chr, uint32_t const target_len, std::vector<ItvChr>& intvec) {
     if (c.hasIntervalFile) {
-      std::ifstream interval_file(c.int_file.string().c_str(), std::ifstream::in);
-      if (interval_file.is_open()) {
-	while (interval_file.good()) {
-	  std::string intervalLine;
-	  getline(interval_file, intervalLine);
+      if (!is_gz(c.int_file)) {
+	std::ifstream interval_file(c.int_file.string().c_str(), std::ifstream::in);
+	if (interval_file.is_open()) {
+	  while (interval_file.good()) {
+	    std::string intervalLine;
+	    getline(interval_file, intervalLine);
+	    typedef boost::tokenizer< boost::char_separator<char> > Tokenizer;
+	    boost::char_separator<char> sep(" \t,;");
+	    Tokenizer tokens(intervalLine, sep);
+	    Tokenizer::iterator tokIter = tokens.begin();
+	    if (tokIter!=tokens.end()) {
+	      std::string chrName=*tokIter++;
+	      if (chrName == chr) {
+		if (tokIter!=tokens.end()) {
+		  ItvChr itv;
+		  itv.start = boost::lexical_cast<int32_t>(*tokIter++);
+		  itv.end = boost::lexical_cast<int32_t>(*tokIter++);
+		  if (itv.start < 0) {
+		    std::cerr << "Interval start < 0" << std::endl;
+		    return false;
+		  }
+		  if (itv.end < 0) {
+		    std::cerr << "Interval end < 0" << std::endl;
+		    return false;
+		  }
+		  if (itv.start >= itv.end) {
+		    std::cerr << "Interval start > interval end" << std::endl;
+		    return false;
+		  }
+		  itv.id = *tokIter;
+		  intvec.push_back(itv);
+		}
+	      }
+	    }
+	  }
+	  interval_file.close();
+	}
+      } else {
+	std::ifstream file(c.int_file.string().c_str(), std::ios_base::in | std::ios_base::binary);
+	boost::iostreams::filtering_streambuf<boost::iostreams::input> dataIn;
+	dataIn.push(boost::iostreams::gzip_decompressor());
+	dataIn.push(file);
+	std::istream instream(&dataIn);
+	std::string intervalLine;
+	while(std::getline(instream, intervalLine)) {
 	  typedef boost::tokenizer< boost::char_separator<char> > Tokenizer;
 	  boost::char_separator<char> sep(" \t,;");
 	  Tokenizer tokens(intervalLine, sep);
@@ -99,7 +139,7 @@ namespace bamstats
 	    }
 	  }
 	}
-	interval_file.close();
+	file.close();
       }
     } else {
       // Create artificial intervals
@@ -346,11 +386,39 @@ namespace bamstats
 	  return 1;
 	}
 	std::string oldChr;
-	std::ifstream interval_file(c.int_file.string().c_str(), std::ifstream::in);
-	if (interval_file.is_open()) {
-	  while (interval_file.good()) {
-	    std::string intervalLine;
-	    getline(interval_file, intervalLine);
+	if (!is_gz(c.int_file)) {
+	  std::ifstream interval_file(c.int_file.string().c_str(), std::ifstream::in);
+	  if (interval_file.is_open()) {
+	    while (interval_file.good()) {
+	      std::string intervalLine;
+	      getline(interval_file, intervalLine);
+	      typedef boost::tokenizer< boost::char_separator<char> > Tokenizer;
+	      boost::char_separator<char> sep(" \t,;");
+	      Tokenizer tokens(intervalLine, sep);
+	      Tokenizer::iterator tokIter = tokens.begin();
+	      if (tokIter!=tokens.end()) {
+		std::string chrName=*tokIter++;
+		if (chrName.compare(oldChr) != 0) {
+		  oldChr = chrName;
+		  int32_t tid = bam_name2id(hdr, chrName.c_str());
+		  if ((tid < 0) || (tid >= (int32_t) hdr->n_targets)) {
+		    std::cerr << "Interval file chromosome " << chrName << " is NOT present in your BAM file header " << c.bamFile.string() << std::endl;
+		    return 1;
+		  }
+		  c.validChr[tid] = true;
+		}
+	      }
+	    }
+	    interval_file.close();
+	  }
+	} else {
+	  std::ifstream file(c.int_file.string().c_str(), std::ios_base::in | std::ios_base::binary);
+	  boost::iostreams::filtering_streambuf<boost::iostreams::input> dataIn;
+	  dataIn.push(boost::iostreams::gzip_decompressor());
+	  dataIn.push(file);
+	  std::istream instream(&dataIn);
+	  std::string intervalLine;
+	  while(std::getline(instream, intervalLine)) {
 	    typedef boost::tokenizer< boost::char_separator<char> > Tokenizer;
 	    boost::char_separator<char> sep(" \t,;");
 	    Tokenizer tokens(intervalLine, sep);
@@ -368,7 +436,7 @@ namespace bamstats
 	      }
 	    }
 	  }
-	  interval_file.close();
+	  file.close();
 	}
 	c.hasIntervalFile= true;
       } else {
