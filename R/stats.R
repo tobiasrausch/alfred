@@ -48,11 +48,17 @@ all=read.table(pipe(cmd), header=T)
 for(sid in unique(all$Sample)) {
 	for(rg in unique(all[all$Sample == sid,]$Library)) {
 	       rl = all[all$Sample == sid & all$Library == rg,]
+	       tc=sum(as.numeric(rl$Count))
+	       upBound=60000
+	       gr=sum(as.numeric(rl[rl$Readlength>upBound,]$Count))
+	       infoMax = paste0("Read Length > ", upBound, " (", round(100 * gr / tc, digits=2), "%)")
+	       rl=rl[rl$Readlength <= upBound,]
 	       p1=ggplot(data=rl, aes(x=Readlength, y=Fraction))
 	       p1=p1 + geom_line()
 	       p1=p1 + xlab("Read length") + ylab("Fraction of reads")
 	       p1=p1 + scale_y_continuous(labels=comma)
-	       p1=p1 + ggtitle(paste0("Read Length Distribution", "\n", "Sample: ", sid, "\n", "RG: ", rg))
+	       if (gr) { p1=p1 + ggtitle(paste0("Read Length Distribution", "\n", infoMax, "\n", "Sample: ", sid, "\n", "RG: ", rg)); }
+	       else { p1=p1 + ggtitle(paste0("Read Length Distribution", "\n", "Sample: ", sid, "\n", "RG: ", rg)); }
 	       p1=p1 + scale_x_continuous(labels=comma)
 	       p1=p1 + theme(legend.position="bottom", legend.direction='horizontal')
 	       print(p1)
