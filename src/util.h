@@ -107,6 +107,24 @@ namespace bamstats
   }
 
   inline int32_t
+  diNucleotideRepeat(std::string const& s, int32_t idx, int32_t repfreq) {
+    for(int32_t i = std::max(0, idx - (repfreq * 2 - 1)); i <= (idx + 1); ++i) {
+      if (i + 2 * repfreq <= (int32_t) s.size()) {
+	bool dinuc = true;
+	for(int32_t k = i + 2; k < i + 2 * repfreq; k=k+2) {
+	  if ((s[k] != s[i]) || (s[k+1] != s[i+1])) {
+	    dinuc = false;
+	    break;
+	  }
+	}
+	if (dinuc) return 5;
+      }
+    }	      
+    return 6; // None
+  }
+    
+  
+  inline int32_t
   homopolymerContext(std::string const& s, int32_t idx, int32_t homlen) {
     for(int32_t i = std::max(0, idx - (homlen - 1)); i <= (idx + 1); ++i) {
       if (i + homlen <= (int32_t) s.size()) {
@@ -122,11 +140,11 @@ namespace bamstats
 	  else if (s[i] == 'C') return 1;
 	  else if (s[i] == 'G') return 2;
 	  else if (s[i] == 'T') return 3;
-	  else return 4;
+	  else if (s[i] == 'N') return 4;
 	}
       }
     }
-    return 4;
+    return diNucleotideRepeat(s, idx, homlen);
   }
 
   inline std::size_t hash_pair_mate(bam1_t* rec) {
