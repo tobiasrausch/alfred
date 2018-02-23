@@ -67,7 +67,7 @@ displayUsage() {
   std::cout << "    qc           alignment quality control" << std::endl;
   std::cout << "    count_rna    counting RNA reads in features" << std::endl;
   std::cout << "    count_dna    counting DNA reads in windows" << std::endl;
-  std::cout << "    tracks       create coverage tracks" << std::endl;
+  std::cout << "    tracks       create browser tracks" << std::endl;
   std::cout << "    split        split BAM into haplotypes" << std::endl;
   std::cout << "    ase          allele-specific expression" << std::endl;
   std::cout << std::endl;

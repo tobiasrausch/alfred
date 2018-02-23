@@ -44,8 +44,10 @@ namespace bamstats
 
   struct TrackConfig {
     uint16_t minQual;
+    uint32_t normalize;
     float resolution;
     std::string sampleName;
+    std::string format;
     boost::filesystem::path bamFile;
     boost::filesystem::path outfile;
   };
@@ -65,22 +67,82 @@ namespace bamstats
     hts_idx_t* idx = sam_index_load(samfile, c.bamFile.string().c_str());
     bam_hdr_t* hdr = sam_hdr_read(samfile);
 
-    // Parse BAM file
-    boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
-    std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "BAM file parsing" << std::endl;
-    boost::progress_display show_progress( hdr->n_targets );
-
     // Pair qualities and features
     typedef boost::unordered_map<std::size_t, uint8_t> TQualities;
     TQualities qualities;
 
+    // Normalize read-counts
+    double normFactor = 1;
+    if (c.normalize) {
+      uint64_t totalPairs = 0;
+      boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
+      std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Total read count normalization" << std::endl;
+      boost::progress_display show_progress( hdr->n_targets );
+      for(int32_t refIndex=0; refIndex < (int32_t) hdr->n_targets; ++refIndex) {
+	++show_progress;
+
+	hts_itr_t* iter = sam_itr_queryi(idx, refIndex, 0, hdr->target_len[refIndex]);
+	bam1_t* rec = bam_init1();
+	int32_t lastAlignedPos = 0;
+	std::set<std::size_t> lastAlignedPosReads;
+	while (sam_itr_next(samfile, iter, rec) >= 0) {
+	  if ((rec->core.flag & (BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP | BAM_FSUPPLEMENTARY | BAM_FUNMAP | BAM_FMUNMAP)) || (rec->core.tid != rec->core.mtid) || (!(rec->core.flag & BAM_FPAIRED))) continue;
+	  if (rec->core.qual < c.minQual) continue;
+	  
+	  // Clean-up the read store for identical alignment positions
+	  if (rec->core.pos > lastAlignedPos) {
+	    lastAlignedPosReads.clear();
+	    lastAlignedPos = rec->core.pos;
+	  }
+	
+	  if ((rec->core.pos < rec->core.mpos) || ((rec->core.pos == rec->core.mpos) && (lastAlignedPosReads.find(hash_string(bam_get_qname(rec))) == lastAlignedPosReads.end()))) {
+	    // First read
+	    lastAlignedPosReads.insert(hash_string(bam_get_qname(rec)));
+	    std::size_t hv = hash_pair(rec);
+	    qualities[hv] = rec->core.qual;
+	  } else {
+	    // Second read
+	    std::size_t hv = hash_pair_mate(rec);
+	    if (qualities.find(hv) == qualities.end()) continue; // Mate discarded
+	    uint8_t pairQuality = std::min((uint8_t) qualities[hv], (uint8_t) rec->core.qual);
+	    qualities[hv] = 0;
+	    
+	    // Pair quality
+	    if (pairQuality < c.minQual) continue; // Low quality pair
+	    
+	  
+	    // Get bases
+	    uint32_t* cigar = bam_get_cigar(rec);
+	    for (std::size_t i = 0; i < rec->core.n_cigar; ++i) {
+	      if (bam_cigar_op(cigar[i]) == BAM_CMATCH) totalPairs += bam_cigar_oplen(cigar[i]);
+	    }
+	  }
+	}
+	// Clean-up
+	bam_destroy1(rec);
+	hts_itr_destroy(iter);
+	qualities.clear();
+      }
+      // Normalize to 100bp paired-end reads
+      normFactor = ((double) ((uint64_t) (c.normalize)) / (double) totalPairs) * 100 * 2;
+    }
+    
     // Open output file
     boost::iostreams::filtering_ostream dataOut;
     dataOut.push(boost::iostreams::gzip_compressor());
     dataOut.push(boost::iostreams::file_sink(c.outfile.string().c_str(), std::ios_base::out | std::ios_base::binary));
-    dataOut << "track type=bedGraph name=\"" << c.sampleName << "\" description=\"" << c.sampleName << "\" visibility=full color=110,229,97 yLineOnOff=on autoScale=on yLineMark=\"0.0\" alwaysZero=on graphType=bar maxHeightPixels=128:75:11 windowingFunction=maximum smoothingWindow=off" << std::endl;
-    
+    if (c.format == "bedgraph") {
+      // bedgraph
+      dataOut << "track type=bedGraph name=\"" << c.sampleName << "\" description=\"" << c.sampleName << "\" visibility=full color=44,162,95" << std::endl;
+    } else {
+      // bed
+      dataOut << "chr\tstart\tend\tid\t" << c.sampleName << std::endl;
+    }
+
     // Iterate chromosomes
+    boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
+    std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "BAM file parsing" << std::endl;
+    boost::progress_display show_progress( hdr->n_targets );
     for(int32_t refIndex=0; refIndex < (int32_t) hdr->n_targets; ++refIndex) {
       ++show_progress;
 
@@ -172,24 +234,23 @@ namespace bamstats
 	// Clean-up
 	bam_destroy1(rec);
 	hts_itr_destroy(iter);
-	qualities.clear();
 
 	// Coverage track
 	typedef std::list<Track> TrackLine;
 	TrackLine tl;
 	uint32_t wb = 0;
 	uint32_t we = 0;
-	uint32_t wval = cov[0];
+	double wval = cov[0];
 	for(uint32_t i = 1; i<cov.size(); ++i) {
 	  if (cov[i] == wval) ++we;
 	  else {
-	    tl.push_back(Track(wb, we+1, wval));
+	    tl.push_back(Track(wb, we+1, normFactor * wval));
 	    wb = i;
 	    we = i;
 	    wval = cov[i];
 	  }
 	}
-	tl.push_back(Track(wb, we+1, wval));
+	tl.push_back(Track(wb, we+1, normFactor * wval));
 
 	// Reduce file size
 	if ((c.resolution > 0) && (c.resolution < 1)) {
@@ -235,8 +296,10 @@ namespace bamstats
 	    red = (double) tl.size() / (double) origs;
 	  }
 	}
-	for(TrackLine::iterator idx = tl.begin(); idx != tl.end(); ++idx) {
-	  dataOut << hdr->target_name[refIndex] << "\t" << idx->start << "\t" << idx->end << "\t" << idx->score << std::endl;
+	if (c.format == "bedgraph") {
+	  for(TrackLine::iterator idx = tl.begin(); idx != tl.end(); ++idx) dataOut << hdr->target_name[refIndex] << "\t" << idx->start << "\t" << idx->end << "\t" << idx->score << std::endl;
+	} else {
+	  for(TrackLine::iterator idx = tl.begin(); idx != tl.end(); ++idx) dataOut << hdr->target_name[refIndex] << "\t" << idx->start << "\t" << idx->end << "\t" << hdr->target_name[refIndex] << ":" << idx->start << "-" << idx->end << "\t" << idx->score << std::endl;
 	}
       }
     }
@@ -258,13 +321,15 @@ namespace bamstats
     boost::program_options::options_description generic("Generic options");
     generic.add_options()
       ("help,?", "show help message")
-      ("map-qual,m", boost::program_options::value<uint16_t>(&c.minQual)->default_value(0), "min. mapping quality")
-      ("resolution,r", boost::program_options::value<float>(&c.resolution)->default_value(0.6), "fractional resolution ]0,1]")
+      ("map-qual,m", boost::program_options::value<uint16_t>(&c.minQual)->default_value(10), "min. mapping quality")
+      ("resolution,r", boost::program_options::value<float>(&c.resolution)->default_value(0.2), "fractional resolution ]0,1]")
+      ("normalize,n", boost::program_options::value<uint32_t>(&c.normalize)->default_value(30000000), "#pairs to normalize to (0: no normalization)")
       ;
 
     boost::program_options::options_description window("Output options");
     window.add_options()
       ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("track.gz"), "track file")
+      ("format,f", boost::program_options::value<std::string>(&c.format)->default_value("bedgraph"), "output format [bedgraph|bed]")
       ;
 
     boost::program_options::options_description hidden("Hidden options");
