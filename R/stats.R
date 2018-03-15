@@ -138,7 +138,7 @@ all=read.table(pipe(cmd), header=T)
 for(sid in unique(all$Sample)) {
 	for(rg in unique(all[all$Sample == sid,]$Library)) {	
 	       ic = all[all$Sample == sid & all$Library == rg,]
-	       ic$Homopolymer = factor(ic$Homopolymer, levels=c("A", "C", "G", "T", "N", "DiNuclRepeat", "None"))
+	       ic$Homopolymer = factor(ic$Homopolymer, levels=c("A", "C", "G", "T", "N", "None"))
 	       p1=ggplot(data=ic, aes(x=Homopolymer, y=Fraction))
        	       p1=p1 + geom_bar(aes(group=InDel, fill=InDel), stat="identity", position="dodge")
        	       p1=p1 + xlab("Homopolymer Context") + ylab("InDel Fraction")

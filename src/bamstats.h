@@ -65,16 +65,16 @@ namespace bamstats
     uint64_t insCount;
     uint64_t softClipCount;
     uint64_t hardClipCount;
-    std::vector<uint32_t> delHomACGTN;  // A:0, C:1, G:2, T:3, N:4, dinucl:5, none:6
-    std::vector<uint32_t> insHomACGTN;  // A:0, C:1, G:2, T:3, N:4, dinucl:5, none:6
+    std::vector<uint32_t> delHomACGTN;  // A:0, C:1, G:2, T:3, N:4, none:5
+    std::vector<uint32_t> insHomACGTN;  // A:0, C:1, G:2, T:3, N:4, none:5
     std::vector<uint32_t> delSize;
     std::vector<uint32_t> insSize;
     TCoverageBp bpWithCoverage;
     TBpCoverage cov;
 
     BaseCounts() : maxCoverage(std::numeric_limits<TMaxCoverage>::max()), maxIndelSize(50), matchCount(0), mismatchCount(0), delCount(0), insCount(0), softClipCount(0), hardClipCount(0) {
-      delHomACGTN.resize(7, 0);
-      insHomACGTN.resize(7, 0);
+      delHomACGTN.resize(6, 0);
+      insHomACGTN.resize(6, 0);
       bpWithCoverage.resize(maxCoverage + 1, 0);
       delSize.resize(maxIndelSize + 1, 0);
       insSize.resize(maxIndelSize + 1, 0);
@@ -948,7 +948,6 @@ namespace bamstats
 	else if (i == 2) rcfile << 'G';
 	else if (i == 3) rcfile << 'T';
 	else if (i == 4) rcfile << 'N';
-	else if (i == 5) rcfile << "DiNuclRepeat";
 	else rcfile << "None";
 	rcfile << "\t" << itRg->second.bc.delHomACGTN[i] << "\t" << frac << std::endl;
       }
@@ -965,7 +964,6 @@ namespace bamstats
 	else if (i == 2) rcfile << 'G';
 	else if (i == 3) rcfile << 'T';
 	else if (i == 4) rcfile << 'N';
-	else if (i == 5) rcfile << "DiNuclRepeat";
 	else rcfile << "None";
 	rcfile << "\t" << itRg->second.bc.insHomACGTN[i] << "\t" << frac << std::endl;
       }
