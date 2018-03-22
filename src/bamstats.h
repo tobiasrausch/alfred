@@ -355,8 +355,8 @@ namespace bamstats
     TBitSet gcref;
     uint64_t referencebp = 0;
     uint64_t ncount = 0;
-    uint16_t gcRunnerIdx = 0;
-    uint16_t gcRunnerCount = 0;
+    int32_t gcRunnerIdx = 0;
+    int32_t gcRunnerCount = 0;
     std::vector<ChrGC> chrGC(hdr->n_targets, ChrGC());
     ReadCounts::TGCContent refGcContent(101, 0);
 
@@ -618,13 +618,10 @@ namespace bamstats
 	}
 	++itRg->second.rc.gcContent[gccont];
       } else {
-	if (sequence.size() > 35) {
-	  uint32_t offset = (5 * (sequence.size() - 25)) / 6; // Shift to the right to avoid leading base biases from restriction sites, transposases, ...
-	  ++gcRunnerIdx;
-	  for(uint32_t i = offset; i < (offset + 25); ++i) {
-	    if ((sequence[i] == 'c') || (sequence[i] == 'C') || (sequence[i] == 'g') || (sequence[i] == 'G')) ++gcRunnerCount;
-	  }
-	  if (gcRunnerIdx == 4) {
+	// Most likely some tag-counting application, ignore the first 20bp
+	for(uint32_t i = 20; i < sequence.size(); ++i, ++gcRunnerIdx) {
+	  if ((sequence[i] == 'c') || (sequence[i] == 'C') || (sequence[i] == 'g') || (sequence[i] == 'G')) ++gcRunnerCount;
+	  if (gcRunnerIdx == 100) {
 	    ++itRg->second.rc.gcContent[gcRunnerCount];
 	    gcRunnerIdx = 0;
 	    gcRunnerCount = 0;
