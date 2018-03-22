@@ -618,8 +618,8 @@ namespace bamstats
 	}
 	++itRg->second.rc.gcContent[gccont];
       } else {
-	if (sequence.size() > 25) {
-	  uint32_t offset = (sequence.size() - 25) / 2;
+	if (sequence.size() > 35) {
+	  uint32_t offset = (5 * (sequence.size() - 25)) / 6; // Shift to the right to avoid leading base biases from restriction sites, transposases, ...
 	  ++gcRunnerIdx;
 	  for(uint32_t i = offset; i < (offset + 25); ++i) {
 	    if ((sequence[i] == 'c') || (sequence[i] == 'C') || (sequence[i] == 'g') || (sequence[i] == 'G')) ++gcRunnerCount;
