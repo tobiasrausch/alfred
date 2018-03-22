@@ -619,16 +619,18 @@ namespace bamstats
 	++itRg->second.rc.gcContent[gccont];
       } else {
 	// Most likely some tag-counting application, ignore the first 20bp
-	for(uint32_t i = 20; i < sequence.size(); ++i, ++gcRunnerIdx) {
-	  if ((sequence[i] == 'c') || (sequence[i] == 'C') || (sequence[i] == 'g') || (sequence[i] == 'G')) ++gcRunnerCount;
-	  if (gcRunnerIdx == 100) {
-	    ++itRg->second.rc.gcContent[gcRunnerCount];
-	    gcRunnerIdx = 0;
-	    gcRunnerCount = 0;
+	if (!(rec->core.flag & BAM_FREVERSE)) {
+	  for(uint32_t i = 20; i < sequence.size(); ++i, ++gcRunnerIdx) {
+	    if ((sequence[i] == 'c') || (sequence[i] == 'C') || (sequence[i] == 'g') || (sequence[i] == 'G')) ++gcRunnerCount;
+	    if (gcRunnerIdx == 100) {
+	      ++itRg->second.rc.gcContent[gcRunnerCount];
+	      gcRunnerIdx = 0;
+	      gcRunnerCount = 0;
+	    }
 	  }
 	}
       }
-      
+    
       // Get the reference slice
       std::string refslice = boost::to_upper_copy(std::string(seq + rec->core.pos, seq + lastAlignedPosition(rec)));
       
