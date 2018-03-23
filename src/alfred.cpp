@@ -51,6 +51,7 @@ Contact: Tobias Rausch (rausch@embl.de)
 #include "bamstats.h"
 #include "count_rna.h"
 #include "count_dna.h"
+#include "annotate.h"
 #include "tracks.h"
 #include "split.h"
 #include "ase.h"
@@ -68,6 +69,7 @@ displayUsage() {
   std::cout << "    count_rna    counting RNA reads in features" << std::endl;
   std::cout << "    count_dna    counting DNA reads in windows" << std::endl;
   std::cout << "    tracks       create browser tracks" << std::endl;
+  std::cout << "    annotate     annotate peaks" << std::endl;
   std::cout << "    split        split BAM into haplotypes" << std::endl;
   std::cout << "    ase          allele-specific expression" << std::endl;
   std::cout << std::endl;
@@ -110,6 +112,9 @@ int main(int argc, char **argv) {
   }
   else if ((std::string(argv[1]) == "tracks")) {
     return tracks(argc-1,argv+1);
+  }
+  else if ((std::string(argv[1]) == "annotate")) {
+    return annotate(argc-1,argv+1);
   }
   else if ((std::string(argv[1]) == "split")) {
     return split(argc-1,argv+1);
