@@ -84,9 +84,9 @@ To plot the whole-chromosome coverage profile for chr1-22 and chrX.
 BAM Feature Annotation
 ----------------------
 
-Alfred can also be used to annotate peaks from ChIP-Seq or ATAC-Seq experiments.
+Alfred can also be used to annotate peaks from ChIP-Seq or ATAC-Seq experiments. For instance to annotate overlapping/neighboring genes up to a distance of 10,000bp:
 
-`./src/alfred annotate -g gtf/Homo_sapiens.GRCh37.75.gtf.gz <peaks.bed>`
+`./src/alfred annotate -d 10000 -g gtf/Homo_sapiens.GRCh37.75.gtf.gz <peaks.bed>`
 
 
 Example E. coli data set
