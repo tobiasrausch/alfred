@@ -81,6 +81,14 @@ To plot the whole-chromosome coverage profile for chr1-22 and chrX.
 `Rscript R/rd.R <cov.gz>`
 
 
+BAM Feature Annotation
+----------------------
+
+Alfred can also be used to annotate peaks from ChIP-Seq or ATAC-Seq experiments.
+
+`./src/alfred annotate -g gtf/Homo_sapiens.GRCh37.75.gtf.gz <peaks.bed>`
+
+
 Example E. coli data set
 ------------------------
 
