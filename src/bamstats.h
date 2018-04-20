@@ -59,6 +59,9 @@ namespace bamstats
 
     uint32_t maxCoverage;
     uint32_t maxIndelSize;
+    uint64_t n1;
+    uint64_t n2;
+    uint64_t nd;
     uint64_t matchCount;
     uint64_t mismatchCount;
     uint64_t delCount;
@@ -72,7 +75,7 @@ namespace bamstats
     TCoverageBp bpWithCoverage;
     TBpCoverage cov;
 
-    BaseCounts() : maxCoverage(std::numeric_limits<TMaxCoverage>::max()), maxIndelSize(50), matchCount(0), mismatchCount(0), delCount(0), insCount(0), softClipCount(0), hardClipCount(0) {
+    BaseCounts() : maxCoverage(std::numeric_limits<TMaxCoverage>::max()), maxIndelSize(50), n1(0), n2(0), nd(0), matchCount(0), mismatchCount(0), delCount(0), insCount(0), softClipCount(0), hardClipCount(0) {
       delHomACGTN.resize(6, 0);
       insHomACGTN.resize(6, 0);
       bpWithCoverage.resize(maxCoverage + 1, 0);
@@ -398,8 +401,14 @@ namespace bamstats
 	if (refIndex != -1) {
 	  for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
 	    if ((c.hasRegionFile) && (!gRegions[refIndex].empty())) _summarizeBedCoverage(gRegions[refIndex], itRg->second.bc.cov, refIndex, itRg->first, be);
-	    for(uint32_t i = 0; i < hdr->target_len[refIndex]; ++i)
+	    for(uint32_t i = 0; i < hdr->target_len[refIndex]; ++i) {
+	      if (itRg->second.bc.cov[i] >= 1) {
+		++itRg->second.bc.nd;
+		if (itRg->second.bc.cov[i] == 1) ++itRg->second.bc.n1;
+		if (itRg->second.bc.cov[i] == 2) ++itRg->second.bc.n2;
+	      }
 	      if (!nrun[i]) ++itRg->second.bc.bpWithCoverage[itRg->second.bc.cov[i]];
+	    }
 	    itRg->second.bc.cov.clear();
 	  }
 	  if (seq != NULL) free(seq);
@@ -689,8 +698,14 @@ namespace bamstats
     if (refIndex != -1) {
       for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
 	if ((c.hasRegionFile) && (!gRegions[refIndex].empty())) _summarizeBedCoverage(gRegions[refIndex], itRg->second.bc.cov, refIndex, itRg->first, be);
-	for(uint32_t i = 0; i < hdr->target_len[refIndex]; ++i)
+	for(uint32_t i = 0; i < hdr->target_len[refIndex]; ++i) {
+	  if (itRg->second.bc.cov[i] >= 1) {
+	    ++itRg->second.bc.nd;
+	    if (itRg->second.bc.cov[i] == 1) ++itRg->second.bc.n1;
+	    if (itRg->second.bc.cov[i] == 2) ++itRg->second.bc.n2;
+	  }
 	  if (!nrun[i]) ++itRg->second.bc.bpWithCoverage[itRg->second.bc.cov[i]];
+	}
 	itRg->second.bc.cov.clear();
       }
       if (seq != NULL) free(seq);
@@ -712,8 +727,8 @@ namespace bamstats
     rcfile << "ME\tSample\tLibrary\t#QCFail\tQCFailFraction\t#DuplicateMarked\tDuplicateFraction\t#Unmapped\tUnmappedFraction\t#Mapped\tMappedFraction\t#MappedRead1\t#MappedRead2\tRatioMapped2vsMapped1\t#MappedForward\tMappedForwardFraction\t#MappedReverse\tMappedReverseFraction\t#SecondaryAlignments\tSecondaryAlignmentFraction\t#SupplementaryAlignments\tSupplementaryAlignmentFraction\t#SplicedAlignments\tSplicedAlignmentFraction" << "\t";
     rcfile << "#Pairs\t#MappedPairs\tMappedPairsFraction\t#MappedSameChr\tMappedSameChrFraction\t#MappedProperPair\tMappedProperFraction" << "\t";
     rcfile << "#ReferenceBp\t#ReferenceNs\t#AlignedBases\t#MatchedBases\tMatchRate\t#MismatchedBases\tMismatchRate\t#DeletionsCigarD\tDeletionRate\tHomopolymerContextDel\t#InsertionsCigarI\tInsertionRate\tHomopolymerContextIns\t#SoftClippedBases\tSoftClipRate\t#HardClippedBases\tHardClipRate\tErrorRate" << "\t";
-    rcfile << "MedianReadLength\tDefaultLibraryLayout\tMedianInsertSize\tMedianCoverage\tSDCoverage\tMedianMAPQ";
-    if (c.hasRegionFile) rcfile << "\t#TotalBedBp\t#AlignedBasesInBed\tEnrichmentOverBed";
+    rcfile << "MedianReadLength\tDefaultLibraryLayout\tMedianInsertSize\tMedianCoverage\tSDCoverage\tCoveredBp\tFractionCovered\tBpCov1ToCovNRatio\tBpCov1ToCov2Ratio\tMedianMAPQ";
+    if (c.hasRegionFile) rcfile << "\t#TotalBedBp\t#AlignedBasesInBed\tFractionInBed\tEnrichmentOverBed";
     if (isMitagged) rcfile << "\t#MItagged\tFractionMItagged\t#UMIs";
     if (isHaplotagged) rcfile << "\t#HaploTagged\tFractionHaploTagged\t#PhasedBlocks\tN50PhasedBlockLength"; 
     rcfile << std::endl;
@@ -785,16 +800,20 @@ namespace bamstats
 
       // Standardized SD of genomic coverage
       double ssdcov = 1000 * sdFromHistogram(itRg->second.bc.bpWithCoverage) / std::sqrt((double) mappedCount);
+      double fraccovbp = (double) itRg->second.bc.nd / (double) (referencebp - ncount);
+      double pbc1 = (double) itRg->second.bc.n1 / (double) itRg->second.bc.nd;
+      double pbc2 = (double) itRg->second.bc.n1 / (double) itRg->second.bc.n2;
 
-      rcfile << medianFromHistogram(itRg->second.rc.lRc) << "\t" << deflayout << "\t" << medISize << "\t" << medianFromHistogram(itRg->second.bc.bpWithCoverage) << "\t" << ssdcov << "\t" << medianFromHistogram(itRg->second.qc.qcount);
+      rcfile << medianFromHistogram(itRg->second.rc.lRc) << "\t" << deflayout << "\t" << medISize << "\t" << medianFromHistogram(itRg->second.bc.bpWithCoverage) << "\t" << ssdcov << "\t" << itRg->second.bc.nd << "\t" << fraccovbp << "\t" << pbc1 << "\t" << pbc2 << "\t" << medianFromHistogram(itRg->second.qc.qcount);
       
       // Bed metrics
       if (c.hasRegionFile) {
 	uint64_t nonN = referencebp - ncount;
 	typename BedCounts::TOnTargetMap::iterator itOT = be.onTarget.find(itRg->first);
 	uint64_t alignedBedBases = itOT->second[0];
-	double enrichment = ((double) alignedBedBases / (double) alignedbases) / ((double) totalBedSize / (double) nonN);
-	rcfile << "\t" << totalBedSize << "\t" << alignedBedBases << "\t" << enrichment;
+	double fractioninbed = (double) alignedBedBases / (double) alignedbases;
+	double enrichment = fractioninbed / ((double) totalBedSize / (double) nonN);
+	rcfile << "\t" << totalBedSize << "\t" << alignedBedBases << "\t" << fractioninbed << "\t" << enrichment;
       }
       if (isMitagged) {
 	rcfile << "\t" << itRg->second.rc.mitagged << "\t" << (double) itRg->second.rc.mitagged / (double) totalReadCount << "\t" << itRg->second.rc.umi.count();

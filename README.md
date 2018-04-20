@@ -55,7 +55,7 @@ For instance, for a human whole-exome data set.
 Web Front End
 -------------
 
-The Genome Analysis Server [GEAR](https://gear.embl.de) has a [web front end](https://gear.embl.de/alfred) for Alfred. Instead of plotting the alignment metrics and statistics with R you can also upload the output file of Alfred [here](https://gear.embl.de/alfred).
+The Genome Analysis Server [GEAR](https://gear.embl.de) has a [web front end](https://gear.embl.de/alfred) for Alfred. Instead of plotting the alignment metrics and statistics with R you can also upload the QC output file of Alfred [here](https://gear.embl.de/alfred).
 
 
 
