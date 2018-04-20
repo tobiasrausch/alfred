@@ -63,7 +63,7 @@ For ATAC-Seq data, the insert size distribution should reveal the DNA pitch and 
 
 `Rscript R/stats.R <outfile.tsv.gz>`
 
-`zgrep ^ME <outfile.tsv.gz> | datamash transpose | egrep "DuplicateFraction|MappedFraction|SDCoverage|EnrichmentOverBed"
+`zgrep ^ME <outfile.tsv.gz> | datamash transpose | egrep "DuplicateFraction|MappedFraction|SDCoverage|EnrichmentOverBed"`
 
 ATAC-Seq often has a high number of mitochondrial reads depending on the library preparation.
 
