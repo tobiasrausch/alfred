@@ -25,15 +25,15 @@ BAM Alignment Quality Control
 
 Alfred computes various alignment metrics and summary statistics by read group
 
-`./src/alfred qc -r <ref.fa> -o <qc.tsv.gz> <align.bam>`
+`./src/alfred qc -r <ref.fa> -o qc.tsv.gz <align.bam>`
 
 Plotting alignment statistics
 
-`Rscript R/stats.R <qc.tsv.gz>`
+`Rscript R/stats.R qc.tsv.gz`
 
 To convert all the alignment metrics from column format to rows to easily read it on screen
 
-`zgrep ^ME stats.tsv.gz | cut -f 2- | datamash transpose | column -t`
+`zgrep ^ME qc.tsv.gz | cut -f 2- | datamash transpose | column -t`
 
 
 BAM Alignment Quality Control for Targeted Sequencing
@@ -47,9 +47,9 @@ For instance, for a human whole-exome data set.
 
 `cd maps/ && Rscript exon.R`
 
-`./src/alfred qc -r <hg19.fa> -b maps/exonic.hg19.bed.gz -o <qc.tsv.gz> <exome.bam>`
+`./src/alfred qc -r <hg19.fa> -b maps/exonic.hg19.bed.gz -o qc.tsv.gz <exome.bam>`
 
-`Rscript R/stats.R <qc.tsv.gz>`
+`Rscript R/stats.R qc.tsv.gz`
 
 
 BAM Alignment Quality Control for ATAC-Seq
@@ -59,11 +59,11 @@ For ATAC-Seq data, the insert size distribution should reveal the DNA pitch and 
 
 `cd maps/ && Rscript promoter.R`
 
-`./src/alfred qc -r <hg19.fa> -b maps/hg19.promoter.bed.gz -o <qc.tsv.gz> <atac.bam>`
+`./src/alfred qc -r <hg19.fa> -b maps/hg19.promoter.bed.gz -o qc.tsv.gz <atac.bam>`
 
-`Rscript R/stats.R <qc.tsv.gz>`
+`Rscript R/stats.R qc.tsv.gz`
 
-`zgrep ^ME <qc.tsv.gz> | datamash transpose | egrep "^Dup|^MappedFraction|^SD|^Enrich"`
+`zgrep ^ME qc.tsv.gz | datamash transpose | egrep "^Dup|^MappedFraction|^SD|^Enrich"`
 
 ATAC-Seq often has a high number of mitochondrial reads depending on the library preparation.
 
