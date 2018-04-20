@@ -45,11 +45,29 @@ If target regions are provided, Alfred computes the average coverage for each ta
 
 For instance, for a human whole-exome data set.
 
-`cd exon/ && Rscript exon.R`
+`cd maps/ && Rscript exon.R`
 
-`./src/alfred qc -r <hg19.fa> -b exon/exonic.hg19.bed.gz -o <outfile.tsv.gz> <exome.bam>`
+`./src/alfred qc -r <hg19.fa> -b maps/exonic.hg19.bed.gz -o <outfile.tsv.gz> <exome.bam>`
 
 `Rscript R/stats.R <outfile.tsv.gz>`
+
+
+BAM Alignment Quality Control for ATAC-Seq
+------------------------------------------
+
+For ATAC-Seq data, the insert size distribution should reveal the DNA pitch and a clear nucleosome pattern with a peak for single nucleosomes and dimers. The transcription start site (TSS) enrichment should be >5 for a good ATAC-Seq library and ideally the duplicate rate is <20%, the alignment rate >70% and the standardized SD in coverage >0.3.
+
+`cd maps/ && Rscript promoter.R`
+
+`./src/alfred qc -r <hg19.fa> -b maps/hg19.promoter.bed.gz -o <outfile.tsv.gz> <atac.bam>`
+
+`Rscript R/stats.R <outfile.tsv.gz>`
+
+`zgrep ^ME <outfile.tsv.gz> | datamash transpose | egrep "DuplicateFraction|MappedFraction|SDCoverage|EnrichmentOverBed"
+
+ATAC-Seq often has a high number of mitochondrial reads depending on the library preparation.
+
+
 
 
 Web Front End
