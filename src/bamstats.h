@@ -95,6 +95,7 @@ namespace bamstats
     typedef std::pair<int32_t, int32_t> TStartEndPair;
     typedef std::map<int32_t, TStartEndPair> TBlockRange;
     typedef std::vector<TBlockRange> TGenomicBlockRange;
+    typedef std::vector<uint64_t> TMappedChr;
     
     int32_t maxReadLength;
     int32_t maxUMI;
@@ -110,6 +111,7 @@ namespace bamstats
     int64_t mapped2;
     int64_t haplotagged;
     int64_t mitagged;
+    TMappedChr mappedchr;
     TLengthReadCount lRc;
     TLengthReadCount nCount;
     TLengthReadCount aCount;
@@ -121,7 +123,8 @@ namespace bamstats
     TBitSet umi;
     TGenomicBlockRange brange;
 
-    ReadCounts() : maxReadLength(std::numeric_limits<TMaxReadLength>::max()), maxUMI(10000000), secondary(0), qcfail(0), dup(0), supplementary(0), unmap(0), forward(0), reverse(0), spliced(0), mapped1(0), mapped2(0), haplotagged(0), mitagged(0) {
+    ReadCounts(uint32_t const n_targets) : maxReadLength(std::numeric_limits<TMaxReadLength>::max()), maxUMI(10000000), secondary(0), qcfail(0), dup(0), supplementary(0), unmap(0), forward(0), reverse(0), spliced(0), mapped1(0), mapped2(0), haplotagged(0), mitagged(0) {
+      mappedchr.resize(n_targets, 0);
       lRc.resize(maxReadLength + 1, 0);
       aCount.resize(maxReadLength + 1, 0);
       cCount.resize(maxReadLength + 1, 0);
@@ -182,7 +185,7 @@ namespace bamstats
     PairCounts pc;
     QualCounts qc;
     
-  ReadGroupStats() : bc(BaseCounts()), rc(ReadCounts()), pc(PairCounts()), qc(QualCounts()) {}
+  ReadGroupStats(uint32_t const n_targets) : bc(BaseCounts()), rc(ReadCounts(n_targets)), pc(PairCounts()), qc(QualCounts()) {}
   };
 
 
@@ -337,7 +340,7 @@ namespace bamstats
     TRGMap rgMap;
     for(typename TRgSet::const_iterator itRg = rgs.begin(); itRg != rgs.end(); ++itRg) {
       if (((c.ignoreRG) && (*itRg == "DefaultLib")) || ((c.singleRG) && (*itRg == c.rgname)) || ((!c.ignoreRG) && (!c.singleRG))) {
-	rgMap.insert(std::make_pair(*itRg, ReadGroupStats()));
+	rgMap.insert(std::make_pair(*itRg, ReadGroupStats(hdr->n_targets)));
 	for(int32_t refIndex = 0; refIndex < hdr->n_targets; ++refIndex) {
 	  typename BedCounts::TRgBpMap::iterator itChr = be.gCov[refIndex].insert(std::make_pair(*itRg, typename BedCounts::TBpCov())).first;
 	  itChr->second.resize(gRegions[refIndex].size());
@@ -530,6 +533,7 @@ namespace bamstats
 	continue;
       }
       ++itRg->second.qc.qcount[(int32_t) rec->core.qual];
+      ++itRg->second.rc.mappedchr[refIndex];
       if (rec->core.flag & BAM_FREAD2) ++itRg->second.rc.mapped2;
       else ++itRg->second.rc.mapped1;
       if (rec->core.flag & BAM_FREVERSE) ++itRg->second.rc.reverse;
@@ -922,6 +926,22 @@ namespace bamstats
 	if (totalCO > 0) quant = (double) cumsum / (double) totalCO;
 	rcfile << "CO\t" << c.sampleName << "\t" << i << "\t" << itRg->second.bc.bpWithCoverage[i] << "\t" << quant << "\t" << itRg->first << std::endl;
 	cumsum += itRg->second.bc.bpWithCoverage[i];
+      }
+    }
+
+    // Output mapping statistics by chromosome
+    rcfile << "# Chromosome mapping statistics (CM)." << std::endl;
+    rcfile << "# Use `zgrep ^CM <outfile> | cut -f 2-` to extract this part." << std::endl;
+    rcfile << "CM\tSample\tLibrary\tChrom\tSize\tMapped\tMappedFraction\tObsExpRatio" << std::endl;
+    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+      uint64_t totalMappedChr = 0;
+      for(uint32_t i = 0; i < itRg->second.rc.mappedchr.size(); ++i) totalMappedChr += itRg->second.rc.mappedchr[i];
+      for(uint32_t i = 0; i < itRg->second.rc.mappedchr.size(); ++i) {
+	double frac = 0;
+	if (totalMappedChr > 0) frac = (double) itRg->second.rc.mappedchr[i] / (double) totalMappedChr;
+	double expect = (double) (hdr->target_len[i] - chrGC[i].ncount) / (double) (referencebp - ncount);
+	double obsexprat = frac / expect;
+	rcfile << "CM\t" << c.sampleName << "\t" << itRg->first << "\t" << hdr->target_name[i] << "\t" << hdr->target_len[i] << "\t" << itRg->second.rc.mappedchr[i] << "\t" << frac << "\t" << obsexprat << std::endl;
       }
     }
     
