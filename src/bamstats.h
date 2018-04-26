@@ -522,14 +522,18 @@ namespace bamstats
 	  }
 	}
       }
-      
+
       // Read counts
       if (rec->core.flag & (BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP | BAM_FSUPPLEMENTARY | BAM_FUNMAP)) {
 	if (rec->core.flag & BAM_FSECONDARY) ++itRg->second.rc.secondary;
 	if (rec->core.flag & BAM_FQCFAIL) ++itRg->second.rc.qcfail;
 	if (rec->core.flag & BAM_FDUP) ++itRg->second.rc.dup;
 	if (rec->core.flag & BAM_FSUPPLEMENTARY) ++itRg->second.rc.supplementary;
-	if (rec->core.flag & BAM_FUNMAP) ++itRg->second.rc.unmap;
+	if (rec->core.flag & BAM_FUNMAP) {
+	  ++itRg->second.rc.unmap;
+	} else {
+	  ++itRg->second.rc.mappedchr[refIndex];
+	}
 	continue;
       }
       ++itRg->second.qc.qcount[(int32_t) rec->core.qual];
