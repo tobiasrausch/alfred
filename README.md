@@ -65,9 +65,9 @@ For ATAC-Seq data, the insert size distribution should reveal the DNA pitch and 
 
 `zgrep ^ME qc.tsv.gz | datamash transpose | egrep "^Dup|^MappedFraction|^SD|^Enrich"`
 
-ATAC-Seq often has a high number of mitochondrial reads depending on the library preparation.
+ATAC-Seq libraries often have a large number of mitochondrial reads depending on the library preparation.
 
-
+`zgrep ^CM qc.tsv.gz | egrep "Mapped|chrM"`
 
 
 Web Front End
