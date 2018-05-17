@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
     return count_dna(argc-1,argv+1);
   }
   else if ((std::string(argv[1]) == "count_jct")) {
-    return count_dna(argc-1,argv+1);
+    return count_junction(argc-1,argv+1);
   }
   else if ((std::string(argv[1]) == "tracks")) {
     return tracks(argc-1,argv+1);
