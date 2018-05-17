@@ -10,8 +10,14 @@ matrix:
         apt:
           sources:
             - ubuntu-toolchain-r-test
+	    - boost-latest
           packages:
             - g++-4.8
+	    - libboost-date-time-dev
+	    - libboost-program-options-dev
+	    - libboost-system-dev
+	    - libboost-filesystem-dev
+	    - libboost-iostreams-dev
 
     - env: MYCC="gcc-5" MYCXX="g++-5"
       os: linux
@@ -19,8 +25,14 @@ matrix:
         apt:
           sources:
             - ubuntu-toolchain-r-test
+	    - boost-latest
           packages:
             - g++-5
+	    - libboost-date-time-dev
+	    - libboost-program-options-dev
+	    - libboost-system-dev
+	    - libboost-filesystem-dev
+	    - libboost-iostreams-dev
 
     - env: MYCC="gcc-6" MYCXX="g++-6"
       os: linux
@@ -28,8 +40,14 @@ matrix:
         apt:
           sources:
             - ubuntu-toolchain-r-test
+	    - boost-latest
           packages:
             - g++-6
+	    - libboost-date-time-dev
+	    - libboost-program-options-dev
+	    - libboost-system-dev
+	    - libboost-filesystem-dev
+	    - libboost-iostreams-dev
 
     - env: MYCC="gcc" MYCXX="g++"
       os: osx
