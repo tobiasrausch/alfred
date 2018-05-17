@@ -43,20 +43,21 @@ namespace bamstats
 
   template<typename TConfig, typename TGenomicRegions, typename TGeneIds>
   inline int32_t
-  parseGTF(TConfig const& c, TGenomicRegions& gRegions, TGeneIds& geneIds) {
-    typedef typename TGenomicRegions::value_type TChromosomeRegions;
-
+  parseGTFAll(TConfig const& c, TGenomicRegions& overlappingRegions, TGeneIds& geneIds) {
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "GTF feature parsing" << std::endl;
-    
-    TGenomicRegions overlappingRegions;
-    overlappingRegions.resize(gRegions.size(), TChromosomeRegions());
+
+    // Check gzip
     if (!is_gz(c.gtfFile)) {
       std::cerr << "GTF file is not gzipped!" << std::endl;
       return 0;
     }
+
+    // Map IDs to integer
     typedef std::map<std::string, int32_t> TIdMap;
     TIdMap idMap;
+
+    // Parse GTF
     std::ifstream file(c.gtfFile.string().c_str(), std::ios_base::in | std::ios_base::binary);
     boost::iostreams::filtering_streambuf<boost::iostreams::input> dataIn;
     dataIn.push(boost::iostreams::gzip_decompressor());
@@ -132,7 +133,21 @@ namespace bamstats
 	}
       }
     }
+    return geneIds.size();
+  }
 
+    
+  
+  template<typename TConfig, typename TGenomicRegions, typename TGeneIds>
+  inline int32_t
+  parseGTF(TConfig const& c, TGenomicRegions& gRegions, TGeneIds& geneIds) {
+    typedef typename TGenomicRegions::value_type TChromosomeRegions;
+
+    // Overlapping intervals for each label
+    TGenomicRegions overlappingRegions;
+    overlappingRegions.resize(gRegions.size(), TChromosomeRegions());
+    parseGTFAll(c, overlappingRegions, geneIds);
+    
     // Make intervals non-overlapping for each label
     for(uint32_t refIndex = 0; refIndex < overlappingRegions.size(); ++refIndex) {
       // Sort by ID

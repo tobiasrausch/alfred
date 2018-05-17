@@ -54,6 +54,7 @@ namespace bamstats
     std::string idname;
     std::string feature;
     boost::filesystem::path gtfFile;
+    boost::filesystem::path bedFile;
     boost::filesystem::path bamFile;
     boost::filesystem::path outintra;
     boost::filesystem::path outinter;
@@ -66,7 +67,7 @@ namespace bamstats
 #ifdef PROFILE
     ProfilerStart("alfred.prof");
 #endif
-    /*
+
     // Parse GTF file
     typedef std::vector<IntervalLabel> TChromosomeRegions;
     typedef std::vector<TChromosomeRegions> TGenomicRegions;
@@ -75,14 +76,15 @@ namespace bamstats
     typedef std::vector<std::string> TGeneIds;
     TGeneIds geneIds;
     int32_t tf = 0;
-    if (c.inputFileFormat == 0) tf = parseGTF(c, gRegions, geneIds);
-    else if (c.inputFileFormat == 1) tf = parseBED(c, gRegions, geneIds);
-    else if (c.inputFileFormat == 2) tf = parseGFF3(c, gRegions, geneIds);
+    if (c.inputFileFormat == 0) tf = parseGTFAll(c, gRegions, geneIds);
+    else if (c.inputFileFormat == 1) tf = parseBEDAll(c, gRegions, geneIds);
+    else if (c.inputFileFormat == 2) tf = parseGFF3All(c, gRegions, geneIds);
     if (tf == 0) {
       std::cerr << "Error parsing GTF/GFF3/BED file!" << std::endl;
       return 1;
     }
 
+    /*
     // Feature counter
     typedef std::vector<int32_t> TFeatureCounter;
     TFeatureCounter fc(tf, 0);
@@ -93,7 +95,6 @@ namespace bamstats
       std::cerr << "Error feature counting!" << std::endl;
       return 1;
     }
-
 
     // Output count table
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
@@ -133,6 +134,11 @@ namespace bamstats
       ("id,i", boost::program_options::value<std::string>(&c.idname)->default_value("gene_id"), "gtf/gff3 attribute")
       ("feature,f", boost::program_options::value<std::string>(&c.feature)->default_value("exon"), "gtf/gff3 feature")
       ;
+
+    boost::program_options::options_description bedopt("BED input file options, columns chr, start, end, name [, score, strand]");
+    bedopt.add_options()
+      ("bed,b", boost::program_options::value<boost::filesystem::path>(&c.bedFile), "bed file")
+      ;
     
     boost::program_options::options_description hidden("Hidden options");
     hidden.add_options()
@@ -143,9 +149,9 @@ namespace bamstats
     pos_args.add("input-file", -1);
 
     boost::program_options::options_description cmdline_options;
-    cmdline_options.add(generic).add(gtfopt).add(hidden);
+    cmdline_options.add(generic).add(gtfopt).add(bedopt).add(hidden);
     boost::program_options::options_description visible_options;
-    visible_options.add(generic).add(gtfopt);
+    visible_options.add(generic).add(gtfopt).add(bedopt);
 
     // Parse command-line
     boost::program_options::variables_map vm;
@@ -193,7 +199,10 @@ namespace bamstats
 
     // Check region file
     if (!(boost::filesystem::exists(c.gtfFile) && boost::filesystem::is_regular_file(c.gtfFile) && boost::filesystem::file_size(c.gtfFile))) {
-      std::cerr << "Input gtf/gff file is missing." << std::endl;
+      if (!(boost::filesystem::exists(c.bedFile) && boost::filesystem::is_regular_file(c.bedFile) && boost::filesystem::file_size(c.bedFile))) {
+	std::cerr << "Input gtf/bed file is missing." << std::endl;
+	return 1;
+      } else c.inputFileFormat = 1;
     } else {
       if (is_gff3(c.gtfFile)) c.inputFileFormat = 2;
       else c.inputFileFormat = 0;

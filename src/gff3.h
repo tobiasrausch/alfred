@@ -116,16 +116,14 @@ namespace bamstats
     }
   }
 
+
   template<typename TConfig, typename TGenomicRegions, typename TGeneIds>
   inline int32_t
-  parseGFF3(TConfig const& c, TGenomicRegions& gRegions, TGeneIds& geneIds) {
-    typedef typename TGenomicRegions::value_type TChromosomeRegions;
-
+  parseGFF3All(TConfig const& c, TGenomicRegions& overlappingRegions, TGeneIds& geneIds) {
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "GFF3 feature parsing" << std::endl;
     
-    TGenomicRegions overlappingRegions;
-    overlappingRegions.resize(gRegions.size(), TChromosomeRegions());
+    // Check gzip
     if (!is_gz(c.gtfFile)) {
       std::cerr << "GFF3 file is not gzipped!" << std::endl;
       return 0;
@@ -136,9 +134,11 @@ namespace bamstats
     TParentIdMap pId;
     _buildIDdict(c, pId);
 
-    // Parse GFF3
+    // Map IDs to integer
     typedef std::map<std::string, int32_t> TIdMap;
     TIdMap idMap;
+
+    // Parse GFF3
     std::ifstream file(c.gtfFile.string().c_str(), std::ios_base::in | std::ios_base::binary);
     boost::iostreams::filtering_streambuf<boost::iostreams::input> dataIn;
     dataIn.push(boost::iostreams::gzip_decompressor());
@@ -216,6 +216,19 @@ namespace bamstats
 	}
       }
     }
+    return geneIds.size();
+  }
+
+
+  template<typename TConfig, typename TGenomicRegions, typename TGeneIds>
+  inline int32_t
+  parseGFF3(TConfig const& c, TGenomicRegions& gRegions, TGeneIds& geneIds) {
+    typedef typename TGenomicRegions::value_type TChromosomeRegions;
+
+    // Overlapping intervals for each label
+    TGenomicRegions overlappingRegions;
+    overlappingRegions.resize(gRegions.size(), TChromosomeRegions());
+    parseGFF3All(c, overlappingRegions, geneIds);
 
     // Make intervals non-overlapping for each label
     for(uint32_t refIndex = 0; refIndex < overlappingRegions.size(); ++refIndex) {
