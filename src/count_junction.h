@@ -47,10 +47,8 @@ namespace bamstats
 {
 
   struct CountJunctionConfig {
-    bool stranded;
     unsigned short minQual;
     uint8_t inputFileFormat;   // 0 = gtf, 1 = bed, 2 = gff3
-    uint8_t inputBamFormat; // 0 = bam, 1 = bed
     std::map<std::string, int32_t> nchr;
     std::string sampleName;
     std::string idname;
@@ -68,7 +66,7 @@ namespace bamstats
 #ifdef PROFILE
     ProfilerStart("alfred.prof");
 #endif
-
+    /*
     // Parse GTF file
     typedef std::vector<IntervalLabel> TChromosomeRegions;
     typedef std::vector<TChromosomeRegions> TGenomicRegions;
@@ -86,7 +84,6 @@ namespace bamstats
     }
 
     // Feature counter
-    /*
     typedef std::vector<int32_t> TFeatureCounter;
     TFeatureCounter fc(tf, 0);
     int32_t retparse = 1;
@@ -169,66 +166,35 @@ namespace bamstats
       return 1;
     }
 
-    // Strand-specific counting
-    if (vm.count("stranded")) c.stranded = true;
-    else c.stranded = false;
-    
     // Check bam file
     if (!(boost::filesystem::exists(c.bamFile) && boost::filesystem::is_regular_file(c.bamFile) && boost::filesystem::file_size(c.bamFile))) {
       std::cerr << "Alignment file is missing: " << c.bamFile.string() << std::endl;
       return 1;
     } else {
-      if ((c.bamFile.string().length() > 3) && (c.bamFile.string().substr(c.bamFile.string().length() - 3) == "bed")) {
-	c.inputBamFormat = 1;
-	c.sampleName = c.bamFile.stem().string();
-	std::string oldChr = "";
-	typedef std::set<std::string> TChrSet;
-	TChrSet chrSet;
-	std::ifstream chrFile(c.bamFile.string().c_str(), std::ifstream::in);
-	if (chrFile.is_open()) {
-	  while (chrFile.good()) {
-	    std::string chrFromFile;
-	    getline(chrFile, chrFromFile);
-	    typedef boost::tokenizer< boost::char_separator<char> > Tokenizer;
-	    boost::char_separator<char> sep(" \t,;");
-	    Tokenizer tokens(chrFromFile, sep);
-	    Tokenizer::iterator tokIter = tokens.begin();
-	    if (tokIter!=tokens.end()) {
-	      std::string chrName = *tokIter++;
-	      if (chrName != oldChr) chrSet.insert(chrName);
-	    }
-	  }
-	  chrFile.close();
-	}
-	int32_t refIndex = 0;
-	for(TChrSet::iterator itc = chrSet.begin(); itc != chrSet.end(); ++itc, ++refIndex) c.nchr.insert(std::make_pair(*itc, refIndex));
-      } else {
-	c.inputBamFormat = 0;
-	samFile* samfile = sam_open(c.bamFile.string().c_str(), "r");
-	if (samfile == NULL) {
-	  std::cerr << "Fail to open file " << c.bamFile.string() << std::endl;
-	  return 1;
-	}
-	hts_idx_t* idx = sam_index_load(samfile, c.bamFile.string().c_str());
-	if (idx == NULL) {
-	  if (bam_index_build(c.bamFile.string().c_str(), 0) != 0) {
-	    std::cerr << "Fail to open index for " << c.bamFile.string() << std::endl;
-	    return 1;
-	  }
-	}
-	bam_hdr_t* hdr = sam_hdr_read(samfile);
-	for(int32_t refIndex=0; refIndex < hdr->n_targets; ++refIndex) c.nchr.insert(std::make_pair(hdr->target_name[refIndex], refIndex));
-	
-	// Get sample name
-	std::string sampleName;
-	if (!getSMTag(std::string(hdr->text), c.bamFile.stem().string(), sampleName)) {
-	  std::cerr << "Only one sample (@RG:SM) is allowed per input BAM file " << c.bamFile.string() << std::endl;
-	  return 1;
-	} else c.sampleName = sampleName;
-	bam_hdr_destroy(hdr);
-	hts_idx_destroy(idx);
-	sam_close(samfile);
+      samFile* samfile = sam_open(c.bamFile.string().c_str(), "r");
+      if (samfile == NULL) {
+	std::cerr << "Fail to open file " << c.bamFile.string() << std::endl;
+	return 1;
       }
+      hts_idx_t* idx = sam_index_load(samfile, c.bamFile.string().c_str());
+      if (idx == NULL) {
+	if (bam_index_build(c.bamFile.string().c_str(), 0) != 0) {
+	  std::cerr << "Fail to open index for " << c.bamFile.string() << std::endl;
+	  return 1;
+	}
+      }
+      bam_hdr_t* hdr = sam_hdr_read(samfile);
+      for(int32_t refIndex=0; refIndex < hdr->n_targets; ++refIndex) c.nchr.insert(std::make_pair(hdr->target_name[refIndex], refIndex));
+      
+	// Get sample name
+      std::string sampleName;
+      if (!getSMTag(std::string(hdr->text), c.bamFile.stem().string(), sampleName)) {
+	std::cerr << "Only one sample (@RG:SM) is allowed per input BAM file " << c.bamFile.string() << std::endl;
+	return 1;
+      } else c.sampleName = sampleName;
+      bam_hdr_destroy(hdr);
+      hts_idx_destroy(idx);
+      sam_close(samfile);
     }
 
     // Check region file

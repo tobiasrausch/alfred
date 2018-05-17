@@ -4,50 +4,32 @@ language: cpp
 
 matrix:
   include:
-    - env: MYCC="gcc-4.8" MYCXX="g++-4.8"
+    - env: MYCC="gcc-4.8" MYCXX="g++-4.8" BOOST_VERSION=default
       os: linux
       addons: &gcc48
         apt:
           sources:
             - ubuntu-toolchain-r-test
-	    - boost-latest
           packages:
             - g++-4.8
-            - libboost-date-time-dev
-            - libboost-program-options-dev
-            - libboost-system-dev
-            - libboost-filesystem-dev
-            - libboost-iostreams-dev
 
-    - env: MYCC="gcc-5" MYCXX="g++-5"
+    - env: MYCC="gcc-5" MYCXX="g++-5" BOOST_VERSION=default
       os: linux
       addons: &gcc5
         apt:
           sources:
             - ubuntu-toolchain-r-test
-	    - boost-latest
           packages:
             - g++-5
-            - libboost-date-time-dev
-            - libboost-program-options-dev
-            - libboost-system-dev
-            - libboost-filesystem-dev
-            - libboost-iostreams-dev
 
-    - env: MYCC="gcc-6" MYCXX="g++-6"
+    - env: MYCC="gcc-6" MYCXX="g++-6" BOOST_VERSION=default
       os: linux
       addons: &gcc6
         apt:
           sources:
             - ubuntu-toolchain-r-test
-	    - boost-latest
           packages:
             - g++-6
-	    - libboost-date-time-dev
-	    - libboost-program-options-dev
-	    - libboost-system-dev
-	    - libboost-filesystem-dev
-	    - libboost-iostreams-dev
 
     - env: MYCC="gcc" MYCXX="g++"
       os: osx
