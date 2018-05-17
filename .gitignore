@@ -6,6 +6,7 @@ gtf/
 bin/
 
 *.pyc
+*~
 
 # Compiled Object files
 *.slo
