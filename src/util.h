@@ -82,6 +82,18 @@ namespace bamstats
     IntervalLabel(int32_t s, int32_t e, char t, int32_t l) : start(s), end(e), strand(t), lid(l) {}
   };
 
+  struct IntervalLabelId {
+    int32_t start;
+    int32_t end;
+    char strand;
+    int32_t lid;
+    int32_t eid;
+
+    explicit IntervalLabelId(int32_t s) : start(s), end(s+1), strand('*'), lid(-1), eid(-1) {}
+    IntervalLabelId(int32_t s, int32_t e, char t, int32_t l, int32_t i) : start(s), end(e), strand(t), lid(l), eid(i) {}
+  };
+
+  
   template<typename TRecord>
   struct SortIntervalLabel : public std::binary_function<TRecord, TRecord, bool> {
     inline bool operator()(TRecord const& s1, TRecord const& s2) const {
@@ -96,6 +108,17 @@ namespace bamstats
     }
   };
 
+
+  inline void
+  _insertInterval(std::vector<IntervalLabel>& cr, int32_t s, int32_t e, char strand, int32_t lid, int32_t) {
+    cr.push_back(IntervalLabel(s, e, strand, lid));
+  }
+
+  inline void
+  _insertInterval(std::vector<IntervalLabelId>& cr, int32_t s, int32_t e, char strand, int32_t lid, int32_t eid) {
+    cr.push_back(IntervalLabelId(s, e, strand, lid, eid));
+  }
+    
   
   inline std::size_t hash_pair(bam1_t* rec) {
     std::size_t seed = hash_string(bam_get_qname(rec));

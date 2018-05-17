@@ -69,7 +69,7 @@ namespace bamstats
 #endif
 
     // Parse GTF file
-    typedef std::vector<IntervalLabel> TChromosomeRegions;
+    typedef std::vector<IntervalLabelId> TChromosomeRegions;
     typedef std::vector<TChromosomeRegions> TGenomicRegions;
     TGenomicRegions gRegions;
     gRegions.resize(c.nchr.size(), TChromosomeRegions());

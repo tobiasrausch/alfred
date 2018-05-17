@@ -57,6 +57,9 @@ namespace bamstats
     typedef std::map<std::string, int32_t> TIdMap;
     TIdMap idMap;
 
+    // Keep track of unique exon IDs
+    int32_t eid = 0;
+
     // Parse GTF
     std::ifstream file(c.gtfFile.string().c_str(), std::ios_base::in | std::ios_base::binary);
     boost::iostreams::filtering_streambuf<boost::iostreams::input> dataIn;
@@ -127,7 +130,7 @@ namespace bamstats
 		return 0;
 	      }
 	      //std::cerr << geneIds[idval] << "\t" << start << "\t" << end << std::endl;
-	      overlappingRegions[chrid].push_back(IntervalLabel(start - 1, end, strand, idval));
+	      _insertInterval(overlappingRegions[chrid], start - 1, end, strand, idval, eid++);
 	    }
 	  }
 	}
