@@ -23,6 +23,11 @@ Once you have installed these system libraries you can compile and link Alfred.
 
 `make all`
 
+`make install`
+
+`./bin/alfred -h`
+
+
 BAM Alignment Quality Control
 -----------------------------
 

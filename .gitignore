@@ -3,6 +3,7 @@ src/alfred
 src/count
 exon/
 gtf/
+bin/
 
 *.pyc
 
