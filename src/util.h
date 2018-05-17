@@ -111,14 +111,22 @@ namespace bamstats
 
   inline void
   _insertInterval(std::vector<IntervalLabel>& cr, int32_t s, int32_t e, char strand, int32_t lid, int32_t) {
+    // Uniqueness not necessary because we flatten the interval map
     cr.push_back(IntervalLabel(s, e, strand, lid));
   }
 
   inline void
   _insertInterval(std::vector<IntervalLabelId>& cr, int32_t s, int32_t e, char strand, int32_t lid, int32_t eid) {
-    cr.push_back(IntervalLabelId(s, e, strand, lid, eid));
+    // Check uniqueness
+    bool isUnique = true;
+    for(uint32_t i = 0; i < cr.size(); ++i) {
+      if ((cr[i].start == s) && (cr[i].end == e) && (cr[i].strand == strand) && (cr[i].lid == lid)) {
+	isUnique = false;
+	break;
+      }
+    }
+    if (isUnique) cr.push_back(IntervalLabelId(s, e, strand, lid, eid));
   }
-    
   
   inline std::size_t hash_pair(bam1_t* rec) {
     std::size_t seed = hash_string(bam_get_qname(rec));

@@ -47,9 +47,11 @@ namespace bamstats
 {
 
   struct CountJunctionConfig {
+    typedef std::map<std::string, int32_t> TChrMap;
+    
     unsigned short minQual;
     uint8_t inputFileFormat;   // 0 = gtf, 1 = bed, 2 = gff3
-    std::map<std::string, int32_t> nchr;
+    TChrMap nchr;
     std::string sampleName;
     std::string idname;
     std::string feature;
@@ -60,6 +62,120 @@ namespace bamstats
     boost::filesystem::path outinter;
   };
 
+
+  template<typename TConfig, typename TGenomicRegions, typename TGenomicExonJunction>
+  inline int32_t
+  countExonJct(TConfig const& c, TGenomicRegions& gRegions, TGenomicExonJunction& ejct) {
+    typedef typename TGenomicRegions::value_type TChromosomeRegions;
+    typedef typename TGenomicExonJunction::value_type TExonJctMap;
+    
+    // Load bam file
+    samFile* samfile = sam_open(c.bamFile.string().c_str(), "r");
+    hts_idx_t* idx = sam_index_load(samfile, c.bamFile.string().c_str());
+    bam_hdr_t* hdr = sam_hdr_read(samfile);
+
+    // Parse BAM file
+    boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
+    std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "BAM file parsing" << std::endl;
+    boost::progress_display show_progress( hdr->n_targets );
+
+    // Iterate chromosomes
+    for(int32_t refIndex=0; refIndex < (int32_t) hdr->n_targets; ++refIndex) {
+      ++show_progress;
+      if (gRegions[refIndex].empty()) continue;
+
+      // Sort by position
+      std::sort(gRegions[refIndex].begin(), gRegions[refIndex].end(), SortIntervalStart<IntervalLabelId>());
+      int32_t maxExonLength = 0;
+      for(uint32_t i = 0; i < gRegions[refIndex].size(); ++i) {
+	if ((gRegions[refIndex][i].end - gRegions[refIndex][i].start) > maxExonLength) {
+	  maxExonLength = gRegions[refIndex][i].end - gRegions[refIndex][i].start;
+	}
+      }
+
+      // Flag junction positions
+      typedef boost::dynamic_bitset<> TBitSet;
+      TBitSet featureBitMap(hdr->target_len[refIndex]);
+      for(uint32_t i = 0; i < gRegions[refIndex].size(); ++i) {
+	featureBitMap[gRegions[refIndex][i].start] = 1;
+	featureBitMap[gRegions[refIndex][i].end] = 1;
+      }
+
+      // Count reads
+      hts_itr_t* iter = sam_itr_queryi(idx, refIndex, 0, hdr->target_len[refIndex]);
+      bam1_t* rec = bam_init1();
+      while (sam_itr_next(samfile, iter, rec) >= 0) {
+	if (rec->core.flag & (BAM_FQCFAIL | BAM_FDUP | BAM_FUNMAP)) continue;
+	if (rec->core.qual < c.minQual) continue; // Low quality read
+
+	// Get read sequence
+	std::string sequence;
+	sequence.resize(rec->core.l_qseq);
+	uint8_t* seqptr = bam_get_seq(rec);
+	for (int32_t i = 0; i < rec->core.l_qseq; ++i) sequence[i] = "=ACMGRSVTWYHKDBN"[bam_seqi(seqptr, i)];
+
+	// Parse CIGAR
+	uint32_t* cigar = bam_get_cigar(rec);
+	int32_t gp = rec->core.pos; // Genomic position
+	int32_t sp = 0; // Sequence position
+	for (std::size_t i = 0; i < rec->core.n_cigar; ++i) {
+	  if (bam_cigar_op(cigar[i]) == BAM_CSOFT_CLIP) {
+	    sp += bam_cigar_oplen(cigar[i]);
+	    //if (featureBitMap[gp]) featurepos.push_back(gp);
+	  }
+	  else if (bam_cigar_op(cigar[i]) == BAM_CINS) sp += bam_cigar_oplen(cigar[i]);
+	  else if (bam_cigar_op(cigar[i]) == BAM_CDEL) gp += bam_cigar_oplen(cigar[i]);
+	  else if (bam_cigar_op(cigar[i]) == BAM_CREF_SKIP) {
+	    int32_t gpStart = gp;
+	    gp += bam_cigar_oplen(cigar[i]);
+	    int32_t gpEnd = gp;
+	    if ((featureBitMap[gpStart]) && (featureBitMap[gpEnd])) {
+	      typename TChromosomeRegions::const_iterator vIt = std::lower_bound(gRegions[refIndex].begin(), gRegions[refIndex].end(), IntervalLabelId(std::max(0, gpStart - maxExonLength)), SortIntervalStart<IntervalLabelId>());
+	      for(; vIt != gRegions[refIndex].end(); ++vIt) {
+		if (vIt->end < gpStart) continue;
+		if (vIt->start > gpStart) break; // Sorted intervals so we can stop searching
+		if (vIt->end == gpStart) {
+		  // Find junction partner
+		  typename TChromosomeRegions::const_iterator vItNext = vIt;
+		  ++vItNext;
+		  for(; vItNext != gRegions[refIndex].end(); ++vItNext) {
+		    if (vItNext->end < gpEnd) continue;
+		    if (vItNext->start > gpEnd) break; // Sorted intervals so we can stop searching
+		    if (vItNext->start == gpEnd) {
+		      if (vIt->eid < vItNext->eid) {
+			typename TExonJctMap::iterator itEjct = ejct[refIndex].find(std::make_pair(vIt->eid, vItNext->eid));
+			if (itEjct != ejct[refIndex].end()) ++itEjct->second;
+			else ejct[refIndex].insert(std::make_pair(std::make_pair(vIt->eid, vItNext->eid), 1));
+		      }
+		    }
+		  }
+		}
+	      }
+	    }
+	  }
+	  else if (bam_cigar_op(cigar[i]) == BAM_CHARD_CLIP) {
+	    //Nop
+	  } else if (bam_cigar_op(cigar[i]) == BAM_CMATCH) {
+	    sp += bam_cigar_oplen(cigar[i]);
+	    gp += bam_cigar_oplen(cigar[i]);
+	  } else {
+	    std::cerr << "Unknown Cigar options" << std::endl;
+	    return 1;
+	  }
+	}
+      }
+      // Clean-up
+      bam_destroy1(rec);
+      hts_itr_destroy(iter);
+    }
+
+    // clean-up
+    bam_hdr_destroy(hdr);
+    hts_idx_destroy(idx);
+    sam_close(samfile);
+    return 0;
+  }
+  
   template<typename TConfig>
   inline int32_t
   countJunctionRun(TConfig const& c) {
@@ -71,8 +187,7 @@ namespace bamstats
     // Parse GTF file
     typedef std::vector<IntervalLabelId> TChromosomeRegions;
     typedef std::vector<TChromosomeRegions> TGenomicRegions;
-    TGenomicRegions gRegions;
-    gRegions.resize(c.nchr.size(), TChromosomeRegions());
+    TGenomicRegions gRegions(c.nchr.size(), TChromosomeRegions());
     typedef std::vector<std::string> TGeneIds;
     TGeneIds geneIds;
     int32_t tf = 0;
@@ -84,28 +199,59 @@ namespace bamstats
       return 1;
     }
 
-    /*
-    // Feature counter
-    typedef std::vector<int32_t> TFeatureCounter;
-    TFeatureCounter fc(tf, 0);
-    int32_t retparse = 1;
-    if (c.inputBamFormat == 0) retparse = bam_counter(c, gRegions, fc);
-    else if (c.inputBamFormat == 1) retparse = bed_counter(c, gRegions, fc);
+    // Exon junction counting
+    typedef std::pair<int32_t, int32_t> TExonPair;
+    typedef std::map<TExonPair, uint32_t> TExonJctCount;
+    typedef std::vector<TExonJctCount> TGenomicExonJctCount;
+    TGenomicExonJctCount ejct(c.nchr.size(), TExonJctCount());
+    int32_t retparse = countExonJct(c, gRegions, ejct);
     if (retparse != 0) {
-      std::cerr << "Error feature counting!" << std::endl;
+      std::cerr << "Error exon junction counting!" << std::endl;
       return 1;
     }
 
     // Output count table
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Output count table" << std::endl;
-    std::ofstream fcfile(c.outfile.string().c_str());
-    fcfile << "gene\t" << c.sampleName << std::endl;
-    for(uint32_t idval = 0; idval < geneIds.size(); ++idval) fcfile << geneIds[idval] << "\t" << fc[idval] << std::endl;
+    boost::progress_display show_progress( c.nchr.size() );
+    std::ofstream fcfile(c.outintra.string().c_str());
+    fcfile << "gene\texonA\texonB\t" << c.sampleName << std::endl;
+    for(int32_t refIndex=0; refIndex < (int32_t) c.nchr.size(); ++refIndex) {
+      ++show_progress;
+      if (gRegions[refIndex].empty()) continue;
+
+      // Find chromosome name
+      std::string chrname = "NA";
+      for(typename CountJunctionConfig::TChrMap::const_iterator itC = c.nchr.begin(); itC != c.nchr.end(); ++itC) {
+	if (itC->second == refIndex) {
+	  chrname = itC->first;
+	  break;
+	}
+      }
+
+      // Output intra-gene exon-exon junction support
+      for(typename TChromosomeRegions::iterator itR = gRegions[refIndex].begin(); itR != gRegions[refIndex].end(); ++itR) {
+	typename TChromosomeRegions::iterator itRNext = itR;
+	++itRNext;
+	for(; itRNext != gRegions[refIndex].end(); ++itRNext) {
+	  if ((itR->lid == itRNext->lid) && (itR->end < itRNext->start)) {
+	    fcfile << geneIds[itR->lid] << '\t' << chrname << ':' << itR->start << '-' << itR->end << '\t' << chrname << ':' << itRNext->start << '-' << itRNext->end << '\t';
+	    int32_t leid = itR->eid;
+	    int32_t heid = itRNext->eid;
+	    if (leid > heid) {
+	      leid = itRNext->eid;
+	      heid = itR->eid;
+	    }
+	    typename TExonJctCount::iterator itE = ejct[refIndex].find(std::make_pair(leid, heid));
+	    if (itE != ejct[refIndex].end()) fcfile << itE->second << std::endl;
+	    else fcfile << '0' << std::endl;
+	  }
+	}
+      }
+    }
     fcfile.close();
-    */
     
-    boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
+    now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] Done." << std::endl;
     
 #ifdef PROFILE
