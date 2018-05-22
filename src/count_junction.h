@@ -210,9 +210,22 @@ namespace bamstats
       return 1;
     }
 
-    // Output count table
+    // Mapping refIndex -> chromosome name
+    typedef std::vector<std::string> TChrName;
+    TChrName chrName(c.nchr.size());
+    for(int32_t refIndex=0; refIndex < (int32_t) c.nchr.size(); ++refIndex) {
+      chrName[refIndex] = "NA";
+      for(typename CountJunctionConfig::TChrMap::const_iterator itC = c.nchr.begin(); itC != c.nchr.end(); ++itC) {
+	if (itC->second == refIndex) {
+	  chrName[refIndex] = itC->first;
+	  break;
+	}
+      }
+    }
+    
+    // Intra-gene table
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
-    std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Output count table" << std::endl;
+    std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Output intra-gene splicing table" << std::endl;
     boost::progress_display show_progress( c.nchr.size() );
     std::ofstream intrafile(c.outintra.string().c_str());
     intrafile << "gene\texonA\texonB\t" << c.sampleName << std::endl;
@@ -220,22 +233,13 @@ namespace bamstats
       ++show_progress;
       if (gRegions[refIndex].empty()) continue;
 
-      // Find chromosome name
-      std::string chrname = "NA";
-      for(typename CountJunctionConfig::TChrMap::const_iterator itC = c.nchr.begin(); itC != c.nchr.end(); ++itC) {
-	if (itC->second == refIndex) {
-	  chrname = itC->first;
-	  break;
-	}
-      }
-
       // Output intra-gene exon-exon junction support
       for(typename TChromosomeRegions::iterator itR = gRegions[refIndex].begin(); itR != gRegions[refIndex].end(); ++itR) {
 	typename TChromosomeRegions::iterator itRNext = itR;
 	++itRNext;
 	for(; itRNext != gRegions[refIndex].end(); ++itRNext) {
 	  if ((itR->lid == itRNext->lid) && (itR->end < itRNext->start)) {
-	    intrafile << geneIds[itR->lid] << '\t' << chrname << ':' << itR->start << '-' << itR->end << '\t' << chrname << ':' << itRNext->start << '-' << itRNext->end << '\t';
+	    intrafile << geneIds[itR->lid] << '\t' << chrName[refIndex] << ':' << itR->start << '-' << itR->end << '\t' << chrName[refIndex] << ':' << itRNext->start << '-' << itRNext->end << '\t';
 	    int32_t leid = itR->eid;
 	    int32_t heid = itRNext->eid;
 	    if (leid > heid) {
@@ -250,7 +254,45 @@ namespace bamstats
       }
     }
     intrafile.close();
-    
+
+    // Mapping exon id to gene id
+    typedef std::vector<int32_t> TEidToLid;
+    typedef std::vector< std::pair<int32_t, int32_t> > TEidToCoord;
+    typedef std::vector<int32_t> TLidToRefIndex;
+    TEidToLid etol;
+    TEidToCoord ecoord;
+    TLidToRefIndex lidToRefIndex(geneIds.size());
+    for(int32_t refIndex=0; refIndex < (int32_t) c.nchr.size(); ++refIndex) {
+      for (typename TChromosomeRegions::const_iterator itG = gRegions[refIndex].begin(); itG != gRegions[refIndex].end(); ++itG) {
+	if (itG->eid >= (int32_t) etol.size()) {
+	  etol.resize(itG->eid + 1);
+	  ecoord.resize(itG->eid + 1);
+	}
+	etol[itG->eid] = itG->lid;
+	ecoord[itG->eid] = std::make_pair(itG->start, itG->end);
+	lidToRefIndex[itG->lid] = refIndex;
+      }
+    }
+
+    // Inter-gene table
+    now = boost::posix_time::second_clock::local_time();
+    std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Output inter-gene splicing table" << std::endl;
+    boost::progress_display spr( c.nchr.size() );
+    std::ofstream interfile(c.outinter.string().c_str());
+    interfile << "geneA\texonA\tgeneB\texonB\t" << c.sampleName << std::endl;
+    for(int32_t refIndex=0; refIndex < (int32_t) c.nchr.size(); ++refIndex) {
+      for(typename TExonJctCount::const_iterator itE = ejct[refIndex].begin(); itE != ejct[refIndex].end(); ++itE) {
+	int32_t e1 = itE->first.first;
+	int32_t e2 = itE->first.second;
+	// Different Genes?
+	if (etol[e1] != etol[e2]) {
+	  interfile << geneIds[etol[e1]] << '\t' << chrName[lidToRefIndex[etol[e1]]] << ':' << ecoord[e1].first << '-' << ecoord[e1].second << '\t' << geneIds[etol[e2]] << '\t' << chrName[lidToRefIndex[etol[e2]]] << ':' << ecoord[e2].first << '-' << ecoord[e2].second << '\t' << itE->second << std::endl;
+	}
+      }
+    }
+    interfile.close();
+
+    // Done
     now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] Done." << std::endl;
     
