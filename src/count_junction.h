@@ -48,7 +48,8 @@ namespace bamstats
 
   struct CountJunctionConfig {
     typedef std::map<std::string, int32_t> TChrMap;
-    
+
+    bool novelJct;
     unsigned short minQual;
     uint8_t inputFileFormat;   // 0 = gtf, 1 = bed, 2 = gff3
     TChrMap nchr;
@@ -60,12 +61,13 @@ namespace bamstats
     boost::filesystem::path bamFile;
     boost::filesystem::path outintra;
     boost::filesystem::path outinter;
+    boost::filesystem::path outnovel;
   };
 
 
   template<typename TConfig, typename TGenomicRegions, typename TGenomicExonJunction>
   inline int32_t
-  countExonJct(TConfig const& c, TGenomicRegions& gRegions, TGenomicExonJunction& ejct) {
+  countExonJct(TConfig const& c, TGenomicRegions& gRegions, TGenomicExonJunction& ejct, TGenomicExonJunction& njct) {
     typedef typename TGenomicRegions::value_type TChromosomeRegions;
     typedef typename TGenomicExonJunction::value_type TExonJctMap;
     
@@ -151,6 +153,12 @@ namespace bamstats
 		  }
 		}
 	      }
+	    } else {
+	      if (c.novelJct) {
+		typename TExonJctMap::iterator itEjct = njct[refIndex].find(std::make_pair(gpStart, gpEnd));
+		if (itEjct != njct[refIndex].end()) ++itEjct->second;
+		else njct[refIndex].insert(std::make_pair(std::make_pair(gpStart, gpEnd), 1));
+	      }
 	    }
 	  }
 	  else if (bam_cigar_op(cigar[i]) == BAM_CHARD_CLIP) {
@@ -204,7 +212,8 @@ namespace bamstats
     typedef std::map<TExonPair, uint32_t> TExonJctCount;
     typedef std::vector<TExonJctCount> TGenomicExonJctCount;
     TGenomicExonJctCount ejct(c.nchr.size(), TExonJctCount());
-    int32_t retparse = countExonJct(c, gRegions, ejct);
+    TGenomicExonJctCount njct(c.nchr.size(), TExonJctCount());
+    int32_t retparse = countExonJct(c, gRegions, ejct, njct);
     if (retparse != 0) {
       std::cerr << "Error exon junction counting!" << std::endl;
       return 1;
@@ -281,6 +290,7 @@ namespace bamstats
     std::ofstream interfile(c.outinter.string().c_str());
     interfile << "geneA\texonA\tgeneB\texonB\t" << c.sampleName << std::endl;
     for(int32_t refIndex=0; refIndex < (int32_t) c.nchr.size(); ++refIndex) {
+      ++spr;
       for(typename TExonJctCount::const_iterator itE = ejct[refIndex].begin(); itE != ejct[refIndex].end(); ++itE) {
 	int32_t e1 = itE->first.first;
 	int32_t e2 = itE->first.second;
@@ -292,6 +302,67 @@ namespace bamstats
     }
     interfile.close();
 
+    if (c.novelJct) {
+      // Start and end of genes (independent of chromosome, needs to be checked afterwards!)
+      typedef std::vector<IntervalLabel> TGeneRegions;
+      TGeneRegions geneReg(geneIds.size(), IntervalLabel(0));
+      int32_t maxGeneLength = 0;
+      for(int32_t refIndex=0; refIndex < (int32_t) c.nchr.size(); ++refIndex) {
+	for (typename TChromosomeRegions::const_iterator itG = gRegions[refIndex].begin(); itG != gRegions[refIndex].end(); ++itG) {
+	  if (geneReg[itG->lid].lid == -1) {
+	    geneReg[itG->lid].start = itG->start;
+	    geneReg[itG->lid].end = itG->end;
+	    geneReg[itG->lid].strand = itG->strand;
+	    geneReg[itG->lid].lid = itG->lid;
+	  } else {
+	    if (itG->start < geneReg[itG->lid].start) geneReg[itG->lid].start = itG->start;
+	    if (itG->end > geneReg[itG->lid].end) geneReg[itG->lid].end = itG->end;
+	  }
+	  if ((geneReg[itG->lid].end - geneReg[itG->lid].start) > maxGeneLength) maxGeneLength = (geneReg[itG->lid].end - geneReg[itG->lid].start);
+	}
+      }
+      std::cout << maxGeneLength << std::endl;
+
+      // Sort by start position
+      std::sort(geneReg.begin(), geneReg.end(), SortIntervalStart<IntervalLabel>());
+
+      // Novel intra-chromosomal splice junctions
+      now = boost::posix_time::second_clock::local_time();
+      std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Output novel splicing table" << std::endl;
+      boost::progress_display sprgr( c.nchr.size() );
+      std::ofstream novelfile(c.outnovel.string().c_str());
+      novelfile << "geneA\tpositionA\tgeneB\tpositionB\t" << c.sampleName << std::endl;
+      for(int32_t refIndex=0; refIndex < (int32_t) c.nchr.size(); ++refIndex) {
+	++sprgr;
+	for(typename TExonJctCount::const_iterator itN = njct[refIndex].begin(); itN != njct[refIndex].end(); ++itN) {
+	  int32_t p1 = itN->first.first;
+	  std::string geneA = "NA";
+	  typename TGeneRegions::const_iterator gIt1 = std::lower_bound(geneReg.begin(), geneReg.end(), IntervalLabel(std::max(0, p1 - maxGeneLength)), SortIntervalStart<IntervalLabel>());
+	  for(; gIt1 != geneReg.end(); ++gIt1) {
+	    if (gIt1->end < p1) continue;
+	    if (gIt1->start > p1) break; // Sorted intervals so we can stop searching
+	    if (lidToRefIndex[gIt1->lid] == refIndex) {
+	      geneA = geneIds[gIt1->lid];
+	      break;
+	    }
+	  }
+	  int32_t p2 = itN->first.second;
+	  std::string geneB = "NA";
+	  typename TGeneRegions::const_iterator gIt2 = std::lower_bound(geneReg.begin(), geneReg.end(), IntervalLabel(std::max(0, p2 - maxGeneLength)), SortIntervalStart<IntervalLabel>());
+	  for(; gIt2 != geneReg.end(); ++gIt2) {
+	    if (gIt2->end < p2) continue;
+	    if (gIt2->start > p2) break; // Sorted intervals so we can stop searching
+	    if (lidToRefIndex[gIt2->lid] == refIndex) {
+	      geneB = geneIds[gIt2->lid];
+	      break;
+	    }
+	  }
+	  novelfile << geneA << '\t' << chrName[refIndex] << ':' << p1 << '\t' << geneB << '\t' << chrName[refIndex] << ':' << p2 << '\t' << itN->second << std::endl;
+	}
+      }
+      novelfile.close();
+    }
+    
     // Done
     now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] Done." << std::endl;
@@ -314,6 +385,7 @@ namespace bamstats
       ("map-qual,m", boost::program_options::value<unsigned short>(&c.minQual)->default_value(10), "min. mapping quality")
       ("outintra,o", boost::program_options::value<boost::filesystem::path>(&c.outintra)->default_value("intra.tsv"), "intra-gene exon-exon junction reads")
       ("outinter,p", boost::program_options::value<boost::filesystem::path>(&c.outinter)->default_value("inter.tsv"), "inter-gene exon-exon junction reads")
+      ("outnovel,n", boost::program_options::value<boost::filesystem::path>(&c.outnovel)->default_value(""), "trigger collection of not annotated intra-chromosomal junction reads")
       ;
 
     boost::program_options::options_description gtfopt("GTF/GFF3 input file options");
@@ -353,6 +425,10 @@ namespace bamstats
       std::cout << visible_options << "\n";
       return 1;
     }
+
+    // Novel junctions
+    if (c.outnovel.size() > 0) c.novelJct = true;
+    else c.novelJct = false;
 
     // Check bam file
     if (!(boost::filesystem::exists(c.bamFile) && boost::filesystem::is_regular_file(c.bamFile) && boost::filesystem::file_size(c.bamFile))) {
