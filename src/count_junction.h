@@ -385,7 +385,7 @@ namespace bamstats
       ("map-qual,m", boost::program_options::value<unsigned short>(&c.minQual)->default_value(10), "min. mapping quality")
       ("outintra,o", boost::program_options::value<boost::filesystem::path>(&c.outintra)->default_value("intra.tsv"), "intra-gene exon-exon junction reads")
       ("outinter,p", boost::program_options::value<boost::filesystem::path>(&c.outinter)->default_value("inter.tsv"), "inter-gene exon-exon junction reads")
-      ("outnovel,n", boost::program_options::value<boost::filesystem::path>(&c.outnovel)->default_value(""), "trigger collection of not annotated intra-chromosomal junction reads")
+      ("outnovel,n", boost::program_options::value<boost::filesystem::path>(&c.outnovel), "output file for not annotated intra-chromosomal junction reads")
       ;
 
     boost::program_options::options_description gtfopt("GTF/GFF3 input file options");
@@ -427,7 +427,7 @@ namespace bamstats
     }
 
     // Novel junctions
-    if (c.outnovel.size() > 0) c.novelJct = true;
+    if (vm.count("outnovel")) c.novelJct = true;
     else c.novelJct = false;
 
     // Check bam file
