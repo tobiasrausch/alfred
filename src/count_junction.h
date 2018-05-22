@@ -214,8 +214,8 @@ namespace bamstats
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Output count table" << std::endl;
     boost::progress_display show_progress( c.nchr.size() );
-    std::ofstream fcfile(c.outintra.string().c_str());
-    fcfile << "gene\texonA\texonB\t" << c.sampleName << std::endl;
+    std::ofstream intrafile(c.outintra.string().c_str());
+    intrafile << "gene\texonA\texonB\t" << c.sampleName << std::endl;
     for(int32_t refIndex=0; refIndex < (int32_t) c.nchr.size(); ++refIndex) {
       ++show_progress;
       if (gRegions[refIndex].empty()) continue;
@@ -235,7 +235,7 @@ namespace bamstats
 	++itRNext;
 	for(; itRNext != gRegions[refIndex].end(); ++itRNext) {
 	  if ((itR->lid == itRNext->lid) && (itR->end < itRNext->start)) {
-	    fcfile << geneIds[itR->lid] << '\t' << chrname << ':' << itR->start << '-' << itR->end << '\t' << chrname << ':' << itRNext->start << '-' << itRNext->end << '\t';
+	    intrafile << geneIds[itR->lid] << '\t' << chrname << ':' << itR->start << '-' << itR->end << '\t' << chrname << ':' << itRNext->start << '-' << itRNext->end << '\t';
 	    int32_t leid = itR->eid;
 	    int32_t heid = itRNext->eid;
 	    if (leid > heid) {
@@ -243,13 +243,13 @@ namespace bamstats
 	      heid = itR->eid;
 	    }
 	    typename TExonJctCount::iterator itE = ejct[refIndex].find(std::make_pair(leid, heid));
-	    if (itE != ejct[refIndex].end()) fcfile << itE->second << std::endl;
-	    else fcfile << '0' << std::endl;
+	    if (itE != ejct[refIndex].end()) intrafile << itE->second << std::endl;
+	    else intrafile << '0' << std::endl;
 	  }
 	}
       }
     }
-    fcfile.close();
+    intrafile.close();
     
     now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] Done." << std::endl;
