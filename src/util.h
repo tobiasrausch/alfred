@@ -137,6 +137,12 @@ namespace bamstats
     return seed;
   }
 
+  inline std::size_t hash_read(bam1_t* rec) {
+    std::size_t seed = hash_string(bam_get_qname(rec));
+    boost::hash_combine(seed, (rec->core.flag & BAM_FREAD2));
+    return seed;
+  }
+
   inline int32_t
   homopolymerContext(std::string const& s, int32_t idx, int32_t homlen) {
     for(int32_t i = std::max(0, idx - (homlen - 1)); i <= (idx + 1); ++i) {

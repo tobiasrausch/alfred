@@ -82,6 +82,9 @@ namespace bamstats
     boost::progress_display show_progress( hdr->n_targets );
 
     // Iterate chromosomes
+    typedef boost::unordered_map<std::size_t, int32_t> TClipReads;
+    TClipReads clipReads;
+    uint32_t minClipLength = 25;
     for(int32_t refIndex=0; refIndex < (int32_t) hdr->n_targets; ++refIndex) {
       ++show_progress;
       if (gRegions[refIndex].empty()) continue;
@@ -123,7 +126,32 @@ namespace bamstats
 	for (std::size_t i = 0; i < rec->core.n_cigar; ++i) {
 	  if (bam_cigar_op(cigar[i]) == BAM_CSOFT_CLIP) {
 	    sp += bam_cigar_oplen(cigar[i]);
-	    //if (featureBitMap[gp]) featurepos.push_back(gp);
+	    // Minimum size so it may get mapped elsewhere
+	    if (featureBitMap[gp]) {
+	      // Assumption is a short read has a single soft-clip/hard-clip
+	      if (bam_cigar_oplen(cigar[i]) >= minClipLength) {
+		std::size_t hr = hash_read(rec);
+		typename TChromosomeRegions::const_iterator vIt = std::lower_bound(gRegions[refIndex].begin(), gRegions[refIndex].end(), IntervalLabelId(std::max(0, gp - maxExonLength)), SortIntervalStart<IntervalLabelId>());
+		for(; vIt != gRegions[refIndex].end(); ++vIt) {
+		  if (vIt->end < gp) continue;
+		  if (vIt->start > gp) break; // Sorted intervals so we can stop searching
+		  if ((vIt->start == gp) || (vIt->end == gp)) {
+		    if (clipReads.find(hr) == clipReads.end()) clipReads[hr] = vIt->eid;
+		    else {
+		      int32_t e1 = vIt->eid;
+		      int32_t e2 = clipReads[hr];
+		      if (e2 < e1) {
+			e1 = clipReads[hr];
+			e2 = vIt->eid;
+		      }
+		      typename TExonJctMap::iterator itEjct = ejct[refIndex].find(std::make_pair(e1, e2));
+		      if (itEjct != ejct[refIndex].end()) ++itEjct->second;
+		      else ejct[refIndex].insert(std::make_pair(std::make_pair(e1, e2), 1));
+		    }
+		  }
+		}
+	      }
+	    }
 	  }
 	  else if (bam_cigar_op(cigar[i]) == BAM_CINS) sp += bam_cigar_oplen(cigar[i]);
 	  else if (bam_cigar_op(cigar[i]) == BAM_CDEL) gp += bam_cigar_oplen(cigar[i]);
@@ -145,9 +173,15 @@ namespace bamstats
 		    if (vItNext->start > gpEnd) break; // Sorted intervals so we can stop searching
 		    if (vItNext->start == gpEnd) {
 		      if (vIt->eid < vItNext->eid) {
-			typename TExonJctMap::iterator itEjct = ejct[refIndex].find(std::make_pair(vIt->eid, vItNext->eid));
+			int32_t e1 = vIt->eid;
+			int32_t e2 = vItNext->eid;
+			if (e2 < e1) {
+			  e1 = vItNext->eid;
+			  e2 = vIt->eid;
+			}
+			typename TExonJctMap::iterator itEjct = ejct[refIndex].find(std::make_pair(e1, e2));
 			if (itEjct != ejct[refIndex].end()) ++itEjct->second;
-			else ejct[refIndex].insert(std::make_pair(std::make_pair(vIt->eid, vItNext->eid), 1));
+			else ejct[refIndex].insert(std::make_pair(std::make_pair(e1, e2), 1));
 		      }
 		    }
 		  }
@@ -162,7 +196,32 @@ namespace bamstats
 	    }
 	  }
 	  else if (bam_cigar_op(cigar[i]) == BAM_CHARD_CLIP) {
-	    //Nop
+	    if (bam_cigar_oplen(cigar[i]) >= minClipLength) {
+	      // Minimum size so it may get mapped elsewhere
+	      if (featureBitMap[gp]) {
+		// Assumption is only a single soft-clip/hard-clip
+		std::size_t hr = hash_read(rec);
+		typename TChromosomeRegions::const_iterator vIt = std::lower_bound(gRegions[refIndex].begin(), gRegions[refIndex].end(), IntervalLabelId(std::max(0, gp - maxExonLength)), SortIntervalStart<IntervalLabelId>());
+		for(; vIt != gRegions[refIndex].end(); ++vIt) {
+		  if (vIt->end < gp) continue;
+		  if (vIt->start > gp) break; // Sorted intervals so we can stop searching
+		  if ((vIt->start == gp) || (vIt->end == gp)) {
+		    if (clipReads.find(hr) == clipReads.end()) clipReads[hr] = vIt->eid;
+		    else {
+		      int32_t e1 = vIt->eid;
+		      int32_t e2 = clipReads[hr];
+		      if (e2 < e1) {
+			e1 = clipReads[hr];
+			e2 = vIt->eid;
+		      }
+		      typename TExonJctMap::iterator itEjct = ejct[refIndex].find(std::make_pair(e1, e2));
+		      if (itEjct != ejct[refIndex].end()) ++itEjct->second;
+		      else ejct[refIndex].insert(std::make_pair(std::make_pair(e1, e2), 1));
+		    }
+		  }
+		}
+	      }
+	    }
 	  } else if (bam_cigar_op(cigar[i]) == BAM_CMATCH) {
 	    sp += bam_cigar_oplen(cigar[i]);
 	    gp += bam_cigar_oplen(cigar[i]);
@@ -321,7 +380,6 @@ namespace bamstats
 	  if ((geneReg[itG->lid].end - geneReg[itG->lid].start) > maxGeneLength) maxGeneLength = (geneReg[itG->lid].end - geneReg[itG->lid].start);
 	}
       }
-      std::cout << maxGeneLength << std::endl;
 
       // Sort by start position
       std::sort(geneReg.begin(), geneReg.end(), SortIntervalStart<IntervalLabel>());
