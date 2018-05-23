@@ -127,9 +127,9 @@ namespace bamstats
 	  if (bam_cigar_op(cigar[i]) == BAM_CSOFT_CLIP) {
 	    sp += bam_cigar_oplen(cigar[i]);
 	    // Minimum size so it may get mapped elsewhere
-	    if (featureBitMap[gp]) {
+	    if (bam_cigar_oplen(cigar[i]) >= minClipLength) {
 	      // Assumption is a short read has a single soft-clip/hard-clip
-	      if (bam_cigar_oplen(cigar[i]) >= minClipLength) {
+	      if (featureBitMap[gp]) {
 		std::size_t hr = hash_read(rec);
 		typename TChromosomeRegions::const_iterator vIt = std::lower_bound(gRegions[refIndex].begin(), gRegions[refIndex].end(), IntervalLabelId(std::max(0, gp - maxExonLength)), SortIntervalStart<IntervalLabelId>());
 		for(; vIt != gRegions[refIndex].end(); ++vIt) {
