@@ -8,7 +8,7 @@ EBROOTHTSLIB ?= ${PWD}/src/htslib/
 # Install dir
 prefix = ${PWD}
 exec_prefix = $(prefix)
-bindir = $(exec_prefix)/bin
+bindir ?= $(exec_prefix)/bin
 
 # Flags
 CXX=g++
