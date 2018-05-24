@@ -46,6 +46,22 @@ Contact: Tobias Rausch (rausch@embl.de)
 namespace bamstats
 {
 
+  struct SpGp {
+    int32_t sp;
+    int32_t idx;
+    int32_t gp;
+
+    SpGp(int32_t s, int32_t i, int32_t g) : sp(s), idx(i), gp(g) {}
+
+    inline bool operator==(SpGp const& other) const {
+      return ((sp == other.sp) && (idx == other.idx) && (gp == other.gp));
+    }
+
+    inline bool operator<(SpGp const& other) const {
+      return (sp < other.sp);
+    }
+  };
+  
   struct CountJunctionConfig {
     typedef std::map<std::string, int32_t> TChrMap;
 
@@ -82,7 +98,8 @@ namespace bamstats
     boost::progress_display show_progress( hdr->n_targets );
 
     // Iterate chromosomes
-    typedef boost::unordered_map<std::size_t, int32_t> TClipReads;
+    typedef std::set<SpGp> TSpGpSet;
+    typedef boost::unordered_map<std::size_t, TSpGpSet> TClipReads;
     TClipReads clipReads;
     uint32_t minClipLength = 25;
     for(int32_t refIndex=0; refIndex < (int32_t) hdr->n_targets; ++refIndex) {
@@ -119,6 +136,9 @@ namespace bamstats
 	uint8_t* seqptr = bam_get_seq(rec);
 	for (int32_t i = 0; i < rec->core.l_qseq; ++i) sequence[i] = "=ACMGRSVTWYHKDBN"[bam_seqi(seqptr, i)];
 
+	// Collect all exons this read spans
+	TSpGpSet spgpset;
+	
 	// Parse CIGAR
 	uint32_t* cigar = bam_get_cigar(rec);
 	int32_t gp = rec->core.pos; // Genomic position
@@ -126,31 +146,8 @@ namespace bamstats
 	for (std::size_t i = 0; i < rec->core.n_cigar; ++i) {
 	  if (bam_cigar_op(cigar[i]) == BAM_CSOFT_CLIP) {
 	    sp += bam_cigar_oplen(cigar[i]);
-	    // Minimum size so it may get mapped elsewhere
 	    if (bam_cigar_oplen(cigar[i]) >= minClipLength) {
-	      // Assumption is a short read has a single soft-clip/hard-clip
-	      if (featureBitMap[gp]) {
-		std::size_t hr = hash_read(rec);
-		typename TChromosomeRegions::const_iterator vIt = std::lower_bound(gRegions[refIndex].begin(), gRegions[refIndex].end(), IntervalLabelId(std::max(0, gp - maxExonLength)), SortIntervalStart<IntervalLabelId>());
-		for(; vIt != gRegions[refIndex].end(); ++vIt) {
-		  if (vIt->end < gp) continue;
-		  if (vIt->start > gp) break; // Sorted intervals so we can stop searching
-		  if ((vIt->start == gp) || (vIt->end == gp)) {
-		    if (clipReads.find(hr) == clipReads.end()) clipReads[hr] = vIt->eid;
-		    else {
-		      int32_t e1 = vIt->eid;
-		      int32_t e2 = clipReads[hr];
-		      if (e2 < e1) {
-			e1 = clipReads[hr];
-			e2 = vIt->eid;
-		      }
-		      typename TExonJctMap::iterator itEjct = ejct[refIndex].find(std::make_pair(e1, e2));
-		      if (itEjct != ejct[refIndex].end()) ++itEjct->second;
-		      else ejct[refIndex].insert(std::make_pair(std::make_pair(e1, e2), 1));
-		    }
-		  }
-		}
-	      }
+	      if (featureBitMap[gp]) spgpset.insert(SpGp(sp, refIndex, gp));
 	    }
 	  }
 	  else if (bam_cigar_op(cigar[i]) == BAM_CINS) sp += bam_cigar_oplen(cigar[i]);
@@ -189,38 +186,15 @@ namespace bamstats
 	      }
 	    } else {
 	      if (c.novelJct) {
-		typename TExonJctMap::iterator itEjct = njct[refIndex].find(std::make_pair(gpStart, gpEnd));
-		if (itEjct != njct[refIndex].end()) ++itEjct->second;
+		typename TExonJctMap::iterator itNjct = njct[refIndex].find(std::make_pair(gpStart, gpEnd));
+		if (itNjct != njct[refIndex].end()) ++itNjct->second;
 		else njct[refIndex].insert(std::make_pair(std::make_pair(gpStart, gpEnd), 1));
 	      }
 	    }
 	  }
 	  else if (bam_cigar_op(cigar[i]) == BAM_CHARD_CLIP) {
 	    if (bam_cigar_oplen(cigar[i]) >= minClipLength) {
-	      // Minimum size so it may get mapped elsewhere
-	      if (featureBitMap[gp]) {
-		// Assumption is only a single soft-clip/hard-clip
-		std::size_t hr = hash_read(rec);
-		typename TChromosomeRegions::const_iterator vIt = std::lower_bound(gRegions[refIndex].begin(), gRegions[refIndex].end(), IntervalLabelId(std::max(0, gp - maxExonLength)), SortIntervalStart<IntervalLabelId>());
-		for(; vIt != gRegions[refIndex].end(); ++vIt) {
-		  if (vIt->end < gp) continue;
-		  if (vIt->start > gp) break; // Sorted intervals so we can stop searching
-		  if ((vIt->start == gp) || (vIt->end == gp)) {
-		    if (clipReads.find(hr) == clipReads.end()) clipReads[hr] = vIt->eid;
-		    else {
-		      int32_t e1 = vIt->eid;
-		      int32_t e2 = clipReads[hr];
-		      if (e2 < e1) {
-			e1 = clipReads[hr];
-			e2 = vIt->eid;
-		      }
-		      typename TExonJctMap::iterator itEjct = ejct[refIndex].find(std::make_pair(e1, e2));
-		      if (itEjct != ejct[refIndex].end()) ++itEjct->second;
-		      else ejct[refIndex].insert(std::make_pair(std::make_pair(e1, e2), 1));
-		    }
-		  }
-		}
-	      }
+	      if (featureBitMap[gp]) spgpset.insert(SpGp(sp, refIndex, gp));
 	    }
 	  } else if (bam_cigar_op(cigar[i]) == BAM_CMATCH) {
 	    sp += bam_cigar_oplen(cigar[i]);
@@ -230,10 +204,25 @@ namespace bamstats
 	    return 1;
 	  }
 	}
+
+	// Read might have secondary alignments so append
+	if (!spgpset.empty()) {
+	  std::size_t hr = hash_read(rec);
+	  if (clipReads.find(hr) == clipReads.end()) clipReads[hr] = spgpset;
+	  else clipReads[hr].insert(spgpset.begin(), spgpset.end());
+	}
       }
       // Clean-up
       bam_destroy1(rec);
       hts_itr_destroy(iter);
+    }
+
+    // Post-process the soft-clipped reads
+    for(typename TClipReads::const_iterator itC = clipReads.begin(); itC != clipReads.end(); ++itC) {
+      for(typename TSpGpSet::const_iterator itSp = itC->second.begin(); itSp != itC->second.end(); ++itSp) {
+	//std::cerr << itSp->sp << '\t' << itSp->idx << '\t' << itSp->gp << std::endl;
+      }
+      //std::cerr << std::endl;
     }
 
     // clean-up
