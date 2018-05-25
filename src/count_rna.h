@@ -47,10 +47,10 @@ namespace bamstats
 {
 
   struct CountRNAConfig {
-    bool stranded;
-    unsigned short minQual;
     uint8_t inputFileFormat;   // 0 = gtf, 1 = bed, 2 = gff3
     uint8_t inputBamFormat; // 0 = bam, 1 = bed
+    uint16_t stranded;  // 0 = unstranded, 1 = stranded, 2 = stranded (opposite)
+    uint16_t minQual;
     std::map<std::string, int32_t> nchr;
     std::string sampleName;
     std::string idname;
@@ -127,7 +127,13 @@ namespace bamstats
 		if (vIt->start > fplast) break; // Sorted intervals so we can stop searching
 		for(TFeaturePos::const_iterator fIt = featurepos.begin(); fIt != featurepos.end(); ++fIt) {
 		  if ((vIt->start <= *fIt) && (vIt->end > *fIt) && (featureid != vIt->lid)) {
-		    if ((c.stranded) && (vIt->strand != strand)) continue;
+		    if (c.stranded) {
+		      if (c.stranded == 1) {
+			if (vIt->strand != strand) continue;
+		      } else {
+			if (vIt->strand == strand) continue;
+		      }
+		    }
 		    if (featureid == -1) featureid = vIt->lid;
 		    else {
 		      ambiguous = true;
@@ -247,17 +253,33 @@ namespace bamstats
 	    for(TFeaturePos::const_iterator fIt = featurepos.begin(); fIt != featurepos.end(); ++fIt) {
 	      if ((vIt->start <= *fIt) && (vIt->end > *fIt) && (featureid != vIt->lid)) {
 		if (c.stranded) {
-		  if (rec->core.flag & BAM_FREAD1) {
-		    if (rec->core.flag & BAM_FREVERSE) {
-		      if (vIt->strand != '-') continue;
+		  if (c.stranded == 1) {
+		    if (rec->core.flag & BAM_FREAD1) {
+		      if (rec->core.flag & BAM_FREVERSE) {
+			if (vIt->strand != '-') continue;
+		      } else {
+			if (vIt->strand != '+') continue;
+		      }
 		    } else {
-		      if (vIt->strand != '+') continue;
+		      if (rec->core.flag & BAM_FREVERSE) {
+			if (vIt->strand != '+') continue;
+		      } else {
+			if (vIt->strand != '-') continue;
+		      }
 		    }
 		  } else {
-		    if (rec->core.flag & BAM_FREVERSE) {
-		      if (vIt->strand != '+') continue;
+		    if (rec->core.flag & BAM_FREAD1) {
+		      if (rec->core.flag & BAM_FREVERSE) {
+			if (vIt->strand != '+') continue;
+		      } else {
+			if (vIt->strand != '-') continue;
+		      }
 		    } else {
-		      if (vIt->strand != '-') continue;
+		      if (rec->core.flag & BAM_FREVERSE) {
+			if (vIt->strand != '-') continue;
+		      } else {
+			if (vIt->strand != '+') continue;
+		      }
 		    }
 		  }
 		}
@@ -380,8 +402,8 @@ namespace bamstats
     boost::program_options::options_description generic("Generic options");
     generic.add_options()
       ("help,?", "show help message")
-      ("map-qual,m", boost::program_options::value<unsigned short>(&c.minQual)->default_value(10), "min. mapping quality")
-      ("stranded,s", "strand-specific counting")
+      ("map-qual,m", boost::program_options::value<uint16_t>(&c.minQual)->default_value(10), "min. mapping quality")
+      ("stranded,s", boost::program_options::value<uint16_t>(&c.stranded)->default_value(0), "strand-specific counting (0: unstranded, 1: stranded, 2: reverse stranded)")
       ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("gene.count"), "output file")
       ;
 
@@ -424,10 +446,6 @@ namespace bamstats
       return 1;
     }
 
-    // Strand-specific counting
-    if (vm.count("stranded")) c.stranded = true;
-    else c.stranded = false;
-    
     // Check bam file
     if (!(boost::filesystem::exists(c.bamFile) && boost::filesystem::is_regular_file(c.bamFile) && boost::filesystem::file_size(c.bamFile))) {
       std::cerr << "Alignment file is missing: " << c.bamFile.string() << std::endl;
