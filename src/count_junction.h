@@ -66,8 +66,9 @@ namespace bamstats
     typedef std::map<std::string, int32_t> TChrMap;
 
     bool novelJct;
-    unsigned short minQual;
     uint8_t inputFileFormat;   // 0 = gtf, 1 = bed, 2 = gff3
+    uint16_t minQual;
+    uint16_t stranded;  // 0 = unstranded, 1 = stranded, 2 = stranded (opposite)
     TChrMap nchr;
     std::string sampleName;
     std::string idname;
@@ -162,6 +163,7 @@ namespace bamstats
 		if (vIt->end < gpStart) continue;
 		if (vIt->start > gpStart) break; // Sorted intervals so we can stop searching
 		if (vIt->end == gpStart) {
+		  if (!_strandOkay(rec, vIt->strand, c.stranded)) continue; // Check strand
 		  // Find junction partner
 		  typename TChromosomeRegions::const_iterator vItNext = vIt;
 		  ++vItNext;
@@ -169,6 +171,8 @@ namespace bamstats
 		    if (vItNext->end < gpEnd) continue;
 		    if (vItNext->start > gpEnd) break; // Sorted intervals so we can stop searching
 		    if (vItNext->start == gpEnd) {
+		      if (!_strandOkay(rec, vItNext->strand, c.stranded)) continue; // Check strand
+		      // Count Exon-Exon Junction
 		      if (vIt->eid < vItNext->eid) {
 			int32_t e1 = vIt->eid;
 			int32_t e2 = vItNext->eid;
@@ -429,7 +433,8 @@ namespace bamstats
     boost::program_options::options_description generic("Generic options");
     generic.add_options()
       ("help,?", "show help message")
-      ("map-qual,m", boost::program_options::value<unsigned short>(&c.minQual)->default_value(10), "min. mapping quality")
+      ("map-qual,m", boost::program_options::value<uint16_t>(&c.minQual)->default_value(10), "min. mapping quality")
+      ("stranded,s", boost::program_options::value<uint16_t>(&c.stranded)->default_value(0), "strand-specific counting (0: unstranded, 1: stranded, 2: reverse stranded)")
       ("outintra,o", boost::program_options::value<boost::filesystem::path>(&c.outintra)->default_value("intra.tsv"), "intra-gene exon-exon junction reads")
       ("outinter,p", boost::program_options::value<boost::filesystem::path>(&c.outinter)->default_value("inter.tsv"), "inter-gene exon-exon junction reads")
       ("outnovel,n", boost::program_options::value<boost::filesystem::path>(&c.outnovel), "output file for not annotated intra-chromosomal junction reads")

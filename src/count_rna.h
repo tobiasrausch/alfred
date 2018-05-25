@@ -252,37 +252,7 @@ namespace bamstats
 	    if (vIt->start > fplast) break; // Sorted intervals so we can stop searching
 	    for(TFeaturePos::const_iterator fIt = featurepos.begin(); fIt != featurepos.end(); ++fIt) {
 	      if ((vIt->start <= *fIt) && (vIt->end > *fIt) && (featureid != vIt->lid)) {
-		if (c.stranded) {
-		  if (c.stranded == 1) {
-		    if (rec->core.flag & BAM_FREAD1) {
-		      if (rec->core.flag & BAM_FREVERSE) {
-			if (vIt->strand != '-') continue;
-		      } else {
-			if (vIt->strand != '+') continue;
-		      }
-		    } else {
-		      if (rec->core.flag & BAM_FREVERSE) {
-			if (vIt->strand != '+') continue;
-		      } else {
-			if (vIt->strand != '-') continue;
-		      }
-		    }
-		  } else {
-		    if (rec->core.flag & BAM_FREAD1) {
-		      if (rec->core.flag & BAM_FREVERSE) {
-			if (vIt->strand != '+') continue;
-		      } else {
-			if (vIt->strand != '-') continue;
-		      }
-		    } else {
-		      if (rec->core.flag & BAM_FREVERSE) {
-			if (vIt->strand != '-') continue;
-		      } else {
-			if (vIt->strand != '+') continue;
-		      }
-		    }
-		  }
-		}
+		if (!_strandOkay(rec, vIt->strand, c.stranded)) continue;
 		if (featureid == -1) featureid = vIt->lid;
 		else {
 		  ambiguous = true;

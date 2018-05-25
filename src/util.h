@@ -127,6 +127,42 @@ namespace bamstats
     }
     if (isUnique) cr.push_back(IntervalLabelId(s, e, strand, lid, eid));
   }
+
+  inline bool
+  _strandOkay(bam1_t* rec, char const strand, uint16_t const stranded) {
+    if (stranded) {
+      if (stranded == 1) {
+	if (rec->core.flag & BAM_FREAD1) {
+	  if (rec->core.flag & BAM_FREVERSE) {
+	    if (strand != '-') return false;
+	  } else {
+	    if (strand != '+') return false;
+	  }
+	} else {
+	  if (rec->core.flag & BAM_FREVERSE) {
+	    if (strand != '+') return false;
+	  } else {
+	    if (strand != '-') return false;
+	  }
+	}
+      } else {
+	if (rec->core.flag & BAM_FREAD1) {
+	  if (rec->core.flag & BAM_FREVERSE) {
+	    if (strand != '+') return false;
+	  } else {
+	    if (strand != '-') return false;
+	  }
+	} else {
+	  if (rec->core.flag & BAM_FREVERSE) {
+	    if (strand != '-') return false;
+	  } else {
+	    if (strand != '+') return false;
+	  }
+	}
+      }
+    }
+    return true;
+  }
   
   inline std::size_t hash_pair(bam1_t* rec) {
     std::size_t seed = hash_string(bam_get_qname(rec));
