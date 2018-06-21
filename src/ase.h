@@ -255,7 +255,7 @@ namespace bamstats {
 	  } else {
 	    if (c.outputAll) {
 	      // No coverage
-	      dataOut << chrName << "\t" << (pv[i].pos + 1) << "\t" << recvcf->d.id << "\t" << pv[i].ref << "\t" << pv[i].alt << "\t" << totalcov << "\t" << ref[i] << "\t" << alt[i] << "\t" << hapstr << "\tNA\tNA\tNA" << std::endl;
+	      dataOut << chrName << "\t" << (pv[i].pos + 1) << "\t" << recvcf->d.id << "\t" << pv[i].ref << "\t" << pv[i].alt << "\t" << totalcov << "\t" << ref[i] << "\t" << alt[i] << "\t" << hapstr << "\tNA\tNA" << std::endl;
 	    }
 	  }
 	}
