@@ -231,7 +231,7 @@ namespace bamstats
 	  else if (bam_cigar_op(cigar[i]) == BAM_CREF_SKIP) gp += bam_cigar_oplen(cigar[i]);
 	  else if (bam_cigar_op(cigar[i]) == BAM_CHARD_CLIP) {
 	    //Nop
-	  } else if (bam_cigar_op(cigar[i]) == BAM_CMATCH) {
+	  } else if ((bam_cigar_op(cigar[i]) == BAM_CMATCH) || (bam_cigar_op(cigar[i]) == BAM_CEQUAL) || (bam_cigar_op(cigar[i]) == BAM_CDIFF)) {
 	    for(std::size_t k = 0; k<bam_cigar_oplen(cigar[i]); ++k, ++sp, ++gp)
 	      if (featureBitMap[gp]) featurepos.push_back(gp);
 	  } else {

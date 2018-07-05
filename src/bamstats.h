@@ -663,7 +663,7 @@ namespace bamstats
       uint32_t* cigar = bam_get_cigar(rec);
       bool spliced = false;
       for (std::size_t i = 0; i < rec->core.n_cigar; ++i) {
-	if (bam_cigar_op(cigar[i]) == BAM_CMATCH) {
+	if ((bam_cigar_op(cigar[i]) == BAM_CMATCH) || (bam_cigar_op(cigar[i]) == BAM_CEQUAL) || (bam_cigar_op(cigar[i]) == BAM_CDIFF)) {
 	  // match or mismatch
 	  for(std::size_t k = 0; k<bam_cigar_oplen(cigar[i]);++k) {
 	    if (sequence[sp] == refslice[rp]) ++itRg->second.bc.matchCount;

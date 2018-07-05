@@ -159,7 +159,7 @@ namespace bamstats {
 	      else if (bam_cigar_op(cigar[i]) == BAM_CREF_SKIP) gp += bam_cigar_oplen(cigar[i]);
 	      else if (bam_cigar_op(cigar[i]) == BAM_CHARD_CLIP) {
 		//Nop
-	      } else if (bam_cigar_op(cigar[i]) == BAM_CMATCH) {
+	      } else if ((bam_cigar_op(cigar[i]) == BAM_CMATCH) || (bam_cigar_op(cigar[i]) == BAM_CEQUAL) || (bam_cigar_op(cigar[i]) == BAM_CDIFF)) {
 		if (gp + (int32_t) bam_cigar_oplen(cigar[i]) < vIt->pos) {
 		  gp += bam_cigar_oplen(cigar[i]);
 		  sp += bam_cigar_oplen(cigar[i]);

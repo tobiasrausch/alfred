@@ -200,7 +200,7 @@ namespace bamstats
 	    if (bam_cigar_oplen(cigar[i]) >= minClipLength) {
 	      if (featureBitMap[gp]) spgpset.insert(SpGp(sp, refIndex, gp));
 	    }
-	  } else if (bam_cigar_op(cigar[i]) == BAM_CMATCH) {
+	  } else if ((bam_cigar_op(cigar[i]) == BAM_CMATCH) || (bam_cigar_op(cigar[i]) == BAM_CEQUAL) || (bam_cigar_op(cigar[i]) == BAM_CDIFF)) {
 	    sp += bam_cigar_oplen(cigar[i]);
 	    gp += bam_cigar_oplen(cigar[i]);
 	  } else {
