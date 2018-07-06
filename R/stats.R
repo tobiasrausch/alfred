@@ -48,11 +48,17 @@ all=read.table(pipe(cmd), header=T)
 for(sid in unique(all$Sample)) {
 	for(rg in unique(all[all$Sample == sid,]$Library)) {
 	       rl = all[all$Sample == sid & all$Library == rg,]
+	       tc=sum(as.numeric(rl$Count))
+	       upBound=60000
+	       gr=sum(as.numeric(rl[rl$Readlength>upBound,]$Count))
+	       infoMax = paste0("Read Length > ", upBound, " (", round(100 * gr / tc, digits=2), "%)")
+	       rl=rl[rl$Readlength <= upBound,]
 	       p1=ggplot(data=rl, aes(x=Readlength, y=Fraction))
 	       p1=p1 + geom_line()
 	       p1=p1 + xlab("Read length") + ylab("Fraction of reads")
 	       p1=p1 + scale_y_continuous(labels=comma)
-	       p1=p1 + ggtitle(paste0("Read Length Distribution", "\n", "Sample: ", sid, "\n", "RG: ", rg))
+	       if (gr) { p1=p1 + ggtitle(paste0("Read Length Distribution", "\n", infoMax, "\n", "Sample: ", sid, "\n", "RG: ", rg)); }
+	       else { p1=p1 + ggtitle(paste0("Read Length Distribution", "\n", "Sample: ", sid, "\n", "RG: ", rg)); }
 	       p1=p1 + scale_x_continuous(labels=comma)
 	       p1=p1 + theme(legend.position="bottom", legend.direction='horizontal')
 	       print(p1)
@@ -132,10 +138,10 @@ all=read.table(pipe(cmd), header=T)
 for(sid in unique(all$Sample)) {
 	for(rg in unique(all[all$Sample == sid,]$Library)) {	
 	       ic = all[all$Sample == sid & all$Library == rg,]
-	       ic$Homopolymer = factor(ic$Homopolymer, levels=c("A", "C", "G", "T", "None"))
-	       p1=ggplot(data=ic, aes(x=Homopolymer, y=Count))
+	       ic$Homopolymer = factor(ic$Homopolymer, levels=c("A", "C", "G", "T", "N", "None"))
+	       p1=ggplot(data=ic, aes(x=Homopolymer, y=Fraction))
        	       p1=p1 + geom_bar(aes(group=InDel, fill=InDel), stat="identity", position="dodge")
-       	       p1=p1 + xlab("Homopolymer Context") + ylab("InDel Count")
+       	       p1=p1 + xlab("Homopolymer Context") + ylab("InDel Fraction")
        	       p1=p1 + scale_y_continuous(labels=comma)
 	       p1=p1 + ggtitle(paste0("InDel Homopolymer Context", "\n", "Sample: ", sid, "\n", "RG: ", rg))
        	       p1=p1 + theme(legend.position="bottom", legend.direction='horizontal')
@@ -234,6 +240,24 @@ if (!is.null(all)) {
      }
    }
    print(warnings())	
+}
+
+cmd=paste0('zgrep ^PS ', args[1], ' | cut -f 2-')
+all=tryCatch(read.table(pipe(cmd), header=T), error=function(e) NULL)
+if (!is.null(all)) {
+   print("Phased block length");
+   for(sid in unique(all$Sample)) {
+     for(rg in unique(all[all$Sample == sid,]$Library)) {
+      	x = all[all$Sample == sid & all$Library == rg,]
+    	p1=ggplot(data=x, aes(x=Size))
+    	p1=p1 + geom_histogram(bins=50)
+    	p1=p1 + scale_y_continuous(labels=comma)
+	p1=p1 + ggtitle(paste0("Phased block length distribution", "\n", "Sample: ", sid, "\n", "RG: ", rg))
+   	p1=p1 + scale_x_continuous(labels=comma) + xlab("Phased block size") + ylab("Count")
+    	print(p1)
+     }
+   }
+   print(warnings())
 }
 
 
