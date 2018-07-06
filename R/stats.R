@@ -143,7 +143,7 @@ for(sid in unique(all$Sample)) {
        	       p1=p1 + geom_bar(aes(group=InDel, fill=InDel), stat="identity", position="dodge")
        	       p1=p1 + xlab("Homopolymer Context") + ylab("InDel Fraction")
        	       p1=p1 + scale_y_continuous(labels=comma)
-	       p1=p1 + ggtitle(paste0("InDel Homopolymer and Dinucleotide Repeat Context", "\n", "Sample: ", sid, "\n", "RG: ", rg))
+	       p1=p1 + ggtitle(paste0("InDel Homopolymer Context", "\n", "Sample: ", sid, "\n", "RG: ", rg))
        	       p1=p1 + theme(legend.position="bottom", legend.direction='horizontal')
        	       print(p1)
 	}
