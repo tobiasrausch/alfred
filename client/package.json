@@ -1,0 +1,19 @@
+{
+  "name": "alfred-client",
+  "private": true,
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "build": "rimraf dist && parcel build src/index.html --no-cache --no-source-maps --public-url ./",
+    "dev": "parcel src/index.html --no-cache --open"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "",
+  "devDependencies": {
+    "babel-plugin-transform-runtime": "^6.23.0",
+    "babel-runtime": "^6.26.0",
+    "parcel-bundler": "^1.9.2",
+    "rimraf": "^2.6.2"
+  }
+}

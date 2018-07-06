@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>Alfred: BAM Alignment Statistics | GEAR</title>
+  <meta name="description" content="BAM Alignment Statistics.">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.6/css/all.css">
+  <link rel="stylesheet" href="static/css/gear.css">
+</head>
+
+<body>
+  <header class="px-0 py-4">
+    <div class="container">
+      <h1 class="display-4 app-name">Alfred</h1>
+        <p class="lead">BAM Alignment Statistics.</p>
+        <a class="plain" href="https://www-db.embl.de/EMBLPersonGroup-PersonPicture/MailForm/?recipient=ggenomics" target="_blank">
+          <i class="fas fa-question"></i> Get help
+        </a>
+        ·
+        <a class="plain" target="_blank" href="https://github.com/gear-genomics/alfred-ui">
+          <i class="fab fa-github-alt"></i> Source
+        </a>
+    </div>
+  </header>
+
+  <main class="container">
+    <ul class="nav nav-fill mb-2" id="mainTab">
+      <li class="nav-item">
+        <a class="nav-link active" href="#input-tab">Input</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="#result-tab" id="link-results">Results</a>
+      </li>
+    </ul>
+    <div class="tab-content" id="main-tabs">
+      <div class="tab-pane show active" id="input-tab">
+        <div class="alert alert-light mb-2" role="alert">
+          <i class="fas fa-info-circle"></i>
+	  This is the web front end of <a href="https://github.com/tobiasrausch/alfred/">Alfred</a>, an efficient and versatile BAM alignment quality control method. You can use the web application to visualize and plot Alfred's statistic file. Please first QC your BAM file using <a href="https://github.com/tobiasrausch/alfred/">Alfred</a> and then upload the statistics file below (qc.tsv.gz).<br> 
+          <input type="file" class="btn btn-default btn-file" name="stats" id="stats" />
+          <br>
+        </div>
+        <button type="submit" class="btn btn-outline-primary" id="btn-submit">
+          <i class="fas fa-rocket" style="margin-right: 5px;"></i>
+          Launch Analysis
+        </button>
+        <button type="submit" class="btn btn-outline-primary" id="btn-example">
+          <i class="fas fa-eye" style="margin-right: 5px;"></i>
+          Show Example
+        </button>
+       </div>
+
+            <div class="tab-pane" id="result-tab">
+        <div id="result-info" class="alert alert-info d-none" role="alert">
+          <i class="fas fa-spinner spinner"></i>
+          Analysis is running, please be patient.
+        </div>
+        <div id="result-error" class="alert alert-danger d-none" role="alert">
+          <i class="fas fa-fire"></i>
+          <span id="error-message"></span>
+        </div>
+        <div id="result-container" class="d-none">
+          <a
+            id="link-pdf"
+            class="btn btn-outline-primary"
+            href="#"
+            target="_blank"
+            role="button"
+          >
+            <i class="far fa-file" style="margin-right: 5px;"></i>
+            View PDF
+          </a>
+          <span class="alert alert-light" role="alert">
+            <i class="fas fa-info-circle"></i>
+            <span>PDF link is valid for 24h.</span>
+          </span>
+          <div id="canvas-container"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div class="float-left">
+        <a class="plain" target="_blank" href="https://gear.embl.de">
+          GEAR ~
+          <i class="fas fa-home"></i>
+        </a>
+        ·
+        <a class="plain" target="_blank" href="https://github.com/gear-genomics">
+          <i class="fab fa-github-alt"></i>
+        </a>
+        ·
+        <a class="plain" target="_blank" href="https://gear.embl.de/terms">
+          Terms of Use
+        </a>
+        ·
+        <a class="plain" target="_blank" href="https://gear.embl.de/contact">
+          Contact Us
+        </a>
+      </div>
+      <div class="float-right">
+        Hosted with
+        <i class="fas fa-heart embl-red"></i> by
+        <a class="plain" target="_blank" href="https://www.embl.de/">
+          <img class="footer-logo" alt="EMBL logo" src="static/img/embl.svg">
+        </a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.0.489/build/pdf.min.js"></script>
+
+  <script src="static/js/alfred.js"></script>
+
+</body>
+
+</html>

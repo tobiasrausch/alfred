@@ -1,0 +1,56 @@
+@import url('https://fonts.googleapis.com/css?family=Rosarivo');
+
+header,
+footer {
+  background: url(../img/pattern.png);
+}
+
+header {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+footer {
+  position: fixed;
+  bottom: 0;
+  height: 50px;
+  line-height: 50px;
+  width: 100%;
+  border-top: 1px solid #f0f0f0;
+}
+
+.footer-logo {
+  height: 2rem;
+}
+
+main {
+  padding-top: 30px;
+  padding-bottom: 75px;
+}
+
+.embl-red {
+  color: #e2001a;
+}
+
+.app-name {
+  font-family: 'Rosarivo', sans-serif;
+}
+
+a.plain,
+a.plain:link,
+a.plain:hover {
+  color: inherit;
+  text-decoration: none;
+}
+
+#mainTab .nav-link.active {
+  border-bottom: 2px solid;
+}
+
+.spinner {
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
