@@ -16,6 +16,12 @@ submitButton.addEventListener('click', function() {
 const exampleButton = document.getElementById('btn-example')
 exampleButton.addEventListener('click', showExample)
 const inputFile = document.getElementById('inputFile')
+const linkPdf = document.getElementById('link-pdf')
+const linkExample = document.getElementById('link-example')
+const canvasContainer = document.getElementById('canvas-container')
+const resultContainer = document.getElementById('result-container')
+const resultInfo = document.getElementById('result-info')
+const resultError = document.getElementById('result-error')
 
 function run() {
   const formData = new FormData()

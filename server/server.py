@@ -34,7 +34,7 @@ def download(uuid):
                return send_file(os.path.join(sf, filename), attachment_filename=filename)
    return "File does not exist!"
 
-@app.route('/upload', methods = ['POST'])
+@app.route('/api/v1/upload', methods = ['POST'])
 def upload_file():
    if request.method == 'POST':
       uuidstr = str(uuid.uuid4())
@@ -45,10 +45,10 @@ def upload_file():
          os.makedirs(sf)
 
       # Statistics file
-      if 'stats' not in request.files:
+      if 'queryFile' not in request.files:
          error = "Alfred statistic file missing!"
          return jsonify(errors = [{"title": "Alfred statistics file is missing!"}]), 400
-      fexp = request.files['stats']
+      fexp = request.files['queryFile']
       if fexp.filename == '':
          return jsonify(errors = [{"title": "Statistics file name is missing!"}]), 400
       if not allowed_file(fexp.filename):
