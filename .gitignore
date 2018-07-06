@@ -1,5 +1,7 @@
 data/
-ws/nohup.out
+server/nohup.out
+server/venv/
+server/run.sh
 *.pyc
 
 # Byte-compiled / optimized / DLL files
