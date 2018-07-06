@@ -37,12 +37,13 @@
     </ul>
     <div class="tab-content" id="main-tabs">
       <div class="tab-pane show active" id="input-tab">
-        <div class="alert alert-light mb-2" role="alert">
-          <i class="fas fa-info-circle"></i>
-	  This is the web front end of <a href="https://github.com/tobiasrausch/alfred/">Alfred</a>, an efficient and versatile BAM alignment quality control method. You can use the web application to visualize and plot Alfred's statistic file. Please first QC your BAM file using <a href="https://github.com/tobiasrausch/alfred/">Alfred</a> and then upload the statistics file below (qc.tsv.gz).<br> 
-          <input type="file" class="btn btn-default btn-file" name="stats" id="stats" />
-          <br>
+	<div class="form-group">
+	  <label for="inputFile">
+	    This is the web front end of <a href="https://github.com/tobiasrausch/alfred/">Alfred</a>, an efficient and versatile BAM alignment quality control method. You can use the web application to visualize and plot Alfred's statistic file. Please first QC your BAM file using <a href="https://github.com/tobiasrausch/alfred/">Alfred</a> and then upload the statistics file below (<code>.tsv.gz</code>).
+	  </label>
+          <input type="file" class="form-control-file" id="inputFile" />
         </div>
+	
         <button type="submit" class="btn btn-outline-primary" id="btn-submit">
           <i class="fas fa-rocket" style="margin-right: 5px;"></i>
           Launch Analysis
@@ -51,9 +52,9 @@
           <i class="fas fa-eye" style="margin-right: 5px;"></i>
           Show Example
         </button>
-       </div>
+      </div>
 
-            <div class="tab-pane" id="result-tab">
+      <div class="tab-pane" id="result-tab">
         <div id="result-info" class="alert alert-info d-none" role="alert">
           <i class="fas fa-spinner spinner"></i>
           Analysis is running, please be patient.
