@@ -5,3 +5,4 @@ Dockerized Alfred
 
 `docker pull trausch/alfred`
 
+`docker run trausch/alfred alfred --version`

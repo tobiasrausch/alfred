@@ -5,8 +5,6 @@ MAINTAINER Tobias Rausch rausch@embl.de
 
 # install required packages
 RUN apt-get update && apt-get install -y \
-    ant \
-    asciidoc \
     build-essential \
     cmake \
     g++ \
@@ -22,11 +20,9 @@ RUN apt-get update && apt-get install -y \
     libhdf5-dev \
     libncurses-dev \
     liblzma-dev \
-    python \
-    python-dev \
-    python-pip \
     zlib1g-dev \
-    && apt-get clean
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # set environment
 ENV BOOST_ROOT /usr
@@ -42,12 +38,21 @@ RUN cd /opt \
 RUN cd /opt \
     && git clone https://github.com/tobiasrausch/alfred.git \
     && cd /opt/alfred/ \
-    && make all \
+    && make STATIC=1 all \
     && make install
 
-# add user
-RUN groupadd -r -g 1000 ubuntu && useradd -r -g ubuntu -u 1000 -m ubuntu
-USER ubuntu
+# Multi-stage build
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates
+RUN mkdir -p /opt/alfred/bin
+WORKDIR /opt/alfred/bin
+COPY --from=0 /opt/alfred/bin/alfred .
 
-# by default /bin/bash is executed
-CMD ["/bin/bash"]
+# Workdir
+WORKDIR /root/
+
+# Add Alfred to PATH
+ENV PATH="/opt/alfred/bin:${PATH}"
+
+# by default /bin/sh is executed
+CMD ["/bin/sh"]
