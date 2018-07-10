@@ -43,7 +43,6 @@ RUN cd /opt \
 
 # Multi-stage build
 FROM alpine:latest
-RUN apk --no-cache add ca-certificates
 RUN mkdir -p /opt/alfred/bin
 WORKDIR /opt/alfred/bin
 COPY --from=0 /opt/alfred/bin/alfred .
