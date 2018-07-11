@@ -13,7 +13,7 @@ bindir ?= $(exec_prefix)/bin
 # Flags
 CXX=g++
 CXXFLAGS += -isystem ${EBROOTHTSLIB} -pedantic -W -Wall -Wno-unknown-pragmas -D__STDC_LIMIT_MACROS -fno-strict-aliasing
-LDFLAGS += -L${EBROOTHTSLIB} -L${EBROOTHTSLIB}/lib -lboost_iostreams -lboost_filesystem -lboost_system -lboost_program_options -lboost_date_time
+LDFLAGS += -L${EBROOTHTSLIB} -L${EBROOTHTSLIB}/lib -lboost_iostreams -lboost_filesystem -lboost_system -lboost_program_options -lboost_date_time 
 
 # Additional flags for release/debug
 ifeq (${STATIC}, 1)
@@ -45,7 +45,7 @@ TARGETS = ${SUBMODULES} ${BUILT_PROGRAMS}
 all:   	$(TARGETS)
 
 .htslib: $(HTSLIBSOURCES)
-	cd src/htslib && make && make lib-static && cd ../../ && touch .htslib
+	if [ -r src/htslib/Makefile ]; then cd src/htslib && make && make lib-static && cd ../../ && touch .htslib; fi
 
 src/alfred: ${SUBMODULES} $(SOURCES)
 	$(CXX) $(CXXFLAGS) $@.cpp -o $@ $(LDFLAGS)
@@ -55,5 +55,10 @@ install: ${BUILT_PROGRAMS}
 	install -p ${BUILT_PROGRAMS} ${bindir}
 
 clean:
-	cd src/htslib && make clean
+	if [ -r src/htslib/Makefile ]; then cd src/htslib && make clean; fi
 	rm -f $(TARGETS) $(TARGETS:=.o) ${SUBMODULES}
+
+distclean: clean
+	rm -f ${BUILT_PROGRAMS}
+
+.PHONY: clean distclean install all
