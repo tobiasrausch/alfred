@@ -54,7 +54,7 @@ namespace bamstats
     typedef uint32_t TCountType;
     typedef std::vector<TCountType> TCoverageBp;
     
-    typedef uint8_t TMaxCoverage;
+    typedef uint16_t TMaxCoverage;
     typedef std::vector<TMaxCoverage> TBpCoverage;
 
     uint32_t maxCoverage;

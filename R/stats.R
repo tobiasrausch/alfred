@@ -116,7 +116,7 @@ for(sid in unique(all$Sample)) {
       ins = all[all$Sample == sid & all$Library == rg,]
       tc=sum(as.numeric(ins$Count))
       if (tc > 0) {
-	upBound=max(ins[ins$Quantile >= 0.001 & ins$Quantile <= 0.999,]$InsertSize)
+      	upBound=max(ins[ins$Quantile >= 0.001 & ins$Quantile <= 0.999,]$InsertSize)
 	gr=sum(as.numeric(ins[ins$InsertSize>upBound,]$Count))
 	infoMax = paste0("Insert size > ", upBound, " (", round(100 * gr / tc, digits=2), "%)")
 	ins=ins[ins$InsertSize <= upBound,]
