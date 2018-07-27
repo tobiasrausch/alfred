@@ -52,8 +52,10 @@ struct Config {
   bool hasRegionFile;
   bool ignoreRG;
   bool singleRG;
+  uint16_t of;
   std::string rgname;
   std::string sampleName;
+  std::string format;
   boost::filesystem::path outfile;
   boost::filesystem::path genome;
   boost::filesystem::path regionFile;
@@ -70,6 +72,7 @@ int qc(int argc, char **argv) {
     ("help,?", "show help message")
     ("reference,r", boost::program_options::value<boost::filesystem::path>(&c.genome), "reference fasta file (required)")
     ("bed,b", boost::program_options::value<boost::filesystem::path>(&c.regionFile), "bed file with target regions (optional)")
+    ("format,f", boost::program_options::value<std::string>(&c.format)->default_value("tsv"), "output format [tsv|json]")
     ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("qc.tsv.gz"), "gzipped output file")
     ;
 
@@ -104,6 +107,10 @@ int qc(int argc, char **argv) {
     std::cout << visible_options << "\n";
     return 1;
   }
+
+  // Output format
+  if (c.format == "json") c.of = 1;
+  else c.of = 0;
 
   // Ignore read groups
   if (vm.count("ignore")) {
