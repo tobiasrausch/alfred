@@ -41,9 +41,9 @@ Contact: Tobias Rausch (rausch@embl.de)
 namespace bamstats
 {
 
-  template<typename TConfig, typename TGenomicRegions, typename TGeneIds>
+  template<typename TConfig, typename TGenomicRegions, typename TGeneIds, typename TProteinCoding>
   inline int32_t
-  parseGTFAll(TConfig const& c, TGenomicRegions& overlappingRegions, TGeneIds& geneIds) {
+  parseGTFAll(TConfig const& c, TGenomicRegions& overlappingRegions, TGeneIds& geneIds, TProteinCoding& pCoding) {
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "GTF feature parsing" << std::endl;
 
@@ -119,6 +119,22 @@ namespace bamstats
 	      if (idIter == idMap.end()) {
 		idMap.insert(std::make_pair(val, idval));
 		geneIds.push_back(val);
+		// Protein Coding?
+		bool pCode = false;
+		for(Tokenizer::iterator arIter = attrTokens.begin(); arIter != attrTokens.end(); ++arIter) {
+		  std::string kvl = *arIter;
+		  boost::trim(kvl);
+		  boost::char_separator<char> sKV2(" ");
+		  Tokenizer kvT2(kvl, sKV2);
+		  Tokenizer::iterator kvT2It = kvT2.begin();
+		  std::string procod = *kvT2It++;
+		  if (procod == "gene_biotype") {
+		    std::string gbio = *kvT2It;
+		    if (gbio.size() >= 3) gbio = gbio.substr(1, gbio.size()-2);
+		    if (gbio == "protein_coding") pCode = true;
+		  }
+		}
+		pCoding.push_back(pCode);
 	      } else idval = idIter->second;
 	      // Convert to 0-based and right-open
 	      if (start == 0) {
@@ -139,17 +155,23 @@ namespace bamstats
     return geneIds.size();
   }
 
-    
-  
+
   template<typename TConfig, typename TGenomicRegions, typename TGeneIds>
   inline int32_t
-  parseGTF(TConfig const& c, TGenomicRegions& gRegions, TGeneIds& geneIds) {
+  parseGTFAll(TConfig const& c, TGenomicRegions& overlappingRegions, TGeneIds& geneIds) {
+    std::vector<bool> pCoding;
+    return parseGTFAll(c, overlappingRegions, geneIds, pCoding);
+  }
+  
+  template<typename TConfig, typename TGenomicRegions, typename TGeneIds, typename TProteinCoding>
+  inline int32_t
+  parseGTF(TConfig const& c, TGenomicRegions& gRegions, TGeneIds& geneIds, TProteinCoding& pCoding) {
     typedef typename TGenomicRegions::value_type TChromosomeRegions;
 
     // Overlapping intervals for each label
     TGenomicRegions overlappingRegions;
     overlappingRegions.resize(gRegions.size(), TChromosomeRegions());
-    parseGTFAll(c, overlappingRegions, geneIds);
+    parseGTFAll(c, overlappingRegions, geneIds, pCoding);
     
     // Make intervals non-overlapping for each label
     for(uint32_t refIndex = 0; refIndex < overlappingRegions.size(); ++refIndex) {
@@ -179,6 +201,12 @@ namespace bamstats
     return geneIds.size();
   }
 
+  template<typename TConfig, typename TGenomicRegions, typename TGeneIds>
+  inline int32_t
+  parseGTF(TConfig const& c, TGenomicRegions& gRegions, TGeneIds& geneIds) {
+    std::vector<bool> pCoding;
+    return parseGTF(c, gRegions, geneIds, pCoding);
+  }
 }
 
 #endif

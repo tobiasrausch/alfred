@@ -179,6 +179,16 @@ namespace bamstats
     return seed;
   }
 
+  template<typename TGenomicRegions>
+  inline void
+  getGeneLength(TGenomicRegions const& gRegions, std::vector<uint32_t>& geneLength) {
+    for(uint32_t refIndex = 0; refIndex < gRegions.size(); ++refIndex) {
+      for(uint32_t i = 0; i < gRegions[refIndex].size(); ++i) {
+	geneLength[gRegions[refIndex][i].lid] += gRegions[refIndex][i].end - gRegions[refIndex][i].start;
+      }
+    }
+  }
+  
   inline int32_t
   homopolymerContext(std::string const& s, int32_t idx, int32_t homlen) {
     for(int32_t i = std::max(0, idx - (homlen - 1)); i <= (idx + 1); ++i) {

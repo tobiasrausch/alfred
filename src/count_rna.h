@@ -55,6 +55,7 @@ namespace bamstats
     std::string sampleName;
     std::string idname;
     std::string feature;
+    std::string normalize;
     boost::filesystem::path gtfFile;
     boost::filesystem::path bedFile;
     boost::filesystem::path bamFile;
@@ -326,14 +327,22 @@ namespace bamstats
     gRegions.resize(c.nchr.size(), TChromosomeRegions());
     typedef std::vector<std::string> TGeneIds;
     TGeneIds geneIds;
+    typedef std::vector<bool> TProteinCoding;
+    TProteinCoding pCoding;
     int32_t tf = 0;
-    if (c.inputFileFormat == 0) tf = parseGTF(c, gRegions, geneIds);
+    if (c.inputFileFormat == 0) tf = parseGTF(c, gRegions, geneIds, pCoding);
     else if (c.inputFileFormat == 1) tf = parseBED(c, gRegions, geneIds);
     else if (c.inputFileFormat == 2) tf = parseGFF3(c, gRegions, geneIds);
     if (tf == 0) {
       std::cerr << "Error parsing GTF/GFF3/BED file!" << std::endl;
       return 1;
     }
+
+    // Get gene lengh
+    typedef std::vector<uint32_t> TGeneLength;
+    TGeneLength geneLength(geneIds.size(), 0);
+    getGeneLength(gRegions, geneLength);
+    //for(uint32_t idval = 0; idval < geneIds.size(); ++idval) std::cerr << geneIds[idval] << "\t" << geneLength[idval] << std::endl;
 
     // Feature counter
     typedef std::vector<int32_t> TFeatureCounter;
@@ -346,12 +355,27 @@ namespace bamstats
       return 1;
     }
 
+    // Reads mapped to protein-coding sequences in the alignment
+    uint64_t totalReadProtein = 0;
+    for(uint32_t idval = 0; idval < pCoding.size(); ++idval) {
+      if (pCoding[idval]) totalReadProtein += fc[idval];
+    }
+    
     // Output count table
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Output count table" << std::endl;
     std::ofstream fcfile(c.outfile.string().c_str());
     fcfile << "gene\t" << c.sampleName << std::endl;
-    for(uint32_t idval = 0; idval < geneIds.size(); ++idval) fcfile << geneIds[idval] << "\t" << fc[idval] << std::endl;
+    if (c.normalize == "fpkm") {
+      // FPKM
+      for(uint32_t idval = 0; idval < geneIds.size(); ++idval) {
+	double fpkm = ((double) (fc[idval]) * (double) 1000000000) / ((double) (totalReadProtein) * (double) geneLength[idval]);
+	fcfile << geneIds[idval] << "\t" << fpkm << std::endl;
+      }
+    } else {
+      // Raw
+      for(uint32_t idval = 0; idval < geneIds.size(); ++idval) fcfile << geneIds[idval] << "\t" << fc[idval] << std::endl;
+    }
     fcfile.close();
     
     now = boost::posix_time::second_clock::local_time();
@@ -374,6 +398,7 @@ namespace bamstats
       ("help,?", "show help message")
       ("map-qual,m", boost::program_options::value<uint16_t>(&c.minQual)->default_value(10), "min. mapping quality")
       ("stranded,s", boost::program_options::value<uint16_t>(&c.stranded)->default_value(0), "strand-specific counting (0: unstranded, 1: stranded, 2: reverse stranded)")
+      ("normalize,n", boost::program_options::value<std::string>(&c.normalize)->default_value("raw"), "normalization [raw|fpkm]")
       ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("gene.count"), "output file")
       ;
 
