@@ -356,9 +356,15 @@ namespace bamstats
 
     // Reads mapped to protein-coding sequences in the alignment
     uint64_t totalReadProtein = 0;
+    TFeatureCounter pGenes;
     for(uint32_t idval = 0; idval < pCoding.size(); ++idval) {
-      if (pCoding[idval]) totalReadProtein += fc[idval];
+      if (pCoding[idval]) {
+	totalReadProtein += fc[idval];
+	pGenes.push_back(fc[idval]);
+      }
     }
+    std::sort(pGenes.begin(), pGenes.end());
+    int32_t uqval = pGenes[(int32_t) ((pGenes.size() * 3) / 4)];
 
     // Debug code
     //for(uint32_t idval = 0; idval < geneIds.size(); ++idval) std::cerr << geneIds[idval] << "\t" << pCoding[idval] << "\t" << geneLength[idval] << "\t" << fc[idval] << std::endl;
@@ -373,6 +379,12 @@ namespace bamstats
       for(uint32_t idval = 0; idval < geneIds.size(); ++idval) {
 	double fpkm = ((double) (fc[idval]) * (double) 1000000000) / ((double) (totalReadProtein) * (double) geneLength[idval]);
 	fcfile << geneIds[idval] << "\t" << fpkm << std::endl;
+      }
+    } else if (c.normalize == "fpkm_uq") {
+      // FPKM-UQ
+      for(uint32_t idval = 0; idval < geneIds.size(); ++idval) {
+	double fpkm_uq = ((double) (fc[idval]) * (double) 1000000000) / ((double) (uqval) * (double) geneLength[idval]);
+	fcfile << geneIds[idval] << "\t" << fpkm_uq << std::endl;
       }
     } else {
       // Raw
@@ -400,7 +412,7 @@ namespace bamstats
       ("help,?", "show help message")
       ("map-qual,m", boost::program_options::value<uint16_t>(&c.minQual)->default_value(10), "min. mapping quality")
       ("stranded,s", boost::program_options::value<uint16_t>(&c.stranded)->default_value(0), "strand-specific counting (0: unstranded, 1: stranded, 2: reverse stranded)")
-      ("normalize,n", boost::program_options::value<std::string>(&c.normalize)->default_value("raw"), "normalization [raw|fpkm]")
+      ("normalize,n", boost::program_options::value<std::string>(&c.normalize)->default_value("raw"), "normalization [raw|fpkm|fpkm_uq]")
       ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("gene.count"), "output file")
       ;
 
