@@ -41,9 +41,9 @@ Contact: Tobias Rausch (rausch@embl.de)
 namespace bamstats
 {
 
-  template<typename TConfig, typename TGenomicRegions, typename TGeneIds>
+  template<typename TConfig, typename TGenomicRegions, typename TGeneIds, typename TProteinCoding>
   inline int32_t
-  parseBEDAll(TConfig const& c, TGenomicRegions& overlappingRegions, TGeneIds& geneIds) {
+  parseBEDAll(TConfig const& c, TGenomicRegions& overlappingRegions, TGeneIds& geneIds, TProteinCoding& pCoding) {
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "BED feature parsing" << std::endl;
     
@@ -92,15 +92,19 @@ namespace bamstats
       }
       std::string val = *tokIter++;
       char strand = '*';
+      std::string biotype = "NA";
       if (tokIter != tokens.end()) {
 	++tokIter; // skip score
 	strand = boost::lexical_cast<char>(*tokIter++);
+	biotype = *tokIter++;
       }
       int32_t idval = geneIds.size();
       typename TIdMap::const_iterator idIter = idMap.find(val);
       if (idIter == idMap.end()) {
 	idMap.insert(std::make_pair(val, idval));
 	geneIds.push_back(val);
+	if (biotype == "protein_coding") pCoding.push_back(true);
+	else pCoding.push_back(false);
       } else idval = idIter->second;
       // BED is 0-based and right-open, no need to convert
       if (start > end) {
@@ -112,17 +116,24 @@ namespace bamstats
     }
     return geneIds.size();
   }   
-  
 
   template<typename TConfig, typename TGenomicRegions, typename TGeneIds>
   inline int32_t
-  parseBED(TConfig const& c, TGenomicRegions& gRegions, TGeneIds& geneIds) {
+  parseBEDAll(TConfig const& c, TGenomicRegions& overlappingRegions, TGeneIds& geneIds) {
+    std::vector<bool> pCoding;
+    return parseBEDAll(c, overlappingRegions, geneIds, pCoding);
+  }
+  
+
+  template<typename TConfig, typename TGenomicRegions, typename TGeneIds, typename TProteinCoding>
+  inline int32_t
+  parseBED(TConfig const& c, TGenomicRegions& gRegions, TGeneIds& geneIds, TProteinCoding& pCoding) {
     typedef typename TGenomicRegions::value_type TChromosomeRegions;
 
     // Overlapping intervals for each label
     TGenomicRegions overlappingRegions;
     overlappingRegions.resize(gRegions.size(), TChromosomeRegions());
-    parseBEDAll(c, overlappingRegions, geneIds);
+    parseBEDAll(c, overlappingRegions, geneIds, pCoding);
 
     // Make intervals non-overlapping for each label
     for(uint32_t refIndex = 0; refIndex < overlappingRegions.size(); ++refIndex) {
@@ -150,6 +161,14 @@ namespace bamstats
     }
     return geneIds.size();
   }
+
+  template<typename TConfig, typename TGenomicRegions, typename TGeneIds>
+  inline int32_t
+  parseBED(TConfig const& c, TGenomicRegions& gRegions, TGeneIds& geneIds) {
+    std::vector<bool> pCoding;
+    return parseBED(c, gRegions, geneIds, pCoding);
+  }
+  
 
 }
 

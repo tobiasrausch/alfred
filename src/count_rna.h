@@ -331,8 +331,8 @@ namespace bamstats
     TProteinCoding pCoding;
     int32_t tf = 0;
     if (c.inputFileFormat == 0) tf = parseGTF(c, gRegions, geneIds, pCoding);
-    else if (c.inputFileFormat == 1) tf = parseBED(c, gRegions, geneIds);
-    else if (c.inputFileFormat == 2) tf = parseGFF3(c, gRegions, geneIds);
+    else if (c.inputFileFormat == 1) tf = parseBED(c, gRegions, geneIds, pCoding);
+    else if (c.inputFileFormat == 2) tf = parseGFF3(c, gRegions, geneIds, pCoding);
     if (tf == 0) {
       std::cerr << "Error parsing GTF/GFF3/BED file!" << std::endl;
       return 1;
@@ -411,7 +411,7 @@ namespace bamstats
       ("feature,f", boost::program_options::value<std::string>(&c.feature)->default_value("exon"), "gtf/gff3 feature")
       ;
     
-    boost::program_options::options_description bedopt("BED input file options, columns chr, start, end, name [, score, strand]");
+    boost::program_options::options_description bedopt("BED input file options, columns chr, start, end, name [, score, strand, gene_biotype]");
     bedopt.add_options()
       ("bed,b", boost::program_options::value<boost::filesystem::path>(&c.bedFile), "bed file")
       ;

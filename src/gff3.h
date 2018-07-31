@@ -63,6 +63,7 @@ namespace bamstats
 	std::string attr = *tokIter;
 	std::size_t found = attr.find(c.idname);
 	if (found != std::string::npos) {
+	  bool pCode = false;
 	  std::string kval = "";
 	  std::string ival = "";
 	  boost::char_separator<char> sepAttr(";");
@@ -76,12 +77,16 @@ namespace bamstats
 	    std::string key = *kvTokensIt++;
 	    if (key == "ID") ival = *kvTokensIt;
 	    else if (key == c.idname) kval = *kvTokensIt;
+	    else if (key == "biotype") {
+	      if (*kvTokensIt == "protein_coding") pCode = true;
+	    }
 	  }
-	  pId[ival] = kval;
+	  pId[ival] = std::make_pair(kval, pCode);
 	}
 	// Make sure we also find grand-children
 	found = attr.find("Parent");
 	if (found != std::string::npos) {
+	  bool pCode = false;
 	  std::string pval = "";
 	  std::string ival = "";
 	  boost::char_separator<char> sepAttr(";");
@@ -95,8 +100,11 @@ namespace bamstats
 	    std::string key = *kvTokensIt++;
 	    if (key == "ID") ival = *kvTokensIt;
 	    else if (key == "Parent") pval = *kvTokensIt;
+	    else if (key == "biotype") {
+	      if (*kvTokensIt == "protein_coding") pCode = true;
+	    }
 	  }
-	  tree[ival] = pval;
+	  tree[ival] = std::make_pair(pval, pCode);
 	}
       }
     }
@@ -105,21 +113,21 @@ namespace bamstats
     // Now flatten the parent-child hierarchy
     if (!tree.empty()) {
       for(typename TParentIdMap::iterator pit = tree.begin(); pit!= tree.end(); ++pit) {
-	std::string newParent = pit->second;
+	std::string newParent = pit->second.first;
 	bool carryOn = true;
 	do {
 	  if (pId.find(newParent) != pId.end()) pId[pit->first] = pId[newParent];
 	  if (tree.find(newParent) == tree.end()) carryOn = false;
-	  else newParent = tree.find(newParent)->second;
+	  else newParent = tree.find(newParent)->second.first;
 	} while (carryOn);
       }
     }
   }
 
 
-  template<typename TConfig, typename TGenomicRegions, typename TGeneIds>
+  template<typename TConfig, typename TGenomicRegions, typename TGeneIds, typename TProteinCoding>
   inline int32_t
-  parseGFF3All(TConfig const& c, TGenomicRegions& overlappingRegions, TGeneIds& geneIds) {
+  parseGFF3All(TConfig const& c, TGenomicRegions& overlappingRegions, TGeneIds& geneIds, TProteinCoding& pCoding) {
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "GFF3 feature parsing" << std::endl;
     
@@ -130,7 +138,8 @@ namespace bamstats
     }
 
     // ID dictionary
-    typedef std::map<std::string, std::string> TParentIdMap;
+    typedef std::pair<std::string, bool> TGeneProteinCoding;
+    typedef std::map<std::string, TGeneProteinCoding> TParentIdMap;
     TParentIdMap pId;
     _buildIDdict(c, pId);
 
@@ -195,12 +204,14 @@ namespace bamstats
 	    if ((key == "ID") || (key == "Parent")) {
 	      std::string ivl = *kvTokensIt;         
 	      if (pId.find(ivl) != pId.end()) {
-		std::string val = pId[ivl];
+		std::string val = pId[ivl].first;
+		bool pCode = pId[ivl].second;
 		int32_t idval = geneIds.size();
 		typename TIdMap::const_iterator idIter = idMap.find(val);
 		if (idIter == idMap.end()) {
 		  idMap.insert(std::make_pair(val, idval));
 		  geneIds.push_back(val);
+		  pCoding.push_back(pCode);
 		} else idval = idIter->second;
 		// Convert to 0-based and right-open
 		if (start == 0) {
@@ -222,16 +233,23 @@ namespace bamstats
     return geneIds.size();
   }
 
-
   template<typename TConfig, typename TGenomicRegions, typename TGeneIds>
   inline int32_t
-  parseGFF3(TConfig const& c, TGenomicRegions& gRegions, TGeneIds& geneIds) {
+  parseGFF3All(TConfig const& c, TGenomicRegions& overlappingRegions, TGeneIds& geneIds) {
+    std::vector<bool> pCoding;
+    return parseGFF3All(c, overlappingRegions, geneIds, pCoding);
+  }
+    
+
+  template<typename TConfig, typename TGenomicRegions, typename TGeneIds, typename TProteinCoding>
+  inline int32_t
+  parseGFF3(TConfig const& c, TGenomicRegions& gRegions, TGeneIds& geneIds, TProteinCoding& pCoding) {
     typedef typename TGenomicRegions::value_type TChromosomeRegions;
 
     // Overlapping intervals for each label
     TGenomicRegions overlappingRegions;
     overlappingRegions.resize(gRegions.size(), TChromosomeRegions());
-    parseGFF3All(c, overlappingRegions, geneIds);
+    parseGFF3All(c, overlappingRegions, geneIds, pCoding);
 
     // Make intervals non-overlapping for each label
     for(uint32_t refIndex = 0; refIndex < overlappingRegions.size(); ++refIndex) {
@@ -261,6 +279,14 @@ namespace bamstats
     return geneIds.size();
   }
 
+
+  template<typename TConfig, typename TGenomicRegions, typename TGeneIds>
+  inline int32_t
+  parseGFF3(TConfig const& c, TGenomicRegions& gRegions, TGeneIds& geneIds) {
+    std::vector<bool> pCoding;
+    return parseGFF3(c, gRegions, geneIds, pCoding);
+  }
+  
 }
 
 #endif
