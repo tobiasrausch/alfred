@@ -342,7 +342,6 @@ namespace bamstats
     typedef std::vector<uint32_t> TGeneLength;
     TGeneLength geneLength(geneIds.size(), 0);
     getGeneLength(gRegions, geneLength);
-    //for(uint32_t idval = 0; idval < geneIds.size(); ++idval) std::cerr << geneIds[idval] << "\t" << geneLength[idval] << std::endl;
 
     // Feature counter
     typedef std::vector<int32_t> TFeatureCounter;
@@ -360,6 +359,9 @@ namespace bamstats
     for(uint32_t idval = 0; idval < pCoding.size(); ++idval) {
       if (pCoding[idval]) totalReadProtein += fc[idval];
     }
+
+    // Debug code
+    //for(uint32_t idval = 0; idval < geneIds.size(); ++idval) std::cerr << geneIds[idval] << "\t" << pCoding[idval] << "\t" << geneLength[idval] << "\t" << fc[idval] << std::endl;
     
     // Output count table
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
