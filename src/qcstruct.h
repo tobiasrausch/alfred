@@ -39,6 +39,8 @@ Contact: Tobias Rausch (rausch@embl.de)
 #include <htslib/sam.h>
 #include <htslib/faidx.h>
 
+#include "util.h"
+
 namespace bamstats
 {
 
@@ -46,6 +48,28 @@ namespace bamstats
     uint32_t ncount;
     uint32_t gccount;
   };
+
+  struct ReferenceFeatures {
+    typedef std::vector<uint64_t> TGCContent;
+    typedef std::vector<Interval> TChromosomeRegions;
+    typedef std::vector<TChromosomeRegions> TGenomicRegions;
+    
+    uint64_t referencebp;
+    uint64_t ncount;
+    uint32_t totalBedSize;
+    uint32_t nchr;
+    std::vector<ChrGC> chrGC;
+    TGenomicRegions gRegions;
+    TGCContent refGcContent;
+    
+
+    explicit ReferenceFeatures(uint32_t const nc) : referencebp(0), ncount(0), totalBedSize(0), nchr(nc) {
+      chrGC.resize(nc, ChrGC());
+      gRegions.resize(nc, TChromosomeRegions());
+      refGcContent.resize(101, 0);
+    }
+  };
+
   
   struct BaseCounts {
     typedef uint32_t TCountType;
@@ -87,7 +111,7 @@ namespace bamstats
     typedef uint32_t TCountType;
     typedef std::vector<TCountType> TLengthReadCount;
     typedef std::vector<uint64_t> TBaseQualitySum;
-    typedef std::vector<uint64_t> TGCContent;
+    typedef ReferenceFeatures::TGCContent TGCContent;
     typedef boost::dynamic_bitset<> TBitSet;
     typedef std::pair<int32_t, int32_t> TStartEndPair;
     typedef std::map<int32_t, TStartEndPair> TBlockRange;

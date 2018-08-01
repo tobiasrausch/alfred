@@ -84,14 +84,10 @@ namespace bamstats
     hts_set_fai_filename(samfile, c.genome.string().c_str());
     bam_hdr_t* hdr = sam_hdr_read(samfile);
 
-    // One list of regions for every chromosome
-    typedef std::vector<Interval> TChromosomeRegions;
-    typedef std::vector<TChromosomeRegions> TGenomicRegions;
-    TGenomicRegions gRegions;
-    gRegions.resize(hdr->n_targets, TChromosomeRegions());
+    // Collect reference features
+    ReferenceFeatures rf(hdr->n_targets);
 
     // Parse regions from BED file or create one region per chromosome
-    int32_t totalBedSize = 0;
     if (c.hasRegionFile) {
       if (is_gz(c.regionFile)) {
 	std::ifstream file(c.regionFile.string().c_str(), std::ios_base::in | std::ios_base::binary);
@@ -113,7 +109,7 @@ namespace bamstats
 	    if (tokIter!=tokens.end()) {
 	      int32_t start = boost::lexical_cast<int32_t>(*tokIter++);
 	      int32_t end = boost::lexical_cast<int32_t>(*tokIter++);
-	      gRegions[chrid].push_back(Interval(start, end));
+	      rf.gRegions[chrid].push_back(Interval(start, end));
 	    }
 	  }
 	}
@@ -137,7 +133,7 @@ namespace bamstats
 	      if (tokIter!=tokens.end()) {
 		int32_t start = boost::lexical_cast<int32_t>(*tokIter++);
 		int32_t end = boost::lexical_cast<int32_t>(*tokIter++);
-		gRegions[chrid].push_back(Interval(start, end));
+		rf.gRegions[chrid].push_back(Interval(start, end));
 	      }
 	    }
 	  }
@@ -149,15 +145,15 @@ namespace bamstats
       for(int32_t refIndex = 0; refIndex < hdr->n_targets; ++refIndex) {
 	typedef boost::dynamic_bitset<> TBitSet;
 	TBitSet bedcovered(hdr->target_len[refIndex]);
-	for(uint32_t i = 0; i < gRegions[refIndex].size(); ++i)
-	  for(int32_t k = gRegions[refIndex][i].start; (k < gRegions[refIndex][i].end) && (k < (int32_t) hdr->target_len[refIndex]); ++k) bedcovered[k] = 1;
-	totalBedSize += bedcovered.count();
+	for(uint32_t i = 0; i < rf.gRegions[refIndex].size(); ++i)
+	  for(int32_t k = rf.gRegions[refIndex][i].start; (k < rf.gRegions[refIndex][i].end) && (k < (int32_t) hdr->target_len[refIndex]); ++k) bedcovered[k] = 1;
+	rf.totalBedSize += bedcovered.count();
       }
     }
     
     // Debug code
     //uint32_t rIndex = 0;
-    //for(TGenomicRegions::const_iterator itG = gRegions.begin(); itG != gRegions.end(); ++itG, ++rIndex) {
+    //for(TGenomicRegions::const_iterator itG = rf.gRegions.begin(); itG != rf.gRegions.end(); ++itG, ++rIndex) {
     //for(TChromosomeRegions::const_iterator itC = itG->begin(); itC != itG->end(); ++itC) {
     //std::cout << rIndex << ',' << hdr->target_name[rIndex] << ',' << itC->start << ',' << itC->end << std::endl;
     //}
@@ -182,7 +178,7 @@ namespace bamstats
 	rgMap.insert(std::make_pair(*itRg, ReadGroupStats(hdr->n_targets)));
 	for(int32_t refIndex = 0; refIndex < hdr->n_targets; ++refIndex) {
 	  typename BedCounts::TRgBpMap::iterator itChr = be.gCov[refIndex].insert(std::make_pair(*itRg, typename BedCounts::TBpCov())).first;
-	  itChr->second.resize(gRegions[refIndex].size());
+	  itChr->second.resize(rf.gRegions[refIndex].size());
 	  typename BedCounts::TOnTargetMap::iterator itOT = be.onTarget.insert(std::make_pair(*itRg, typename BedCounts::TOnTargetBp())).first;
 	  itOT->second.resize(be.onTSize, 0);
 	}
@@ -198,12 +194,8 @@ namespace bamstats
     typedef boost::dynamic_bitset<> TBitSet;
     TBitSet nrun;
     TBitSet gcref;
-    uint64_t referencebp = 0;
-    uint64_t ncount = 0;
     int32_t gcRunnerIdx = 0;
     int32_t gcRunnerCount = 0;
-    std::vector<ChrGC> chrGC(hdr->n_targets, ChrGC());
-    ReadCounts::TGCContent refGcContent(101, 0);
 
     // Find N90 chromosome length
     uint32_t minChrLen = 0;
@@ -238,7 +230,7 @@ namespace bamstats
 	// Summarize bp-level coverage
 	if (refIndex != -1) {
 	  for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
-	    if ((c.hasRegionFile) && (!gRegions[refIndex].empty())) _summarizeBedCoverage(gRegions[refIndex], itRg->second.bc.cov, refIndex, itRg->first, be);
+	    if ((c.hasRegionFile) && (!rf.gRegions[refIndex].empty())) _summarizeBedCoverage(rf.gRegions[refIndex], itRg->second.bc.cov, refIndex, itRg->first, be);
 	    for(uint32_t i = 0; i < hdr->target_len[refIndex]; ++i) {
 	      if (itRg->second.bc.cov[i] >= 1) {
 		++itRg->second.bc.nd;
@@ -263,17 +255,17 @@ namespace bamstats
 	nrun.resize(hdr->target_len[refIndex], false);
 	gcref.clear();
 	gcref.resize(hdr->target_len[refIndex], false);
-	referencebp += hdr->target_len[refIndex];
+	rf.referencebp += hdr->target_len[refIndex];
 	for(uint32_t i = 0; i < hdr->target_len[refIndex]; ++i) {
 	  if ((seq[i] == 'c') || (seq[i] == 'C') || (seq[i] == 'g') || (seq[i] == 'G')) gcref[i] = 1;
 	  if ((seq[i] == 'n') || (seq[i] == 'N')) {
 	    nrun[i] = 1;
-	    ++ncount;
+	    ++rf.ncount;
 	  }
 	}
 	// Reference GC
-	chrGC[refIndex].ncount = nrun.count();
-	chrGC[refIndex].gccount = gcref.count();
+	rf.chrGC[refIndex].ncount = nrun.count();
+	rf.chrGC[refIndex].gccount = gcref.count();
 	if ((hdr->target_len[refIndex] > 100) && (hdr->target_len[refIndex] >= minChrLen)) {
 	  uint32_t nsum = 0;
 	  uint32_t gcsum = 0;
@@ -289,7 +281,7 @@ namespace bamstats
 	      nsum += nrun[pos + 99];
 	      gcsum += gcref[pos + 99];
 	    }
-	    if (!nsum) ++refGcContent[gcsum];
+	    if (!nsum) ++rf.refGcContent[gcsum];
 	  }
 	}
 	
@@ -540,7 +532,7 @@ namespace bamstats
     // Summarize bp-level coverage
     if (refIndex != -1) {
       for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
-	if ((c.hasRegionFile) && (!gRegions[refIndex].empty())) _summarizeBedCoverage(gRegions[refIndex], itRg->second.bc.cov, refIndex, itRg->first, be);
+	if ((c.hasRegionFile) && (!rf.gRegions[refIndex].empty())) _summarizeBedCoverage(rf.gRegions[refIndex], itRg->second.bc.cov, refIndex, itRg->first, be);
 	for(uint32_t i = 0; i < hdr->target_len[refIndex]; ++i) {
 	  if (itRg->second.bc.cov[i] >= 1) {
 	    ++itRg->second.bc.nd;
@@ -555,7 +547,7 @@ namespace bamstats
     }
 
     // Output
-    qcTsvOut(c, hdr, rgMap, be, gRegions, refGcContent, chrGC, referencebp, ncount, totalBedSize);
+    qcTsvOut(c, hdr, rgMap, be, rf);
     
     // clean-up
     bam_destroy1(rec);

@@ -37,9 +37,9 @@ namespace bamstats
 {
   
 
-  template<typename TConfig, typename TRGMap, typename TGenomicRegions, typename TGCContent, typename TChrGC>
+  template<typename TConfig, typename TRGMap>
   inline void
-    qcTsvOut(TConfig const& c, bam_hdr_t* hdr, TRGMap& rgMap, BedCounts& be, TGenomicRegions& gRegions, TGCContent& refGcContent, TChrGC& chrGC, uint64_t const referencebp, uint64_t const ncount, int32_t const totalBedSize) {
+  qcTsvOut(TConfig const& c, bam_hdr_t* hdr, TRGMap& rgMap, BedCounts& be, ReferenceFeatures const& rf) {
     // Outfile
     boost::iostreams::filtering_ostream rcfile;
     rcfile.push(boost::iostreams::gzip_compressor());
@@ -105,7 +105,7 @@ namespace bamstats
 	
       // Error rates
       uint64_t alignedbases = itRg->second.bc.matchCount + itRg->second.bc.mismatchCount;
-      rcfile << referencebp << "\t" << ncount << "\t" << alignedbases << "\t" << itRg->second.bc.matchCount << "\t" << (double) itRg->second.bc.matchCount / (double) alignedbases << "\t" << itRg->second.bc.mismatchCount << "\t" << (double) itRg->second.bc.mismatchCount / (double) alignedbases << "\t" << itRg->second.bc.delCount << "\t" << (double) itRg->second.bc.delCount / (double) alignedbases << "\t" << delFrac << "\t" << itRg->second.bc.insCount << "\t" << (double) itRg->second.bc.insCount / (double) alignedbases << "\t" << insFrac << "\t" << itRg->second.bc.softClipCount << "\t" << (double) itRg->second.bc.softClipCount / (double) alignedbases << "\t" << itRg->second.bc.hardClipCount << "\t" << (double) itRg->second.bc.hardClipCount / (double) alignedbases << "\t" << (double) (itRg->second.bc.mismatchCount + itRg->second.bc.delCount + itRg->second.bc.insCount + itRg->second.bc.softClipCount + itRg->second.bc.hardClipCount) / (double) alignedbases  << "\t";
+      rcfile << rf.referencebp << "\t" << rf.ncount << "\t" << alignedbases << "\t" << itRg->second.bc.matchCount << "\t" << (double) itRg->second.bc.matchCount / (double) alignedbases << "\t" << itRg->second.bc.mismatchCount << "\t" << (double) itRg->second.bc.mismatchCount / (double) alignedbases << "\t" << itRg->second.bc.delCount << "\t" << (double) itRg->second.bc.delCount / (double) alignedbases << "\t" << delFrac << "\t" << itRg->second.bc.insCount << "\t" << (double) itRg->second.bc.insCount / (double) alignedbases << "\t" << insFrac << "\t" << itRg->second.bc.softClipCount << "\t" << (double) itRg->second.bc.softClipCount / (double) alignedbases << "\t" << itRg->second.bc.hardClipCount << "\t" << (double) itRg->second.bc.hardClipCount / (double) alignedbases << "\t" << (double) (itRg->second.bc.mismatchCount + itRg->second.bc.delCount + itRg->second.bc.insCount + itRg->second.bc.softClipCount + itRg->second.bc.hardClipCount) / (double) alignedbases  << "\t";
 
       // Median coverage, read length, etc.
       int32_t medISize = 0;
@@ -128,7 +128,7 @@ namespace bamstats
 
       // Standardized SD of genomic coverage
       double ssdcov = 1000 * sdFromHistogram(itRg->second.bc.bpWithCoverage) / std::sqrt((double) mappedCount);
-      double fraccovbp = (double) itRg->second.bc.nd / (double) (referencebp - ncount);
+      double fraccovbp = (double) itRg->second.bc.nd / (double) (rf.referencebp - rf.ncount);
       double pbc1 = (double) itRg->second.bc.n1 / (double) itRg->second.bc.nd;
       double pbc2 = (double) itRg->second.bc.n1 / (double) itRg->second.bc.n2;
 
@@ -136,12 +136,12 @@ namespace bamstats
       
       // Bed metrics
       if (c.hasRegionFile) {
-	uint64_t nonN = referencebp - ncount;
+	uint64_t nonN = rf.referencebp - rf.ncount;
 	typename BedCounts::TOnTargetMap::iterator itOT = be.onTarget.find(itRg->first);
 	uint64_t alignedBedBases = itOT->second[0];
 	double fractioninbed = (double) alignedBedBases / (double) alignedbases;
-	double enrichment = fractioninbed / ((double) totalBedSize / (double) nonN);
-	rcfile << "\t" << totalBedSize << "\t" << alignedBedBases << "\t" << fractioninbed << "\t" << enrichment;
+	double enrichment = fractioninbed / ((double) rf.totalBedSize / (double) nonN);
+	rcfile << "\t" << rf.totalBedSize << "\t" << alignedBedBases << "\t" << fractioninbed << "\t" << enrichment;
       }
       if (c.isMitagged) {
 	rcfile << "\t" << itRg->second.rc.mitagged << "\t" << (double) itRg->second.rc.mitagged / (double) totalReadCount << "\t" << itRg->second.rc.umi.count();
@@ -263,7 +263,7 @@ namespace bamstats
       for(uint32_t i = 0; i < itRg->second.rc.mappedchr.size(); ++i) {
 	double frac = 0;
 	if (totalMappedChr > 0) frac = (double) itRg->second.rc.mappedchr[i] / (double) totalMappedChr;
-	double expect = (double) (hdr->target_len[i] - chrGC[i].ncount) / (double) (referencebp - ncount);
+	double expect = (double) (hdr->target_len[i] - rf.chrGC[i].ncount) / (double) (rf.referencebp - rf.ncount);
 	double obsexprat = frac / expect;
 	rcfile << "CM\t" << c.sampleName << "\t" << itRg->first << "\t" << hdr->target_name[i] << "\t" << hdr->target_len[i] << "\t" << itRg->second.rc.mappedchr[i] << "\t" << frac << "\t" << obsexprat << std::endl;
       }
@@ -346,13 +346,13 @@ namespace bamstats
     rcfile << "# Chromosome GC-content (CG)." << std::endl;
     rcfile << "# Use `zgrep ^CG <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "CG\tChromosome\tSize\tnumN\tnumGC\tGCfraction" << std::endl;
-    for(uint32_t i = 0; i < chrGC.size(); ++i) {
-      if (chrGC[i].ncount + chrGC[i].gccount > 0) {
+    for(uint32_t i = 0; i < rf.chrGC.size(); ++i) {
+      if (rf.chrGC[i].ncount + rf.chrGC[i].gccount > 0) {
 	// Only chromosomes with mapped data
 	double frac = 0;
-	double total = hdr->target_len[i] - chrGC[i].ncount;
-	if (total > 0) frac = (double) chrGC[i].gccount / total;
-	rcfile << "CG\t" << hdr->target_name[i] << "\t" << hdr->target_len[i] << "\t" << chrGC[i].ncount << "\t" << chrGC[i].gccount << "\t" << frac << std::endl;
+	double total = hdr->target_len[i] - rf.chrGC[i].ncount;
+	if (total > 0) frac = (double) rf.chrGC[i].gccount / total;
+	rcfile << "CG\t" << hdr->target_name[i] << "\t" << hdr->target_len[i] << "\t" << rf.chrGC[i].ncount << "\t" << rf.chrGC[i].gccount << "\t" << frac << std::endl;
       }
     }
 
@@ -362,10 +362,10 @@ namespace bamstats
     rcfile << "GC\tSample\tLibrary\tGCcontent\tfractionOfReads" << std::endl;
     {
       double total = 0;
-      for(uint32_t i = 0; i < 101; ++i) total += refGcContent[i];
+      for(uint32_t i = 0; i < 101; ++i) total += rf.refGcContent[i];
       for(uint32_t i = 0; i < 101; ++i) {
 	double frac = 0;
-	if (total > 0) frac = (double) refGcContent[i] / total;
+	if (total > 0) frac = (double) rf.refGcContent[i] / total;
 	rcfile << "GC\tReference\tReference\t" << (double) i / (double) 100 << "\t" << frac << std::endl;
       }
     }
@@ -386,8 +386,8 @@ namespace bamstats
       rcfile << "TC\tSample\tLibrary\tChr\tStart\tEnd\tAvgCov" << std::endl;
       for(int32_t refIndex = 0; refIndex < hdr->n_targets; ++refIndex) {
 	for(typename BedCounts::TRgBpMap::const_iterator itChr = be.gCov[refIndex].begin(); itChr != be.gCov[refIndex].end(); ++itChr) {
-	  for(uint32_t i = 0; i < gRegions[refIndex].size(); ++i) {
-	    rcfile << "TC\t" << c.sampleName << "\t" << itChr->first << "\t" << hdr->target_name[refIndex] << "\t" << gRegions[refIndex][i].start << "\t" << gRegions[refIndex][i].end << "\t" << itChr->second[i] << std::endl;
+	  for(uint32_t i = 0; i < rf.gRegions[refIndex].size(); ++i) {
+	    rcfile << "TC\t" << c.sampleName << "\t" << itChr->first << "\t" << hdr->target_name[refIndex] << "\t" << rf.gRegions[refIndex][i].start << "\t" << rf.gRegions[refIndex][i].end << "\t" << itChr->second[i] << std::endl;
 	  }
 	}
       }
