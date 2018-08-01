@@ -48,10 +48,12 @@ Contact: Tobias Rausch (rausch@embl.de)
 namespace bamstats
 {
 
-struct Config {
+struct ConfigQC {
   bool hasRegionFile;
   bool ignoreRG;
   bool singleRG;
+  bool isHaplotagged;
+  bool isMitagged;
   uint16_t of;
   std::string rgname;
   std::string sampleName;
@@ -64,7 +66,9 @@ struct Config {
 
 
 int qc(int argc, char **argv) {
-  Config c;
+  ConfigQC c;
+  c.isHaplotagged = false;
+  c.isMitagged = false;
 
   // Parameter
   boost::program_options::options_description generic("Generic options");

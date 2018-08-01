@@ -236,10 +236,10 @@ namespace bamstats
       }
     }
   }
-  
+
   template<typename TConfig>
   inline int32_t
-  bamStatsRun(TConfig const& c) {
+  bamStatsRun(TConfig& c) {
     // Load bam file
     samFile* samfile = sam_open(c.bamFile.string().c_str(), "r");
     hts_set_fai_filename(samfile, c.genome.string().c_str());
@@ -366,10 +366,6 @@ namespace bamstats
     std::vector<ChrGC> chrGC(hdr->n_targets, ChrGC());
     ReadCounts::TGCContent refGcContent(101, 0);
 
-    // Haplotyping, Molecular identifier
-    bool isHaplotagged = false;
-    bool isMitagged = false;
-    
     // Find N90 chromosome length
     uint32_t minChrLen = 0;
     {
@@ -548,7 +544,7 @@ namespace bamstats
       // Fetch molecule identifier
       uint8_t* miptr = bam_aux_get(rec, "MI");
       if (miptr) {
-	isMitagged = true;
+	c.isMitagged = true;
 	++itRg->second.rc.mitagged;
 	int32_t mitag = bam_aux2i(miptr);
 	if ((mitag>=0) && (mitag < itRg->second.rc.maxUMI)) {
@@ -561,7 +557,7 @@ namespace bamstats
       // Fetch haplotype tag
       uint8_t* hpptr = bam_aux_get(rec, "HP");
       if (hpptr) {
-	isHaplotagged = true;
+	c.isHaplotagged = true;
 	++itRg->second.rc.haplotagged;
 
 	// If no phased block assume all in one phased block
@@ -737,8 +733,8 @@ namespace bamstats
     rcfile << "#ReferenceBp\t#ReferenceNs\t#AlignedBases\t#MatchedBases\tMatchRate\t#MismatchedBases\tMismatchRate\t#DeletionsCigarD\tDeletionRate\tHomopolymerContextDel\t#InsertionsCigarI\tInsertionRate\tHomopolymerContextIns\t#SoftClippedBases\tSoftClipRate\t#HardClippedBases\tHardClipRate\tErrorRate" << "\t";
     rcfile << "MedianReadLength\tDefaultLibraryLayout\tMedianInsertSize\tMedianCoverage\tSDCoverage\tCoveredBp\tFractionCovered\tBpCov1ToCovNRatio\tBpCov1ToCov2Ratio\tMedianMAPQ";
     if (c.hasRegionFile) rcfile << "\t#TotalBedBp\t#AlignedBasesInBed\tFractionInBed\tEnrichmentOverBed";
-    if (isMitagged) rcfile << "\t#MItagged\tFractionMItagged\t#UMIs";
-    if (isHaplotagged) rcfile << "\t#HaploTagged\tFractionHaploTagged\t#PhasedBlocks\tN50PhasedBlockLength"; 
+    if (c.isMitagged) rcfile << "\t#MItagged\tFractionMItagged\t#UMIs";
+    if (c.isHaplotagged) rcfile << "\t#HaploTagged\tFractionHaploTagged\t#PhasedBlocks\tN50PhasedBlockLength"; 
     rcfile << std::endl;
     for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       // Read counts
@@ -823,10 +819,10 @@ namespace bamstats
 	double enrichment = fractioninbed / ((double) totalBedSize / (double) nonN);
 	rcfile << "\t" << totalBedSize << "\t" << alignedBedBases << "\t" << fractioninbed << "\t" << enrichment;
       }
-      if (isMitagged) {
+      if (c.isMitagged) {
 	rcfile << "\t" << itRg->second.rc.mitagged << "\t" << (double) itRg->second.rc.mitagged / (double) totalReadCount << "\t" << itRg->second.rc.umi.count();
       }
-      if (isHaplotagged) {
+      if (c.isHaplotagged) {
 	int32_t n50ps = n50PhasedBlockLength(itRg->second.rc.brange);
 	rcfile << "\t" << itRg->second.rc.haplotagged << "\t" << (double) itRg->second.rc.haplotagged / (double) totalReadCount << "\t" << phasedBlocks(itRg->second.rc.brange) << "\t" << n50ps;
       }
@@ -1085,7 +1081,7 @@ namespace bamstats
       }
     }
 
-    if (isHaplotagged) {
+    if (c.isHaplotagged) {
       // Output phased block length histogram
       rcfile << "# Phased block length (PS)." << std::endl;
       rcfile << "# Use `zgrep ^PS <outfile> | cut -f 2-` to extract this part." << std::endl;
