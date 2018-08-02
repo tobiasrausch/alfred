@@ -548,7 +548,10 @@ namespace bamstats
 
     // Output
     if (c.format == "json") qcJsonOut(c, hdr, rgMap, be, rf);
-    else qcTsvOut(c, hdr, rgMap, be, rf);
+    else if (c.format == "both") {
+      qcJsonOut(c, hdr, rgMap, be, rf);
+      qcTsvOut(c, hdr, rgMap, be, rf);
+    } else qcTsvOut(c, hdr, rgMap, be, rf);
     
     // clean-up
     bam_destroy1(rec);

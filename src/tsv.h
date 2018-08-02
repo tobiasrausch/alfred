@@ -56,15 +56,52 @@ namespace bamstats
     return lastNonZeroIdx;
   }
 
-  
+  template<typename TVector>
+  inline uint32_t
+  _lastNonZeroIdxISize(TVector const& vec) {
+    uint32_t lastValidISIdx = 0;
+    for(uint32_t i = 0; i < vec.fPlus.size(); ++i) {
+      uint64_t tpecount = vec.fPlus[i] + vec.fMinus[i] + vec.rPlus[i] + vec.rMinus[i];
+      if (tpecount > 0) lastValidISIdx = i;
+    }
+    return lastValidISIdx;
+  }
+
+  template<typename TVector>
+  inline uint32_t
+  _lastCoverageLevel(BedCounts const& be, ReferenceFeatures const& rf, uint32_t const nchr, TVector& fracAboveCov) {
+    typedef typename TVector::value_type TValue;
+    
+    uint32_t lastLevel = 0;
+    for(uint32_t level = 0; level<200000; ++level) {
+      uint32_t aboveLevel = 0;
+      uint32_t totalTargets = 0;
+      for(uint32_t refIndex = 0; refIndex < nchr; ++refIndex) {
+	for(typename BedCounts::TRgBpMap::const_iterator itChr = be.gCov[refIndex].begin(); itChr != be.gCov[refIndex].end(); ++itChr) {
+	  for(uint32_t i = 0; i < rf.gRegions[refIndex].size(); ++i) {
+	    ++totalTargets;
+	    if (itChr->second[i] > level) ++aboveLevel;
+	  }
+	}
+      }
+      TValue frac = (TValue) aboveLevel / (TValue) totalTargets;
+      fracAboveCov.push_back(frac);
+      lastLevel = level + 1;
+      if (frac < 0.01) break;
+    }
+    return lastLevel;
+  }
 
   template<typename TConfig, typename TRGMap>
   inline void
   qcTsvOut(TConfig const& c, bam_hdr_t const* hdr, TRGMap const& rgMap, BedCounts const& be, ReferenceFeatures const& rf) {
+    std::string filename = c.outfile.string();
+    if (c.format == "both") filename += ".tsv.gz";
+    
     // Outfile
     boost::iostreams::filtering_ostream rcfile;
     rcfile.push(boost::iostreams::gzip_compressor());
-    rcfile.push(boost::iostreams::file_sink(c.outfile.string().c_str(), std::ios_base::out | std::ios_base::binary));
+    rcfile.push(boost::iostreams::file_sink(filename.c_str(), std::ios_base::out | std::ios_base::binary));
 
     // Output header
     rcfile << "# This file was produced by alfred v" << alfredVersionNumber << "." << std::endl;
@@ -289,11 +326,7 @@ namespace bamstats
     rcfile << "# Use `zgrep ^IS <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "IS\tSample\tInsertSize\tCount\tLayout\tQuantile\tLibrary" << std::endl;
     for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
-      uint32_t lastValidISIdx = 0;
-      for(uint32_t i = 0; i < itRg->second.pc.fPlus.size(); ++i) {
-	uint64_t tpecount = itRg->second.pc.fPlus[i] + itRg->second.pc.fMinus[i] + itRg->second.pc.rPlus[i] + itRg->second.pc.rMinus[i];
-	if (tpecount > 0) lastValidISIdx = i;
-      }
+      uint32_t lastValidISIdx = _lastNonZeroIdxISize(itRg->second.pc);
       // Ignore last bucket that collects all other pairs
       uint64_t totalFR = 0;
       for(uint32_t i = 0; i < itRg->second.pc.fPlus.size() - 1; ++i) totalFR += itRg->second.pc.fPlus[i] + itRg->second.pc.fMinus[i] + itRg->second.pc.rPlus[i] + itRg->second.pc.rMinus[i];
@@ -362,12 +395,13 @@ namespace bamstats
     rcfile << "# Use `zgrep ^CG <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "CG\tChromosome\tSize\tnumN\tnumGC\tGCfraction" << std::endl;
     for(uint32_t i = 0; i < rf.chrGC.size(); ++i) {
+      // Only chromosomes with mapped data
       if (rf.chrGC[i].ncount + rf.chrGC[i].gccount > 0) {
-	// Only chromosomes with mapped data
-	double frac = 0;
 	double total = hdr->target_len[i] - rf.chrGC[i].ncount;
-	if (total > 0) frac = (double) rf.chrGC[i].gccount / total;
-	rcfile << "CG\t" << hdr->target_name[i] << "\t" << hdr->target_len[i] << "\t" << rf.chrGC[i].ncount << "\t" << rf.chrGC[i].gccount << "\t" << frac << std::endl;
+	if (total > 0) {
+	  double frac = (double) rf.chrGC[i].gccount / total;
+	  rcfile << "CG\t" << hdr->target_name[i] << "\t" << hdr->target_len[i] << "\t" << rf.chrGC[i].ncount << "\t" << rf.chrGC[i].gccount << "\t" << frac << std::endl;
+	}
       }
     }
 
