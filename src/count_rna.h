@@ -373,21 +373,31 @@ namespace bamstats
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Output count table" << std::endl;
     std::ofstream fcfile(c.outfile.string().c_str());
-    fcfile << "gene\t" << c.sampleName << std::endl;
+
     if (c.normalize == "fpkm") {
       // FPKM
+      fcfile << "gene\t" << c.sampleName << std::endl;
       for(uint32_t idval = 0; idval < geneIds.size(); ++idval) {
 	double fpkm = ((double) (fc[idval]) * (double) 1000000000) / ((double) (totalReadProtein) * (double) geneLength[idval]);
 	fcfile << geneIds[idval] << "\t" << fpkm << std::endl;
       }
     } else if (c.normalize == "fpkm_uq") {
       // FPKM-UQ
+      fcfile << "gene\t" << c.sampleName << std::endl;
       for(uint32_t idval = 0; idval < geneIds.size(); ++idval) {
 	double fpkm_uq = ((double) (fc[idval]) * (double) 1000000000) / ((double) (uqval) * (double) geneLength[idval]);
 	fcfile << geneIds[idval] << "\t" << fpkm_uq << std::endl;
       }
+    } else if (c.normalize == "all") {
+      fcfile << "gene\t" << c.sampleName + "_raw" << "\t" << c.sampleName + "_fpkm" << "\t" << c.sampleName + "_fpkm_uq" << std::endl;
+      for(uint32_t idval = 0; idval < geneIds.size(); ++idval) {
+	double fpkm = ((double) (fc[idval]) * (double) 1000000000) / ((double) (totalReadProtein) * (double) geneLength[idval]);
+	double fpkm_uq = ((double) (fc[idval]) * (double) 1000000000) / ((double) (uqval) * (double) geneLength[idval]);
+	fcfile << geneIds[idval] << "\t" << fc[idval] << "\t" << fpkm << "\t" << fpkm_uq << std::endl;
+      }
     } else {
       // Raw
+      fcfile << "gene\t" << c.sampleName << std::endl;
       for(uint32_t idval = 0; idval < geneIds.size(); ++idval) fcfile << geneIds[idval] << "\t" << fc[idval] << std::endl;
     }
     fcfile.close();
