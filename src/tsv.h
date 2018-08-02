@@ -39,7 +39,7 @@ namespace bamstats
 
   template<typename TConfig, typename TRGMap>
   inline void
-  qcTsvOut(TConfig const& c, bam_hdr_t* hdr, TRGMap& rgMap, BedCounts& be, ReferenceFeatures const& rf) {
+  qcTsvOut(TConfig const& c, bam_hdr_t const* hdr, TRGMap const& rgMap, BedCounts const& be, ReferenceFeatures const& rf) {
     // Outfile
     boost::iostreams::filtering_ostream rcfile;
     rcfile.push(boost::iostreams::gzip_compressor());
@@ -60,7 +60,7 @@ namespace bamstats
     if (c.isMitagged) rcfile << "\t#MItagged\tFractionMItagged\t#UMIs";
     if (c.isHaplotagged) rcfile << "\t#HaploTagged\tFractionHaploTagged\t#PhasedBlocks\tN50PhasedBlockLength"; 
     rcfile << std::endl;
-    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+    for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       // Read counts
       uint64_t totalReadCount = itRg->second.rc.qcfail + itRg->second.rc.dup + itRg->second.rc.unmap + itRg->second.rc.mapped1 + itRg->second.rc.mapped2;
       uint64_t mappedCount = itRg->second.rc.mapped1 + itRg->second.rc.mapped2;
@@ -137,7 +137,7 @@ namespace bamstats
       // Bed metrics
       if (c.hasRegionFile) {
 	uint64_t nonN = rf.referencebp - rf.ncount;
-	typename BedCounts::TOnTargetMap::iterator itOT = be.onTarget.find(itRg->first);
+	typename BedCounts::TOnTargetMap::const_iterator itOT = be.onTarget.find(itRg->first);
 	uint64_t alignedBedBases = itOT->second[0];
 	double fractioninbed = (double) alignedBedBases / (double) alignedbases;
 	double enrichment = fractioninbed / ((double) rf.totalBedSize / (double) nonN);
@@ -157,7 +157,7 @@ namespace bamstats
     rcfile << "# Read length distribution (RL)." << std::endl;
     rcfile << "# Use `zgrep ^RL <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "RL\tSample\tReadlength\tCount\tFraction\tLibrary" << std::endl;
-    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+    for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       uint32_t lastValidRL = 0;
       for(uint32_t i = 0; i < itRg->second.rc.lRc.size(); ++i)
 	if (itRg->second.rc.lRc[i] > 0) lastValidRL = i;
@@ -174,7 +174,7 @@ namespace bamstats
     rcfile << "# Mean base quality (BQ)." << std::endl;
     rcfile << "# Use `zgrep ^BQ <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "BQ\tSample\tPosition\tBaseQual\tLibrary" << std::endl;
-    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+    for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       uint32_t lastValidBQIdx = 0;
       for(uint32_t i = lastValidBQIdx + 1; i < itRg->second.rc.nCount.size(); ++i) {
 	uint64_t bcount = itRg->second.rc.aCount[i] + itRg->second.rc.cCount[i] + itRg->second.rc.gCount[i] + itRg->second.rc.tCount[i] + itRg->second.rc.nCount[i];
@@ -191,7 +191,7 @@ namespace bamstats
     rcfile << "# Base content (BC)." << std::endl;
     rcfile << "# Use `zgrep ^BC <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "BC\tSample\tPosition\tBase\tCount\tFraction\tLibrary" << std::endl;
-    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+    for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       uint32_t lastValidBQIdx = 0;
       for(uint32_t i = lastValidBQIdx + 1; i < itRg->second.rc.nCount.size(); ++i) {
 	uint64_t bcount = itRg->second.rc.aCount[i] + itRg->second.rc.cCount[i] + itRg->second.rc.gCount[i] + itRg->second.rc.tCount[i] + itRg->second.rc.nCount[i];
@@ -220,7 +220,7 @@ namespace bamstats
     rcfile << "# Mapping quality histogram (MQ)." << std::endl;
     rcfile << "# Use `zgrep ^MQ <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "MQ\tSample\tMappingQuality\tCount\tFraction\tLibrary" << std::endl;
-    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+    for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       uint32_t lastValidMQ = 0;
       for(uint32_t i = 0; i < itRg->second.qc.qcount.size(); ++i)
 	if (itRg->second.qc.qcount[i] > 0) lastValidMQ = i;
@@ -237,7 +237,7 @@ namespace bamstats
     rcfile << "# Coverage histogram (CO)." << std::endl;
     rcfile << "# Use `zgrep ^CO <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "CO\tSample\tCoverage\tCount\tQuantile\tLibrary" << std::endl;
-    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+    for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       uint32_t lastValidCO = 0;
       for(uint32_t i = 0; i < itRg->second.bc.bpWithCoverage.size(); ++i)
 	if (itRg->second.bc.bpWithCoverage[i] > 0) lastValidCO = i;
@@ -257,7 +257,7 @@ namespace bamstats
     rcfile << "# Chromosome mapping statistics (CM)." << std::endl;
     rcfile << "# Use `zgrep ^CM <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "CM\tSample\tLibrary\tChrom\tSize\tMapped\tMappedFraction\tObsExpRatio" << std::endl;
-    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+    for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       uint64_t totalMappedChr = 0;
       for(uint32_t i = 0; i < itRg->second.rc.mappedchr.size(); ++i) totalMappedChr += itRg->second.rc.mappedchr[i];
       for(uint32_t i = 0; i < itRg->second.rc.mappedchr.size(); ++i) {
@@ -273,7 +273,7 @@ namespace bamstats
     rcfile << "# Insert size histogram (IS)." << std::endl;
     rcfile << "# Use `zgrep ^IS <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "IS\tSample\tInsertSize\tCount\tLayout\tQuantile\tLibrary" << std::endl;
-    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+    for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       uint32_t lastValidISIdx = 0;
       for(uint32_t i = 0; i < itRg->second.pc.fPlus.size(); ++i) {
 	uint64_t tpecount = itRg->second.pc.fPlus[i] + itRg->second.pc.fMinus[i] + itRg->second.pc.rPlus[i] + itRg->second.pc.rMinus[i];
@@ -298,7 +298,7 @@ namespace bamstats
     rcfile << "# InDel context (IC)." << std::endl;
     rcfile << "# Use `zgrep ^IC <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "IC\tSample\tLibrary\tInDel\tHomopolymer\tCount\tFraction" << std::endl;
-    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+    for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       double total = 0;
       for(uint32_t i = 0; i < itRg->second.bc.delHomACGTN.size(); ++i) total += itRg->second.bc.delHomACGTN[i];
       for(uint32_t i = 0; i < itRg->second.bc.delHomACGTN.size(); ++i) {
@@ -314,7 +314,7 @@ namespace bamstats
 	rcfile << "\t" << itRg->second.bc.delHomACGTN[i] << "\t" << frac << std::endl;
       }
     }
-    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+    for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       double total = 0;
       for(uint32_t i = 0; i < itRg->second.bc.insHomACGTN.size(); ++i) total += itRg->second.bc.insHomACGTN[i];
       for(uint32_t i = 0; i < itRg->second.bc.insHomACGTN.size(); ++i) {
@@ -335,7 +335,7 @@ namespace bamstats
     rcfile << "# InDel size (IZ)." << std::endl;
     rcfile << "# Use `zgrep ^IZ <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "IZ\tSample\tLibrary\tInDel\tSize\tCount" << std::endl;
-    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+    for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       for(uint32_t i = 1; i < itRg->second.bc.delSize.size(); ++i) 
 	rcfile << "IZ\t" << c.sampleName << "\t" << itRg->first << "\tDEL\t" << i << "\t" << itRg->second.bc.delSize[i] << std::endl;
       for(uint32_t i = 1; i < itRg->second.bc.insSize.size(); ++i) 
@@ -369,7 +369,7 @@ namespace bamstats
 	rcfile << "GC\tReference\tReference\t" << (double) i / (double) 100 << "\t" << frac << std::endl;
       }
     }
-    for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+    for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       double total = 0;
       for(uint32_t i = 0; i < 101; ++i) total += itRg->second.rc.gcContent[i];
       for(uint32_t i = 0; i < 101; ++i) {
@@ -396,9 +396,9 @@ namespace bamstats
       rcfile << "# On target rate (OT)." << std::endl;
       rcfile << "# Use `zgrep ^OT <outfile> | cut -f 2-` to extract this part." << std::endl;
       rcfile << "OT\tSample\tLibrary\tExtension\tOnTarget" << std::endl;
-      for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+      for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
 	uint64_t alignedbases = itRg->second.bc.matchCount + itRg->second.bc.mismatchCount;
-	typename BedCounts::TOnTargetMap::iterator itOT = be.onTarget.find(itRg->first);
+	typename BedCounts::TOnTargetMap::const_iterator itOT = be.onTarget.find(itRg->first);
 	for(uint32_t k = 0; k < itOT->second.size(); ++k) {
 	  rcfile << "OT\t" << c.sampleName << "\t" << itRg->first << "\t" << k * be.stepsize << "\t" << (double) itOT->second[k] / (double) alignedbases << std::endl;
 	}
@@ -410,7 +410,7 @@ namespace bamstats
       rcfile << "# Phased block length (PS)." << std::endl;
       rcfile << "# Use `zgrep ^PS <outfile> | cut -f 2-` to extract this part." << std::endl;
       rcfile << "PS\tSample\tChr\tStart\tEnd\tPSid\tSize\tLibrary" << std::endl;
-      for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+      for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
 	for(int32_t refIndex = 0; refIndex < (int32_t) itRg->second.rc.brange.size(); ++refIndex) {
 	  for(typename ReadCounts::TBlockRange::const_iterator itBR = itRg->second.rc.brange[refIndex].begin(); itBR != itRg->second.rc.brange[refIndex].end(); ++itBR) {
 	    if (itBR->second.first < itBR->second.second) {
