@@ -54,7 +54,6 @@ struct ConfigQC {
   bool singleRG;
   bool isHaplotagged;
   bool isMitagged;
-  uint16_t of;
   std::string rgname;
   std::string sampleName;
   std::string format;
@@ -111,10 +110,6 @@ int qc(int argc, char **argv) {
     std::cout << visible_options << "\n";
     return 1;
   }
-
-  // Output format
-  if (c.format == "json") c.of = 1;
-  else c.of = 0;
 
   // Ignore read groups
   if (vm.count("ignore")) {

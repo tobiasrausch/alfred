@@ -31,64 +31,125 @@ Contact: Tobias Rausch (rausch@embl.de)
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/device/file.hpp>
 
+#include "tsv.h"
+
 namespace bamstats
 {
   
 
-  template<typename TConfig, typename THeader, typename TSampleWC>
+  template<typename TConfig, typename TRGMap>
   inline void
-  scJsonOut(TConfig const& c, THeader const& hdr, TSampleWC const& sWC) {
+  qcJsonOut(TConfig const& c, bam_hdr_t const* hdr, TRGMap const& rgMap, BedCounts const& be, ReferenceFeatures const& rf) {
     boost::iostreams::filtering_ostream rfile;
     rfile.push(boost::iostreams::gzip_compressor());
     rfile.push(boost::iostreams::file_sink(c.outfile.string().c_str(), std::ios_base::out | std::ios_base::binary));
+    
+    rfile << "{ \"data\": [" << std::endl;
     rfile << "{" << std::endl;
-    rfile << "\"data\": [" << std::endl;
-    for(uint32_t i = 0; i < c.sampleName.size(); ++i) {
-      if (i > 0) rfile << "," << std::endl;
+    rfile << "\"sample\": \"" << c.sampleName << "\"," << std::endl;
+    rfile << "\"rg\": [" << std::endl;
+
+    // All read-groups
+    for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+      if (itRg != rgMap.begin()) rfile << ", ";
       rfile << "{" << std::endl;
-      rfile << "\"sample\": \"" << c.sampleName[i] << "\"," << std::endl;
-      rfile << "\"coverages\": [" << std::endl;
-      for (int32_t refIndex = 0; refIndex<hdr[i]->n_targets; ++refIndex) {
-	if (!sWC[0][refIndex].size()) continue;
-	if (refIndex > 0) rfile << "," << std::endl;
+      rfile << "\"readGroup\": \"" << itRg->first << "\"," << std::endl;
+      rfile << "\"metrics\": [" << std::endl;
+
+      // Base content
+      {
 	rfile << "{" << std::endl;
-	rfile << "\"chromosome\": \"" << hdr[i]->target_name[refIndex] << "\"," << std::endl;
-	rfile << "\"positions\": [" << std::endl;
-	int32_t pos = 0;
-	for (uint32_t k = 0; k < sWC[i][refIndex].size(); ++k) {
-	  if (k > 0) rfile << ", ";
-	  rfile << pos;
-	  pos += c.window;
+	rfile << "\"name\": \"Base content distribution\"," << std::endl;
+	rfile << "\"pos\": [";
+	uint32_t lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc);
+	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
+	  if (i > 0) rfile << ", ";
+	  rfile << i;
 	}
 	rfile << "]," << std::endl;
-	rfile << "\"counts\": [" << std::endl;
-	rfile << "{" << std::endl;
-	rfile << "\"label\": \"Watson\"," << std::endl;
-	rfile << "\"values\": [" << std::endl;
-	for (uint32_t k = 0; k < sWC[i][refIndex].size(); ++k) {
-	  if (k > 0) rfile << ", ";
-	  rfile << sWC[i][refIndex][k].first;
+	rfile << "\"A\": [" << std::endl;
+	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
+	  if (i > 0) rfile << ", ";
+	  rfile << itRg->second.rc.aCount[i];
+	}
+	rfile << "]," << std::endl;
+	rfile << "\"C\": [" << std::endl;
+	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
+	  if (i > 0) rfile << ", ";
+	  rfile << itRg->second.rc.cCount[i];
+	}
+	rfile << "]," << std::endl;
+	rfile << "\"G\": [" << std::endl;
+	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
+	  if (i > 0) rfile << ", ";
+	  rfile << itRg->second.rc.gCount[i];
+	}
+	rfile << "]," << std::endl;
+	rfile << "\"T\": [" << std::endl;
+	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
+	  if (i > 0) rfile << ", ";
+	  rfile << itRg->second.rc.tCount[i];
+	}
+	rfile << "]," << std::endl;
+	rfile << "\"N\": [" << std::endl;
+	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
+	  if (i > 0) rfile << ", ";
+	  rfile << itRg->second.rc.nCount[i];
 	}
 	rfile << "]" << std::endl;
 	rfile << "}," << std::endl;
-	rfile << "{" <<	std::endl;
-	rfile << "\"label\": \"Crick\"," << std::endl;
-	rfile << "\"values\": [" << std::endl;
-	for (uint32_t k = 0; k < sWC[i][refIndex].size(); ++k) {
-	  if (k > 0) rfile << ", ";
-	  rfile << sWC[i][refIndex][k].second;
+      }
+	
+      // Read-length
+      {
+	rfile << "{" << std::endl;
+	rfile << "\"name\": \"Read length distribution\"," << std::endl;
+	rfile << "\"length\": [";
+	uint32_t lastValidRL = _lastNonZeroIdx(itRg->second.rc.lRc);
+	for(uint32_t i = 0; i <= lastValidRL; ++i) {
+	  if (i > 0) rfile << ", ";
+	  rfile << i;
+	}
+	rfile << "]," << std::endl;
+	rfile << "\"count\": [" << std::endl;
+	for(uint32_t i = 0; i <= lastValidRL; ++i) {
+	  if (i > 0) rfile << ", ";
+	  rfile << itRg->second.rc.lRc[i];
+	}
+	rfile << "]" << std::endl;
+	rfile << "}," << std::endl;
+      }
+      
+      // Mean Base Quality
+      {
+	rfile << "{" << std::endl;
+	rfile << "\"name\": \"Mean base quality distribution\"," << std::endl;
+	rfile << "\"pos\": [";
+	uint32_t lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc);
+	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
+	  if (i > 0) rfile << ", ";
+	  rfile << i;
+	}
+	rfile << "]," << std::endl;
+	rfile << "\"qual\": [" << std::endl;
+	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
+	  if (i > 0) rfile << ", ";
+	  uint64_t bcount = itRg->second.rc.aCount[i] + itRg->second.rc.cCount[i] + itRg->second.rc.gCount[i] + itRg->second.rc.tCount[i] + itRg->second.rc.nCount[i];
+	  if (bcount > 0) rfile << (double) (itRg->second.rc.bqCount[i]) / (double) (bcount);
+	  else rfile << 0;
 	}
 	rfile << "]" << std::endl;
 	rfile << "}" << std::endl;
-	rfile << "]" << std::endl;
-	rfile << "}";
       }
+      
+
+      
       rfile << "]" << std::endl;
       rfile << "}";
     }
     rfile << "]" << std::endl;
-    rfile << std::endl;
     rfile << "}" << std::endl;
+    rfile << "]}" << std::endl;
     rfile.pop();
   }
  

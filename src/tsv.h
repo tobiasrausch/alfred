@@ -35,6 +35,27 @@ Contact: Tobias Rausch (rausch@embl.de)
 
 namespace bamstats
 {
+
+  template<typename TVector>
+  inline uint32_t
+  _lastNonZeroIdx(TVector const& vec) {
+    uint32_t lastNonZeroIdx = 0;
+    for(uint32_t i = 0; i < vec.size(); ++i)
+      if (vec[i] > 0) lastNonZeroIdx = i;
+    return lastNonZeroIdx;
+  }
+
+  template<typename TVector>
+  inline uint32_t
+  _lastNonZeroIdxACGTN(TVector const& vec) {
+    uint32_t lastNonZeroIdx = 0;
+    for(uint32_t i = 0; i < vec.nCount.size(); ++i) {
+      uint64_t bcount = vec.aCount[i] + vec.cCount[i] + vec.gCount[i] + vec.tCount[i] + vec.nCount[i];
+      if (bcount > 0) lastNonZeroIdx = i;
+    }
+    return lastNonZeroIdx;
+  }
+
   
 
   template<typename TConfig, typename TRGMap>
@@ -158,9 +179,7 @@ namespace bamstats
     rcfile << "# Use `zgrep ^RL <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "RL\tSample\tReadlength\tCount\tFraction\tLibrary" << std::endl;
     for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
-      uint32_t lastValidRL = 0;
-      for(uint32_t i = 0; i < itRg->second.rc.lRc.size(); ++i)
-	if (itRg->second.rc.lRc[i] > 0) lastValidRL = i;
+      uint32_t lastValidRL = _lastNonZeroIdx(itRg->second.rc.lRc);
       double total = 0;
       for(uint32_t i = 0; i <= lastValidRL; ++i) total += itRg->second.rc.lRc[i];
       for(uint32_t i = 0; i <= lastValidRL; ++i) {
@@ -175,11 +194,7 @@ namespace bamstats
     rcfile << "# Use `zgrep ^BQ <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "BQ\tSample\tPosition\tBaseQual\tLibrary" << std::endl;
     for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
-      uint32_t lastValidBQIdx = 0;
-      for(uint32_t i = lastValidBQIdx + 1; i < itRg->second.rc.nCount.size(); ++i) {
-	uint64_t bcount = itRg->second.rc.aCount[i] + itRg->second.rc.cCount[i] + itRg->second.rc.gCount[i] + itRg->second.rc.tCount[i] + itRg->second.rc.nCount[i];
-	if (bcount > 0) lastValidBQIdx = i;
-      }
+      uint32_t lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc);
       for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
 	uint64_t bcount = itRg->second.rc.aCount[i] + itRg->second.rc.cCount[i] + itRg->second.rc.gCount[i] + itRg->second.rc.tCount[i] + itRg->second.rc.nCount[i];
 	if (bcount > 0) rcfile << "BQ\t" << c.sampleName << "\t" << i << "\t" << (double) (itRg->second.rc.bqCount[i]) / (double) (bcount) << "\t" << itRg->first << std::endl;
