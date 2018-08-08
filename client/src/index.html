@@ -27,8 +27,8 @@
   </header>
 
   <main class="container">
-    <!-- tag should never be visible, it's just for storing the PDF link -->
-    <a id="link-example" class="d-none" href="static/media/example.pdf"></a>
+    <!-- tag should never be visible, it's just for storing the link -->
+    <a id="link-example" class="d-none" href="static/media/example.json.gz"></a>
     <ul class="nav nav-fill mb-4" id="mainTab">
       <li class="nav-item">
         <a class="nav-link active" href="#input-tab">Input</a>
@@ -41,7 +41,7 @@
       <div class="tab-pane show active" id="input-tab">
 	<div class="form-group">
 	  <label for="inputFile">
-	    This is the web front end of <a href="https://github.com/tobiasrausch/alfred/">Alfred</a>, an efficient and versatile BAM alignment quality control method. You can use the web application to visualize and plot Alfred's statistic file. Please first QC your BAM file using <a href="https://github.com/tobiasrausch/alfred/">Alfred</a> and then upload the statistics file below (<code>.tsv.gz</code>).
+	    This is the web front end of <a href="https://github.com/tobiasrausch/alfred/">Alfred</a>, an efficient and versatile BAM alignment quality control method. You can use the web application to visualize and plot Alfred's statistic file. Please first QC your BAM file using <a href="https://github.com/tobiasrausch/alfred/">Alfred</a> and then upload the JSON statistics file below (<code>.json.gz</code>).
 	  </label>
           <input type="file" class="form-control-file" id="inputFile" />
         </div>
@@ -80,7 +80,31 @@
             <i class="fas fa-info-circle"></i>
             <span>PDF link is valid for 24h.</span>
           </span>
-          <div id="canvas-container"></div>
+          <div class="alert alert-info mt-3" role="alert">
+            <i class="fas fa-info-circle"></i>
+            How to interact with the plots:
+            <a href="https://help.plot.ly/zoom-pan-hover-controls/" target="_blank">zoom/pan/hover</a>,
+            <a href="https://help.plot.ly/getting-to-know-the-plotly-modebar/" target="_blank">toolbar</a>
+          </div>
+          <div class="form-row my-3">
+            <div class="col">
+              <label for="">Sample</label>
+              <select
+                id="select-sample"
+                class="custom-select"
+                onchange="handleSelectChange()"
+              ></select>
+            </div>
+            <div class="col">
+                <label for="">Read group</label>
+              <select
+                id="select-rg"
+                class="custom-select"
+                onchange="handleSelectChange()"
+              ></select>
+            </div>
+          </div>
+          <div id="charts-container"></div>
         </div>
       </div>
     </div>
@@ -119,9 +143,7 @@
   <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
-
-  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.0.489/build/pdf.min.js"></script>
+  <script src="https://cdn.plot.ly/plotly-1.39.4.min.js"></script>
 
   <script src="static/js/alfred.js"></script>
 

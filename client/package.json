@@ -15,5 +15,9 @@
     "babel-runtime": "^6.26.0",
     "parcel-bundler": "^1.9.2",
     "rimraf": "^2.6.2"
+  },
+  "dependencies": {
+    "axios": "^0.18.0",
+    "pako": "^1.0.6"
   }
 }
