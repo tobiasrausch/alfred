@@ -1,4 +1,5 @@
 import axios from 'axios'
+import merge from 'deepmerge'
 import pako from 'pako'
 
 const API_URL = process.env.API_URL
@@ -31,9 +32,6 @@ const selectSample = document.getElementById('select-sample')
 const selectReadGroup = document.getElementById('select-rg')
 
 function run() {
-  // const formData = new FormData()
-  // formData.append('queryFile', inputFile.files[0])
-
   const file = inputFile.files[0]
 
   // TODO error handling
@@ -58,25 +56,6 @@ function run() {
     data = JSON.parse(content).data
     handleSuccess(data)
   }
-
-  // axios
-  //   .post(`${API_URL}/upload`, formData)
-  //   .then(res => {
-  //     if (res.status === 200) {
-  //       handleSuccess(`${API_URL}/` + res.data.data.url)
-  //     }
-  //   })
-  //   .catch(err => {
-  //     let errorMessage = err
-  //     if (err.response) {
-  //       errorMessage = err.response.data.errors
-  //         .map(error => error.title)
-  //         .join('; ')
-  //     }
-  //     hideElement(resultInfo)
-  //     showElement(resultError)
-  //     resultError.querySelector('#error-message').textContent = errorMessage
-  //   })
 }
 
 function handleSuccess(data) {
@@ -161,58 +140,87 @@ function renderBaseContentChart(data) {
   Plotly.newPlot(container, chartData, layout)
 }
 
-function lineChart(x, y, {
-  title,
-  titleX,
-  titleY
-}) {
+function lineChart(x, y, layout={}) {
   const container = document.createElement('div')
   chartsContainer.appendChild(container)
   const chartData =[{ x, y }]
-  const layout = {
-    title,
-    xaxis: {
-      title: titleX,
-      zeroline: false
+  const chartLayout = merge(
+    {
+      xaxis: {
+        zeroline: false
+      },
+      yaxis: {
+        zeroline: false
+      }
     },
-    yaxis: {
-      title: titleY,
-      zeroline: false
-    }
-  }
-  Plotly.newPlot(container, chartData, layout)
+    layout
+  )
+  Plotly.newPlot(container, chartData, chartLayout)
 }
 
 function renderReadLengthChart(data) {
-  lineChart(data.length, data.count, {
-    title: data.name,
-    titleX: 'Read length',
-    titleY: 'Count'
-  })
+  lineChart(
+    data.length,
+    data.count,
+    {
+      title: data.name,
+      xaxis: {
+        title: 'Read length'
+      },
+      yaxis: {
+        title: 'Count'
+      }
+    }
+  )
 }
 
 function renderBaseQualityChart(data) {
-  lineChart(data.pos, data.qual, {
-    title: data.name,
-    titleX: 'Position in read',
-    titleY: 'Mean base quality'
-  })
+  lineChart(
+    data.pos,
+    data.qual,
+    {
+      title: data.name,
+      xaxis: {
+        title: 'Position in read'
+      },
+      yaxis: {
+        title: 'Mean base quality'
+      }
+    }
+  )
 }
 
 function renderMappingQualityChart(data) {
-  lineChart(data.pos, data.qual, {
-    title: data.name,
-    titleX: 'Mapping quality',
-    titleY: 'Count'
-  })
+  lineChart(
+    data.pos,
+    data.qual,
+    {
+      title: data.name,
+      xaxis: {
+        title: 'Mapping quality'
+      },
+      yaxis: {
+        title: 'Count'
+      }
+    }
+  )
 }
 
 function renderCoverageChart(data) {
-  lineChart(data.coverage, data.count, {
-    title: data.name,
-    titleX: 'Coverage',
-    titleY: 'Count'
-  })
+  lineChart(
+    data.coverage,
+    data.count,
+    {
+      title: data.name,
+      xaxis: {
+        title: 'Coverage',
+        range: [0, 60]
+      },
+      yaxis: {
+        title: 'Count'
+      }
+    }
+  )
 }
 
 function renderInsertSizeChart(data) {
@@ -244,6 +252,7 @@ function renderInsertSizeChart(data) {
     title,
     xaxis: {
       title: 'Insert size',
+      range: [0, 1000],
       zeroline: false
     },
     yaxis: {
@@ -255,19 +264,35 @@ function renderInsertSizeChart(data) {
 }
 
 function renderOnTargetRateChart(data) {
-  lineChart(data.targetExtension, data.fractionOnTarget, {
-    title: data.name,
-    titleX: 'Left/right extension of target region',
-    titleY: 'Fraction of reads on-target'
-  })
+  lineChart(
+    data.targetExtension,
+    data.fractionOnTarget,
+    {
+      title: data.name,
+      xaxis: {
+        title: 'Left/right extension of target region'
+      },
+      yaxis: {
+        title: 'Fraction of reads on-target'
+      }
+    }
+  )
 }
 
 function renderTargetCoverageChart(data) {
-  lineChart(data.coverageLevel, data.fractionAboveCoverage, {
-    title: data.name,
-    titleX: 'Coverage',
-    titleY: 'Fraction of targets above given coverage'
-  })
+  lineChart(
+    data.coverageLevel,
+    data.fractionAboveCoverage,
+    {
+      title: data.name,
+      xaxis: {
+        title: 'Coverage',
+      },
+      yaxis: {
+        title: 'Fraction of targets above given coverage'
+      }
+    }
+  )
 }
 
 function showExample() {
