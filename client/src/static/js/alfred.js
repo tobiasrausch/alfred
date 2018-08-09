@@ -31,11 +31,33 @@ const selectSample = document.getElementById('select-sample')
 const selectReadGroup = document.getElementById('select-rg')
 
 function run() {
-  const formData = new FormData()
-  formData.append('queryFile', inputFile.files[0])
+  // const formData = new FormData()
+  // formData.append('queryFile', inputFile.files[0])
+
+  const file = inputFile.files[0]
+
+  // TODO error handling
+  if (file === undefined) return
+
   hideElement(resultContainer)
   hideElement(resultError)
   showElement(resultInfo)
+
+  const fileReader = new FileReader()
+  const isGzip = /\.gz$/.test(file.name)
+  if (isGzip) {
+    fileReader.readAsArrayBuffer(file)
+  } else {
+    fileReader.readAsText(file)
+  }
+  fileReader.onload = event => {
+    let content = event.target.result
+    if (isGzip) {
+      content = pako.ungzip(content, { to: 'string' })
+    }
+    data = JSON.parse(content).data
+    handleSuccess(data)
+  }
 
   // axios
   //   .post(`${API_URL}/upload`, formData)
