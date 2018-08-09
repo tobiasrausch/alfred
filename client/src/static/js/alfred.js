@@ -5,16 +5,16 @@ import pako from 'pako'
 const API_URL = process.env.API_URL
 
 $('#mainTab a').on('click', function(e) {
-    e.preventDefault()
-    $(this).tab('show')
+  e.preventDefault()
+  $(this).tab('show')
 })
 
 const resultLink = document.getElementById('link-results')
 
 const submitButton = document.getElementById('btn-submit')
 submitButton.addEventListener('click', function() {
-    resultLink.click()
-    run()
+  resultLink.click()
+  run()
 })
 
 let data, exampleData
@@ -68,13 +68,11 @@ function handleSuccess(data) {
   const samples = [data[1].sample]
   const readGroups = data[1].rg.map(x => x.readGroup)
 
-  selectSample.innerHTML = samples.map(s =>
-    `<option>${s}</option>`
-  ).join('')
+  selectSample.innerHTML = samples.map(s => `<option>${s}</option>`).join('')
 
-  selectReadGroup.innerHTML = readGroups.map(rg =>
-    `<option>${rg}</option>`
-  ).join('')
+  selectReadGroup.innerHTML = readGroups
+    .map(rg => `<option>${rg}</option>`)
+    .join('')
 
   vis(data, samples[0], readGroups[0])
 }
@@ -95,15 +93,13 @@ const chartDispatch = {
   'Coverage histogram': renderCoverageChart,
   'Insert size histogram': renderInsertSizeChart,
   'On-target rate': renderOnTargetRateChart,
-  'Targets above coverage threshold': renderTargetCoverageChart,
+  'Targets above coverage threshold': renderTargetCoverageChart
 }
 
 function vis(data, sample, readGroup) {
-  const dataRg = data.find(
-    x => x.sample === sample
-  ).rg.find(
-    x => x.readGroup === readGroup
-  )
+  const dataRg = data
+    .find(x => x.sample === sample)
+    .rg.find(x => x.readGroup === readGroup)
 
   for (const metric of dataRg.metrics) {
     if (metric.name in chartDispatch) {
@@ -118,7 +114,7 @@ function renderBaseContentChart(data) {
   const title = data.name
   const x = data.pos
   const chartData = []
-  for (const base of "ACGTN") {
+  for (const base of 'ACGTN') {
     chartData.push({
       name: base,
       mode: 'scatter',
@@ -140,10 +136,10 @@ function renderBaseContentChart(data) {
   Plotly.newPlot(container, chartData, layout)
 }
 
-function lineChart(x, y, layout={}) {
+function lineChart(x, y, layout = {}) {
   const container = document.createElement('div')
   chartsContainer.appendChild(container)
-  const chartData =[{ x, y }]
+  const chartData = [{ x, y }]
   const chartLayout = merge(
     {
       xaxis: {
@@ -159,68 +155,52 @@ function lineChart(x, y, layout={}) {
 }
 
 function renderReadLengthChart(data) {
-  lineChart(
-    data.length,
-    data.count,
-    {
-      title: data.name,
-      xaxis: {
-        title: 'Read length'
-      },
-      yaxis: {
-        title: 'Count'
-      }
+  lineChart(data.length, data.count, {
+    title: data.name,
+    xaxis: {
+      title: 'Read length'
+    },
+    yaxis: {
+      title: 'Count'
     }
-  )
+  })
 }
 
 function renderBaseQualityChart(data) {
-  lineChart(
-    data.pos,
-    data.qual,
-    {
-      title: data.name,
-      xaxis: {
-        title: 'Position in read'
-      },
-      yaxis: {
-        title: 'Mean base quality'
-      }
+  lineChart(data.pos, data.qual, {
+    title: data.name,
+    xaxis: {
+      title: 'Position in read'
+    },
+    yaxis: {
+      title: 'Mean base quality'
     }
-  )
+  })
 }
 
 function renderMappingQualityChart(data) {
-  lineChart(
-    data.pos,
-    data.qual,
-    {
-      title: data.name,
-      xaxis: {
-        title: 'Mapping quality'
-      },
-      yaxis: {
-        title: 'Count'
-      }
+  lineChart(data.pos, data.qual, {
+    title: data.name,
+    xaxis: {
+      title: 'Mapping quality'
+    },
+    yaxis: {
+      title: 'Count'
     }
-  )
+  })
 }
 
 function renderCoverageChart(data) {
-  lineChart(
-    data.coverage,
-    data.count,
-    {
-      title: data.name,
-      xaxis: {
-        title: 'Coverage',
-        range: [0, 60]
-      },
-      yaxis: {
-        title: 'Count'
-      }
+  lineChart(data.coverage, data.count, {
+    title: data.name,
+    xaxis: {
+      title: 'Coverage',
+      range: [0, 60]
+    },
+    yaxis: {
+      title: 'Count'
     }
-  )
+  })
 }
 
 function renderInsertSizeChart(data) {
@@ -235,12 +215,7 @@ function renderInsertSizeChart(data) {
     rMinus: 'R-',
     rPlus: 'R+'
   }
-  for (const orientation of [
-    'fMinus',
-    'fPlus',
-    'rMinus',
-    'rPlus'
-  ]) {
+  for (const orientation of ['fMinus', 'fPlus', 'rMinus', 'rPlus']) {
     chartData.push({
       name: orientationLabel[orientation],
       mode: 'scatter',
@@ -264,35 +239,27 @@ function renderInsertSizeChart(data) {
 }
 
 function renderOnTargetRateChart(data) {
-  lineChart(
-    data.targetExtension,
-    data.fractionOnTarget,
-    {
-      title: data.name,
-      xaxis: {
-        title: 'Left/right extension of target region'
-      },
-      yaxis: {
-        title: 'Fraction of reads on-target'
-      }
+  lineChart(data.targetExtension, data.fractionOnTarget, {
+    title: data.name,
+    xaxis: {
+      title: 'Left/right extension of target region'
+    },
+    yaxis: {
+      title: 'Fraction of reads on-target'
     }
-  )
+  })
 }
 
 function renderTargetCoverageChart(data) {
-  lineChart(
-    data.coverageLevel,
-    data.fractionAboveCoverage,
-    {
-      title: data.name,
-      xaxis: {
-        title: 'Coverage',
-      },
-      yaxis: {
-        title: 'Fraction of targets above given coverage'
-      }
+  lineChart(data.coverageLevel, data.fractionAboveCoverage, {
+    title: data.name,
+    xaxis: {
+      title: 'Coverage'
+    },
+    yaxis: {
+      title: 'Fraction of targets above given coverage'
     }
-  )
+  })
 }
 
 function showExample() {
