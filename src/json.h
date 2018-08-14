@@ -46,86 +46,70 @@ namespace bamstats
     boost::iostreams::filtering_ostream rfile;
     rfile.push(boost::iostreams::gzip_compressor());
     rfile.push(boost::iostreams::file_sink(filename.c_str(), std::ios_base::out | std::ios_base::binary));
-    
-    rfile << "{ \"data\": [" << std::endl;
-    // Reference information
-    rfile << "{" << std::endl;
-    rfile << "\"chromosomes\": [";
-    bool firstVal = true;
-    for(uint32_t i = 0; i < rf.chrGC.size(); ++i) {
-      if (rf.chrGC[i].ncount + rf.chrGC[i].gccount > 0) {
-	double total = hdr->target_len[i] - rf.chrGC[i].ncount;
-	if (total > 0) {
-	  double frac = (double) rf.chrGC[i].gccount / total;
-	  if (!firstVal) rfile << ",";
-	  else firstVal = false;
-	  rfile << "{" << std::endl;
-	  rfile << "\"name\": \"" << hdr->target_name[i] << "\"," << std::endl;
-	  rfile << "\"size\": " << hdr->target_len[i] << "," << std::endl;
-	  rfile << "\"ncount\": " << rf.chrGC[i].ncount << "," << std::endl;
-	  rfile << "\"gccount\": " << rf.chrGC[i].gccount << "," << std::endl;
-	  rfile << "\"gcfrac\": " << frac << std::endl;
-	  rfile << "}" << std::endl;
-	}
-      }
-    }
-    rfile << "]" << std::endl;
-    rfile << "}," << std::endl;
 
     // Sample information
-    rfile << "{" << std::endl;
-    rfile << "\"sample\": \"" << c.sampleName << "\"," << std::endl;
-    rfile << "\"rg\": [" << std::endl;
+    rfile << "{\"samples\": [{";
+    rfile << "\"id\": \"" << c.sampleName << "\",";
+    rfile << "\"readGroups\": [";
 
     // All read-groups
     for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       if (itRg != rgMap.begin()) rfile << ", ";
-      rfile << "{" << std::endl;
-      rfile << "\"readGroup\": \"" << itRg->first << "\"," << std::endl;
-      rfile << "\"metrics\": [" << std::endl;
+      rfile << "{";
+      rfile << "\"id\": \"" << itRg->first << "\",";
+      rfile << "\"metrics\": [";
 
       // Base content
       {
-	rfile << "{" << std::endl;
-	rfile << "\"name\": \"Base content distribution\"," << std::endl;
-	rfile << "\"pos\": [";
+	rfile << "{\"id\": \"baseContent\",";
+	rfile << "\"title\": \"Base content distribution\",";
+	rfile << "\"x\": {\"data\": [";
 	uint32_t lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc);
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	  if (i > 0) rfile << ", ";
+	  if (i > 0) rfile << ",";
 	  rfile << i;
 	}
-	rfile << "]," << std::endl;
-	rfile << "\"A\": [" << std::endl;
+	rfile << "],";
+	rfile << "\"title\": \"Position in read\",";
+	rfile << "\"range\": [" << 0 << "," << lastValidBQIdx << "]";
+	rfile << "},";
+	rfile << "\"y\": {\"data\": [";
+	rfile << "[";
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	  if (i > 0) rfile << ", ";
+	  if (i > 0) rfile << ",";
 	  rfile << itRg->second.rc.aCount[i];
 	}
-	rfile << "]," << std::endl;
-	rfile << "\"C\": [" << std::endl;
+	rfile << "],";
+	rfile << "[";
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	  if (i > 0) rfile << ", ";
+	  if (i > 0) rfile << ",";
 	  rfile << itRg->second.rc.cCount[i];
 	}
-	rfile << "]," << std::endl;
-	rfile << "\"G\": [" << std::endl;
+	rfile << "],";
+	rfile << "[";
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	  if (i > 0) rfile << ", ";
+	  if (i > 0) rfile << ",";
 	  rfile << itRg->second.rc.gCount[i];
 	}
-	rfile << "]," << std::endl;
-	rfile << "\"T\": [" << std::endl;
+	rfile << "],";
+	rfile << "[";
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	  if (i > 0) rfile << ", ";
+	  if (i > 0) rfile << ",";
 	  rfile << itRg->second.rc.tCount[i];
 	}
-	rfile << "]," << std::endl;
-	rfile << "\"N\": [" << std::endl;
+	rfile << "],";
+	rfile << "[";
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	  if (i > 0) rfile << ", ";
+	  if (i > 0) rfile << ",";
 	  rfile << itRg->second.rc.nCount[i];
 	}
-	rfile << "]" << std::endl;
-	rfile << "}," << std::endl;
+	rfile << "]";
+	rfile << "],";
+	rfile << "\"title\": [\"A\",\"C\",\"G\",\"T\",\"N\"],";
+	rfile << "\"multiple\": 1";
+	rfile << "},";
+	rfile << "\"type\": \"line\"";
+	rfile << "},";
       }
 	
       // Read-length
@@ -321,8 +305,30 @@ namespace bamstats
       rfile << "}";
     }
     rfile << "]" << std::endl;
+    rfile << "}]," << std::endl;
+
+    // Reference information
+    rfile << "\"chromosomes\": [";
+    bool firstVal = true;
+    for(uint32_t i = 0; i < rf.chrGC.size(); ++i) {
+      if (rf.chrGC[i].ncount + rf.chrGC[i].gccount > 0) {
+	double total = hdr->target_len[i] - rf.chrGC[i].ncount;
+	if (total > 0) {
+	  double frac = (double) rf.chrGC[i].gccount / total;
+	  if (!firstVal) rfile << ",";
+	  else firstVal = false;
+	  rfile << "{" << std::endl;
+	  rfile << "\"name\": \"" << hdr->target_name[i] << "\"," << std::endl;
+	  rfile << "\"size\": " << hdr->target_len[i] << "," << std::endl;
+	  rfile << "\"ncount\": " << rf.chrGC[i].ncount << "," << std::endl;
+	  rfile << "\"gccount\": " << rf.chrGC[i].gccount << "," << std::endl;
+	  rfile << "\"gcfrac\": " << frac << std::endl;
+	  rfile << "}" << std::endl;
+	}
+      }
+    }
+    rfile << "]" << std::endl;
     rfile << "}" << std::endl;
-    rfile << "]}" << std::endl;
     rfile.pop();
   }
  
