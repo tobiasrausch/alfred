@@ -63,178 +63,205 @@ namespace bamstats
       {
 	rfile << "{\"id\": \"baseContent\",";
 	rfile << "\"title\": \"Base content distribution\",";
-	rfile << "\"x\": {\"data\": [";
+	rfile << "\"x\": {\"data\": [{\"values\": [";
 	uint32_t lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc);
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
 	  if (i > 0) rfile << ",";
 	  rfile << i;
 	}
-	rfile << "],";
-	rfile << "\"title\": \"Position in read\",";
-	rfile << "\"range\": [" << 0 << "," << lastValidBQIdx << "]";
-	rfile << "},";
+	rfile << "]}], \"axis\": {\"title\": \"Position in read\"}},";
 	rfile << "\"y\": {\"data\": [";
-	rfile << "[";
+	rfile << "{\"values\": [";
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
 	  if (i > 0) rfile << ",";
 	  rfile << itRg->second.rc.aCount[i];
 	}
-	rfile << "],";
-	rfile << "[";
+	rfile << "], \"title\": \"A\"},";
+	rfile << "{\"values\": [";
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
 	  if (i > 0) rfile << ",";
 	  rfile << itRg->second.rc.cCount[i];
 	}
-	rfile << "],";
-	rfile << "[";
+	rfile << "], \"title\": \"C\"},";
+	rfile << "{\"values\": [";
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
 	  if (i > 0) rfile << ",";
 	  rfile << itRg->second.rc.gCount[i];
 	}
-	rfile << "],";
-	rfile << "[";
+	rfile << "], \"title\": \"G\"},";
+	rfile << "{\"values\": [";
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
 	  if (i > 0) rfile << ",";
 	  rfile << itRg->second.rc.tCount[i];
 	}
-	rfile << "],";
-	rfile << "[";
+	rfile << "], \"title\": \"T\"},";
+	rfile << "{\"values\": [";
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
 	  if (i > 0) rfile << ",";
 	  rfile << itRg->second.rc.nCount[i];
 	}
-	rfile << "]";
-	rfile << "],";
-	rfile << "\"title\": [\"A\",\"C\",\"G\",\"T\",\"N\"],";
-	rfile << "\"multiple\": 1";
-	rfile << "},";
-	rfile << "\"type\": \"line\"";
-	rfile << "},";
+	rfile << "], \"title\": \"N\"}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"line\"}";
       }
 	
       // Read-length
       {
-	rfile << "{" << std::endl;
-	rfile << "\"name\": \"Read length distribution\"," << std::endl;
-	rfile << "\"length\": [";
+	rfile << ",{\"id\": \"readLength\",";
+	rfile << "\"title\": \"Read length distribution\",";
+	rfile << "\"x\": {\"data\": [{\"values\": [";
 	uint32_t lastValidRL = _lastNonZeroIdx(itRg->second.rc.lRc);
 	for(uint32_t i = 0; i <= lastValidRL; ++i) {
-	  if (i > 0) rfile << ", ";
+	  if (i > 0) rfile << ",";
 	  rfile << i;
 	}
-	rfile << "]," << std::endl;
-	rfile << "\"count\": [" << std::endl;
+	rfile << "]}], \"axis\": {\"title\": \"Read length\"}},";
+	rfile << "\"y\": {\"data\": [{\"values\": [";
 	for(uint32_t i = 0; i <= lastValidRL; ++i) {
-	  if (i > 0) rfile << ", ";
+	  if (i > 0) rfile << ",";
 	  rfile << itRg->second.rc.lRc[i];
 	}
-	rfile << "]" << std::endl;
-	rfile << "}," << std::endl;
+	rfile << "]}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"line\"}";
       }
       
       // Mean Base Quality
       {
-	rfile << "{" << std::endl;
-	rfile << "\"name\": \"Mean base quality distribution\"," << std::endl;
-	rfile << "\"pos\": [";
+	rfile << ",{\"id\": \"baseQuality\",";	
+	rfile << "\"title\": \"Mean base quality distribution\",";
+	rfile << "\"x\": {\"data\": [{\"values\": [";
 	uint32_t lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc);
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	  if (i > 0) rfile << ", ";
+	  if (i > 0) rfile << ",";
 	  rfile << i;
 	}
-	rfile << "]," << std::endl;
-	rfile << "\"qual\": [" << std::endl;
+	rfile << "]}], \"axis\": {\"title\": \"Read position\"}},";
+	rfile << "\"y\": {\"data\": [{\"values\": [";
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	  if (i > 0) rfile << ", ";
+	  if (i > 0) rfile << ",";
 	  uint64_t bcount = itRg->second.rc.aCount[i] + itRg->second.rc.cCount[i] + itRg->second.rc.gCount[i] + itRg->second.rc.tCount[i] + itRg->second.rc.nCount[i];
 	  if (bcount > 0) rfile << (double) (itRg->second.rc.bqCount[i]) / (double) (bcount);
 	  else rfile << 0;
 	}
-	rfile << "]" << std::endl;
-	rfile << "}," << std::endl;
+	rfile << "]}], \"axis\": {\"title\": \"Average base quality\"}}, \"type\": \"line\"}";
       }
 
       // Mapping quality histogram
       {
-	rfile << "{" << std::endl;
-	rfile << "\"name\": \"Mapping quality distribution\"," << std::endl;
-	rfile << "\"pos\": [";
+	rfile << ",{\"id\": \"mappingQuality\", \"title\": \"Mapping quality distribution\",";
+	rfile << "\"x\": {\"data\": [{\"values\": [";
 	uint32_t lastValidMQ = _lastNonZeroIdx(itRg->second.qc.qcount);
 	for(uint32_t i = 0; i <= lastValidMQ; ++i) {
-	  if (i > 0) rfile << ", ";
+	  if (i > 0) rfile << ",";
 	  rfile << i;
 	}
-	rfile << "]," << std::endl;
-	rfile << "\"qual\": [" << std::endl;
+	rfile << "]}], \"axis\": {\"title\": \"Mapping Quality\"}},";
+	rfile << "\"y\": {\"data\": [{\"values\": [";
 	for(uint32_t i = 0; i <= lastValidMQ; ++i) {
-	  if (i > 0) rfile << ", ";
+	  if (i > 0) rfile << ",";
 	  rfile << itRg->second.qc.qcount[i];
 	}
-	rfile << "]" << std::endl;
-	rfile << "}," << std::endl;
+	rfile << "]}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"line\"}";
       }
 
       // Coverage Histogram
       {
-	rfile << "{" << std::endl;
-	rfile << "\"name\": \"Coverage histogram\"," << std::endl;
-	rfile << "\"coverage\": [";
+	rfile << ",{\"id\": \"coverageHistogram\", \"title\": \"Coverage histogram\",";
+	rfile << "\"x\": {\"data\": [{\"values\": [";
 	uint32_t lastValidCO = _lastNonZeroIdx(itRg->second.bc.bpWithCoverage);
 	for(uint32_t i = 0; i <= lastValidCO; ++i) {
-	  if (i > 0) rfile << ", ";
+	  if (i > 0) rfile << ",";
 	  rfile << i;
 	}
-	rfile << "]," << std::endl;
-	rfile << "\"count\": [" << std::endl;
+	rfile << "]}], \"axis\": {\"title\": \"Coverage\", \"range\": [0,60]}},";
+	rfile << "\"y\": {\"data\": [{\"values\": [";
 	for(uint32_t i = 0; i <= lastValidCO; ++i) {
-	  if (i > 0) rfile << ", ";
+	  if (i > 0) rfile << ",";
 	  rfile << itRg->second.bc.bpWithCoverage[i];
 	}
-	rfile << "]" << std::endl;
-	rfile << "}," << std::endl;
+	rfile << "]}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"line\"}";
       }
 
       // Insert Size Histogram
       {
-	rfile << "{" << std::endl;
-	rfile << "\"name\": \"Insert size histogram\"," << std::endl;
-	rfile << "\"insertSize\": [";
+	rfile << ",{\"id\": \"insertSize\", \"title\": \"Insert size histogram\",";
+	rfile << "\"x\": {\"data\": [{\"values\": [";
 	uint32_t lastValidIS = _lastNonZeroIdxISize(itRg->second.pc);
 	for(uint32_t i = 0; i <= lastValidIS; ++i) {
-	  if (i > 0) rfile << ", ";
+	  if (i > 0) rfile << ",";
 	  rfile << i;
 	}
-	rfile << "]," << std::endl;
-	rfile << "\"fPlus\": [" << std::endl;
+	rfile << "]}], \"axis\": {\"title\": \"Insert Size\", \"range\": [0,1000]}},";
+	rfile << "\"y\": {\"data\": [";
+	rfile << "{\"values\": [";
 	for(uint32_t i = 0; i <= lastValidIS; ++i) {
-	  if (i > 0) rfile << ", ";
+	  if (i > 0) rfile << ",";
 	  rfile << itRg->second.pc.fPlus[i];
 	}
-	rfile << "]," << std::endl;
-	rfile << "\"fMinus\": [" << std::endl;
+	rfile << "], \"title\": \"F+\"},";
+	rfile << "{\"values\": [";
 	for(uint32_t i = 0; i <= lastValidIS; ++i) {
-	  if (i > 0) rfile << ", ";
+	  if (i > 0) rfile << ",";
 	  rfile << itRg->second.pc.fMinus[i];
 	}
-	rfile << "]," << std::endl;
-	rfile << "\"rPlus\": [" << std::endl;
+	rfile << "], \"title\": \"F-\"},";
+	rfile << "{\"values\": [";
 	for(uint32_t i = 0; i <= lastValidIS; ++i) {
-	  if (i > 0) rfile << ", ";
+	  if (i > 0) rfile << ",";
 	  rfile << itRg->second.pc.rPlus[i];
 	}
-	rfile << "]," << std::endl;
-	rfile << "\"rMinus\": [" << std::endl;
+	rfile << "], \"title\": \"R+\"},";
+	rfile << "{\"values\": [";
 	for(uint32_t i = 0; i <= lastValidIS; ++i) {
-	  if (i > 0) rfile << ", ";
+	  if (i > 0) rfile << ",";
 	  rfile << itRg->second.pc.rMinus[i];
 	}
-	rfile << "]" << std::endl;
-	rfile << "}," << std::endl;
+	rfile << "], \"title\": \"R-\"}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"line\"}";
+      }
+
+      // Bed specific data
+      if (c.hasRegionFile) {
+	// On target rate
+	{
+	  rfile << ",{\"id\": \"onTarget\",";
+	  rfile << "\"title\": \"On-target rate\",";
+	  rfile << "\"x\": {\"data\": [{\"values\": [";
+	  uint64_t alignedbases = itRg->second.bc.matchCount + itRg->second.bc.mismatchCount;
+	  typename BedCounts::TOnTargetMap::const_iterator itOT = be.onTarget.find(itRg->first);
+	  for(uint32_t i = 0; i < itOT->second.size(); ++i) {
+	    if (i > 0) rfile << ",";
+	    rfile << i * be.stepsize;
+	  }
+	  rfile << "]}], \"axis\": {\"title\": \"Target Extension\"}},";
+	  rfile << "\"y\": {\"data\": [{\"values\": [";
+	  for(uint32_t i = 0; i < itOT->second.size(); ++i) {
+	    if (i > 0) rfile << ",";
+	    rfile << (double) itOT->second[i] / (double) alignedbases;
+	  }
+	  rfile << "]}], \"axis\": {\"title\": \"Fraction on target\"}}, \"type\": \"line\"}";
+	}
+
+	// Avg. target coverage
+	{
+	  rfile << ",{\"id\": \"targetCoverage\",";
+	  rfile << "\"title\": \"Targets above coverage threshold\",";
+	  rfile << "\"x\": {\"data\": [{\"values\": [";
+	  std::vector<double> fracAboveCov;
+	  uint32_t maxBedCov = _lastCoverageLevel(be, rf, hdr->n_targets, fracAboveCov);
+	  for(uint32_t i = 0; i < maxBedCov; ++i) {
+	    if (i > 0) rfile << ",";
+	    rfile << i;
+	  }
+	  rfile << "]}], \"axis\": {\"title\": \"Coverage Level\"}},";
+	  rfile << "\"y\": {\"data\": [{\"values\": [";
+	  for(uint32_t i = 0; i < maxBedCov; ++i) {
+	    if (i > 0) rfile << ", ";
+	    rfile << fracAboveCov[i];
+	  }
+	  rfile << "]}], \"axis\": {\"title\": \"Fraction above coverage\"}}, \"type\": \"line\"}";
+	}
       }
 
       // Mapping statistics by chromosome
       {
-	rfile << "{" << std::endl;
+	rfile << ",{" << std::endl;
 	rfile << "\"name\": \"Chromosome mapping statistics\"," << std::endl;
 	rfile << "\"chromosomes\": [";
 	uint64_t totalMappedChr = 0;
@@ -254,58 +281,14 @@ namespace bamstats
 	  rfile << "}" << std::endl;
 	}
 	rfile << "]}" << std::endl;
-      }
-
-      // Bed specific data
-      if (c.hasRegionFile) {
-	// On target rate
-	{
-	  rfile << ",{" << std::endl;
-	  rfile << "\"name\": \"On-target rate\"," << std::endl;
-	  rfile << "\"targetExtension\": [";
-	  uint64_t alignedbases = itRg->second.bc.matchCount + itRg->second.bc.mismatchCount;
-	  typename BedCounts::TOnTargetMap::const_iterator itOT = be.onTarget.find(itRg->first);
-	  for(uint32_t i = 0; i < itOT->second.size(); ++i) {
-	    if (i > 0) rfile << ", ";
-	    rfile << i * be.stepsize;
-	  }
-	  rfile << "]," << std::endl;
-	  rfile << "\"fractionOnTarget\": [" << std::endl;
-	  for(uint32_t i = 0; i < itOT->second.size(); ++i) {
-	    if (i > 0) rfile << ", ";
-	    rfile << (double) itOT->second[i] / (double) alignedbases;
-	  }
-	  rfile << "]" << std::endl;
-	  rfile << "}" << std::endl;
-	}
-
-	// Avg. target coverage
-	{
-	  rfile << ",{" << std::endl;
-	  rfile << "\"name\": \"Targets above coverage threshold\"," << std::endl;
-	  std::vector<double> fracAboveCov;
-	  uint32_t maxBedCov = _lastCoverageLevel(be, rf, hdr->n_targets, fracAboveCov);
-	  rfile << "\"coverageLevel\": [";
-	  for(uint32_t i = 0; i < maxBedCov; ++i) {
-	    if (i > 0) rfile << ", ";
-	    rfile << i;
-	  }
-	  rfile << "]," << std::endl;
-	  rfile << "\"fractionAboveCoverage\": [" << std::endl;
-	  for(uint32_t i = 0; i < maxBedCov; ++i) {
-	    if (i > 0) rfile << ", ";
-	    rfile << fracAboveCov[i];
-	  }
-	  rfile << "]" << std::endl;
-	  rfile << "}" << std::endl;
-	}
       }      
+
+
       
-      rfile << "]" << std::endl;
-      rfile << "}";
+      rfile << "]}";
     }
-    rfile << "]" << std::endl;
-    rfile << "}]," << std::endl;
+    rfile << "]}]," << std::endl;
+
 
     // Reference information
     rfile << "\"chromosomes\": [";
