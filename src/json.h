@@ -261,28 +261,28 @@ namespace bamstats
 
       // Mapping statistics by chromosome
       {
-	rfile << ",{" << std::endl;
-	rfile << "\"name\": \"Chromosome mapping statistics\"," << std::endl;
-	rfile << "\"chromosomes\": [";
+	rfile << ",{\"id\": \"mappingByChromosome\",";
+	rfile << "\"title\": \"Mapping statistics by chromosome\",";
+	rfile << "\"data\": {\"columns\": [\"chr\", \"size\", \"mapped\", \"fracTotal\", \"observedExpected\"], \"rows\": [";
 	uint64_t totalMappedChr = 0;
 	for(uint32_t i = 0; i < itRg->second.rc.mappedchr.size(); ++i) totalMappedChr += itRg->second.rc.mappedchr[i];
 	for(uint32_t i = 0; i < itRg->second.rc.mappedchr.size(); ++i) {
-	  if (i > 0) rfile << ", ";
+	  if (i > 0) rfile << ",";
+	  rfile << "[";
 	  double frac = 0;
 	  if (totalMappedChr > 0) frac = (double) itRg->second.rc.mappedchr[i] / (double) totalMappedChr;
 	  double expect = (double) (hdr->target_len[i] - rf.chrGC[i].ncount) / (double) (rf.referencebp - rf.ncount);
 	  double obsexprat = frac / expect;
-	  rfile << "{" << std::endl;
-	  rfile << "\"name\": \"" << hdr->target_name[i] << "\"," << std::endl;
-	  rfile << "\"size\": " << hdr->target_len[i] << "," << std::endl;
-	  rfile << "\"mapped\": " << itRg->second.rc.mappedchr[i] << "," << std::endl;
-	  rfile << "\"fracTotal\": " << frac << "," << std::endl;
-	  rfile << "\"observedExpected\": " << obsexprat << std::endl;
-	  rfile << "}" << std::endl;
+	  rfile << "\"" << hdr->target_name[i] << "\",";
+	  rfile << hdr->target_len[i] << ",";
+	  rfile << itRg->second.rc.mappedchr[i] << ",";
+	  rfile << frac << ",";
+	  rfile << obsexprat;
+	  rfile << "]";
 	}
-	rfile << "]}" << std::endl;
-      }      
-
+	rfile << "]},";
+	rfile << "\"type\": \"table\"}";
+      }
 
       
       rfile << "]}";
