@@ -53,7 +53,7 @@ function run() {
     if (isGzip) {
       content = pako.ungzip(content, { to: 'string' })
     }
-    data = JSON.parse(content).data
+    data = JSON.parse(content)
     handleSuccess(data)
   }
 }
@@ -65,16 +65,19 @@ function handleSuccess(data) {
 
   chartsContainer.innerHTML = ''
 
-  const samples = [data[1].sample]
-  const readGroups = data[1].rg.map(x => x.readGroup)
+  const samples = data.samples.map(sample => sample.id)
+  const readGroups = {}
+  data.samples.forEach(sample => {
+    readGroups[sample.id] = sample.readGroups.map(rg => rg.id)
+  })
 
   selectSample.innerHTML = samples.map(s => `<option>${s}</option>`).join('')
 
-  selectReadGroup.innerHTML = readGroups
+  selectReadGroup.innerHTML = readGroups[samples[0]]
     .map(rg => `<option>${rg}</option>`)
     .join('')
 
-  vis(data, samples[0], readGroups[0])
+  vis(data, samples[0], readGroups[samples[0]][0])
 }
 
 window.handleSelectChange = handleSelectChange
@@ -86,26 +89,71 @@ function handleSelectChange() {
 }
 
 const chartDispatch = {
-  'Base content distribution': renderBaseContentChart,
-  'Read length distribution': renderReadLengthChart,
-  'Mean base quality distribution': renderBaseQualityChart,
-  'Mapping quality distribution': renderMappingQualityChart,
-  'Coverage histogram': renderCoverageChart,
-  'Insert size histogram': renderInsertSizeChart,
-  'On-target rate': renderOnTargetRateChart,
-  'Targets above coverage threshold': renderTargetCoverageChart
+  'line': lineChart,
+  'table': table
 }
 
 function vis(data, sample, readGroup) {
-  const dataRg = data
-    .find(x => x.sample === sample)
-    .rg.find(x => x.readGroup === readGroup)
+  console.log(sample, readGroup)
+  const dataRg = data.samples
+    .find(s => s.id === sample)
+    .readGroups.find(rg => rg.id === readGroup)
 
   for (const metric of dataRg.metrics) {
-    if (metric.name in chartDispatch) {
-      chartDispatch[metric.name](metric)
+    console.log(metric.id)
+  }
+}
+
+function lineChart(metricData) {
+  const container = document.createElement('div')
+  chartsContainer.appendChild(container)
+
+  const xData = metricData.x.data[0]
+  const chartData = []
+  for (const yData of metricData.y.data) {
+    const trace = {/*...*/}
+    chartData.push(trace)
+  }
+
+  const layout = {
+    title: 'TODO',
+    xaxis: {
+      title: 'TODO',
+      zeroline: false
+    },
+    yaxis: {
+      title: 'TODO',
+      zeroline: false
     }
   }
+
+  if (metricData.x.axis.range) {
+    layout.xaxis.range = metricData.x.axis.range
+  }
+
+  if (metricData.y.axis.range) {
+    layout.yaxis.range = metricData.y.axis.range
+  }
+
+  // Plotly.newPlot(container, chartData, layout)
+
+  // const chartData = [{ x, y }]
+  // const chartLayout = merge(
+  //   {
+  //     xaxis: {
+  //       zeroline: false
+  //     },
+  //     yaxis: {
+  //       zeroline: false
+  //     }
+  //   },
+  //   layout
+  // )
+  // Plotly.newPlot(container, chartData, chartLayout)
+}
+
+function table() {
+  console.log('TODO: summary table')
 }
 
 function renderBaseContentChart(data) {
@@ -278,7 +326,7 @@ function showExample() {
       })
       .then(response => {
         const content = pako.ungzip(response.data, { to: 'string' })
-        exampleData = JSON.parse(content).data
+        exampleData = JSON.parse(content)
         data = exampleData
         handleSuccess(data)
       })
