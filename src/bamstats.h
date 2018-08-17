@@ -216,6 +216,7 @@ namespace bamstats
 	}
       }
     }
+    if (minChrLen > 10000000) minChrLen = 10000000;
     
     // Parse genome
     int32_t refIndex = -1;

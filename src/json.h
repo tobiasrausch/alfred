@@ -286,6 +286,41 @@ namespace bamstats
 	}
 	rfile << "], \"title\": \"Insertion\"}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"line\"}";
       }
+
+
+      // GC Content
+      {
+	rfile << ",{\"id\": \"gcContent\", \"title\": \"GC content\",";
+	rfile << "\"x\": {\"data\": [{\"values\": [";
+	double refTotal = 0;
+	double sampleTotal = 0;
+	for(uint32_t i = 0; i < 101; ++i) {
+	  refTotal += rf.refGcContent[i];
+	  sampleTotal += itRg->second.rc.gcContent[i];
+	}
+	for(uint32_t i = 0; i < 101; ++i) {
+	  if (i > 0) rfile << ",";
+	  rfile << (double) i / (double) 100;
+	}
+	rfile << "]}], \"axis\": {\"title\": \"GC fraction\"}},";
+	rfile << "\"y\": {\"data\": [";
+	rfile << "{\"values\": [";
+	for(uint32_t i = 0; i < 101; ++i) {
+	  if (i > 0) rfile << ",";
+	  double frac = 0;
+	  if (refTotal > 0) frac = (double) (rf.refGcContent[i]) / refTotal;
+	  rfile << frac;
+	}
+	rfile << "], \"title\": \"Reference\"},";
+	rfile << "{\"values\": [";
+	for(uint32_t i = 0; i < 101; ++i) {
+	  if (i > 0) rfile << ",";
+	  double frac = 0;
+	  if (sampleTotal > 0) frac = (double) itRg->second.rc.gcContent[i] / sampleTotal;
+	  rfile << frac;
+	}
+	rfile << "], \"title\": \"Sample\"}], \"axis\": {\"title\": \"Normalized Fraction\"}}, \"type\": \"line\"}";
+      }
       
       // Mapping statistics by chromosome
       {
