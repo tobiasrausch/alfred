@@ -99,8 +99,8 @@ function handleSampleSelectChange() {
 }
 
 const chartDispatch = {
-  bar: barChart,
-  line: lineChart,
+  bar: chart,
+  line: chart,
   table: table
 }
 
@@ -114,47 +114,7 @@ function vis(data, sample, readGroup) {
   }
 }
 
-function barChart(metricData) {
-  const container = document.createElement('div')
-  chartsContainer.appendChild(container)
-
-  const xData = metricData.x.data[0].values
-  const chartData = []
-  for (const y of metricData.y.data) {
-    const trace = {
-      type: 'bar',
-      x: xData,
-      y: y.values,
-      name: y.title || ''
-    }
-    chartData.push(trace)
-  }
-
-  const layout = {
-    title: metricData.title,
-    barmode: metricData.options.layout,
-    xaxis: {
-      title: metricData.x.axis.title,
-      zeroline: false
-    },
-    yaxis: {
-      title: metricData.y.axis.title,
-      zeroline: false
-    }
-  }
-
-  if (metricData.x.axis.range) {
-    layout.xaxis.range = metricData.x.axis.range
-  }
-
-  if (metricData.y.axis.range) {
-    layout.yaxis.range = metricData.y.axis.range
-  }
-
-  Plotly.newPlot(container, chartData, layout)
-}
-
-function lineChart(metricData) {
+function chart(metricData) {
   const container = document.createElement('div')
   chartsContainer.appendChild(container)
 
@@ -165,6 +125,9 @@ function lineChart(metricData) {
       x: xData,
       y: y.values,
       name: y.title || ''
+    }
+    if (metricData.type === 'bar'){
+      trace.type = 'bar'
     }
     chartData.push(trace)
   }
@@ -179,6 +142,10 @@ function lineChart(metricData) {
       title: metricData.y.axis.title,
       zeroline: false
     }
+  }
+
+  if (metricData.type === 'bar') {
+    layout.barmode = metricData.options.layout
   }
 
   if (metricData.x.axis.range) {
