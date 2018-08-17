@@ -339,7 +339,7 @@ namespace bamstats
 	  if (i > 0) rfile << ",";
 	  rfile << itRg->second.bc.insHomACGTN[i];
 	}
-	rfile << "], \"title\": \"Insertion\"}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"line\"}";
+	rfile << "], \"title\": \"Insertion\"}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"bar\", \"options\": {\"layout\": \"group\"}}";
       }
       
       // Mapping statistics by chromosome
