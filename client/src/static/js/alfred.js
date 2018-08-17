@@ -1,5 +1,4 @@
 import axios from 'axios'
-import merge from 'deepmerge'
 import pako from 'pako'
 
 const API_URL = process.env.API_URL
