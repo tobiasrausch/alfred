@@ -99,8 +99,8 @@ function handleSampleSelectChange() {
 }
 
 const chartDispatch = {
-  'line': lineChart,
-  'table': table
+  line: lineChart,
+  table: table
 }
 
 function vis(data, sample, readGroup) {
@@ -157,19 +157,19 @@ function table(tableData) {
     <table class="table table-sm table-striped table-hover">
       <thead>
         <tr>
-          ${tableData.data.columns.map(
-            title => `<th scope="col">${title}</th>`
-          ).join('')}
+          ${tableData.data.columns
+            .map(title => `<th scope="col">${title}</th>`)
+            .join('')}
         </tr>
       </thead>
       <tbody>
-        ${tableData.data.rows.map(
-          row => `<tr>
-            ${row.map(
-              value => `<td>${value}</td>`
-            ).join('')}
+        ${tableData.data.rows
+          .map(
+            row => `<tr>
+            ${row.map(value => `<td>${value}</td>`).join('')}
           </tr>`
-        ).join('')}
+          )
+          .join('')}
       </tbody>
     </table>
   `
