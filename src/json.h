@@ -259,6 +259,34 @@ namespace bamstats
 	}
       }
 
+      // InDel Size
+      {
+	rfile << ",{\"id\": \"indelSize\", \"title\": \"InDel Size\",";
+	rfile << "\"x\": {\"data\": [{\"values\": [";
+	uint32_t lastSize = itRg->second.bc.delSize.size();
+	if (itRg->second.bc.insSize.size() > lastSize) lastSize = itRg->second.bc.insSize.size();
+	for(uint32_t i = 0; i < lastSize; ++i) {
+	  if (i > 0) rfile << ",";
+	  rfile << i;
+	}
+	rfile << "]}], \"axis\": {\"title\": \"InDel Size\", \"range\": [0,10]}},";
+	rfile << "\"y\": {\"data\": [";
+	rfile << "{\"values\": [";
+	for(uint32_t i = 0; i < lastSize; ++i) {
+	  if (i > 0) rfile << ",";
+	  if (i < itRg->second.bc.delSize.size()) rfile << itRg->second.bc.delSize[i];
+	  else rfile << '0';
+	}
+	rfile << "], \"title\": \"Deletion\"},";
+	rfile << "{\"values\": [";
+	for(uint32_t i = 0; i < lastSize; ++i) {
+	  if (i > 0) rfile << ",";
+	  if (i < itRg->second.bc.insSize.size()) rfile << itRg->second.bc.insSize[i];
+	  else rfile << '0';
+	}
+	rfile << "], \"title\": \"Insertion\"}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"line\"}";
+      }
+      
       // Mapping statistics by chromosome
       {
 	rfile << ",{\"id\": \"mappingByChromosome\",";
