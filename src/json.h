@@ -263,7 +263,7 @@ namespace bamstats
       {
 	rfile << ",{\"id\": \"mappingByChromosome\",";
 	rfile << "\"title\": \"Mapping statistics by chromosome\",";
-	rfile << "\"data\": {\"columns\": [\"chr\", \"size\", \"mapped\", \"fracTotal\", \"observedExpected\"], \"rows\": [";
+	rfile << "\"data\": {\"columns\": [\"Chr\", \"Size\", \"#N\", \"#GC\", \"GC-fraction\", \"mapped\", \"fracTotal\", \"observedExpected\"], \"rows\": [";
 	uint64_t totalMappedChr = 0;
 	for(uint32_t i = 0; i < itRg->second.rc.mappedchr.size(); ++i) totalMappedChr += itRg->second.rc.mappedchr[i];
 	for(uint32_t i = 0; i < itRg->second.rc.mappedchr.size(); ++i) {
@@ -275,6 +275,12 @@ namespace bamstats
 	  double obsexprat = frac / expect;
 	  rfile << "\"" << hdr->target_name[i] << "\",";
 	  rfile << hdr->target_len[i] << ",";
+	  rfile << rf.chrGC[i].ncount << ",";
+	  rfile << rf.chrGC[i].gccount << ",";
+	  double totalBases = hdr->target_len[i] - rf.chrGC[i].ncount;
+	  double gcfrac = 0;
+	  if (totalBases > 0) gcfrac = (double) rf.chrGC[i].gccount / totalBases;
+	  rfile << gcfrac << ",";
 	  rfile << itRg->second.rc.mappedchr[i] << ",";
 	  rfile << frac << ",";
 	  rfile << obsexprat;
@@ -287,31 +293,7 @@ namespace bamstats
       
       rfile << "]}";
     }
-    rfile << "]}]," << std::endl;
-
-
-    // Reference information
-    rfile << "\"chromosomes\": [";
-    bool firstVal = true;
-    for(uint32_t i = 0; i < rf.chrGC.size(); ++i) {
-      if (rf.chrGC[i].ncount + rf.chrGC[i].gccount > 0) {
-	double total = hdr->target_len[i] - rf.chrGC[i].ncount;
-	if (total > 0) {
-	  double frac = (double) rf.chrGC[i].gccount / total;
-	  if (!firstVal) rfile << ",";
-	  else firstVal = false;
-	  rfile << "{" << std::endl;
-	  rfile << "\"name\": \"" << hdr->target_name[i] << "\"," << std::endl;
-	  rfile << "\"size\": " << hdr->target_len[i] << "," << std::endl;
-	  rfile << "\"ncount\": " << rf.chrGC[i].ncount << "," << std::endl;
-	  rfile << "\"gccount\": " << rf.chrGC[i].gccount << "," << std::endl;
-	  rfile << "\"gcfrac\": " << frac << std::endl;
-	  rfile << "}" << std::endl;
-	}
-      }
-    }
-    rfile << "]" << std::endl;
-    rfile << "}" << std::endl;
+    rfile << "]}]}" << std::endl;
     rfile.pop();
   }
  
