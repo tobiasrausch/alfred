@@ -80,10 +80,21 @@ function handleSuccess(data) {
   vis(data, samples[0], readGroups[samples[0]][0])
 }
 
-window.handleSelectChange = handleSelectChange
-function handleSelectChange() {
+window.handleReadGroupSelectChange = handleReadGroupSelectChange
+function handleReadGroupSelectChange() {
   const sample = selectSample.value
   const readGroup = selectReadGroup.value
+  chartsContainer.innerHTML = ''
+  vis(data, sample, readGroup)
+}
+
+window.handleSampleSelectChange = handleSampleSelectChange
+function handleSampleSelectChange() {
+  const sample = selectSample.value
+  selectReadGroup.innerHTML = readGroups[sample]
+    .map(rg => `<option>${rg}</option>`)
+    .join('')
+  const readGroup = readGroups[sample][0]
   chartsContainer.innerHTML = ''
   vis(data, sample, readGroup)
 }
@@ -94,13 +105,12 @@ const chartDispatch = {
 }
 
 function vis(data, sample, readGroup) {
-  console.log(sample, readGroup)
   const dataRg = data.samples
     .find(s => s.id === sample)
     .readGroups.find(rg => rg.id === readGroup)
 
   for (const metric of dataRg.metrics) {
-    console.log(metric.id)
+    chartDispatch[metric.type](metric)
   }
 }
 
@@ -108,21 +118,25 @@ function lineChart(metricData) {
   const container = document.createElement('div')
   chartsContainer.appendChild(container)
 
-  const xData = metricData.x.data[0]
+  const xData = metricData.x.data[0].values
   const chartData = []
-  for (const yData of metricData.y.data) {
-    const trace = {/*...*/}
+  for (const y of metricData.y.data) {
+    const trace = {
+      x: xData,
+      y: y.values,
+      name: y.title || ''
+    }
     chartData.push(trace)
   }
 
   const layout = {
-    title: 'TODO',
+    title: metricData.title,
     xaxis: {
-      title: 'TODO',
+      title: metricData.x.axis.title,
       zeroline: false
     },
     yaxis: {
-      title: 'TODO',
+      title: metricData.y.axis.title,
       zeroline: false
     }
   }
@@ -135,179 +149,34 @@ function lineChart(metricData) {
     layout.yaxis.range = metricData.y.axis.range
   }
 
-  // Plotly.newPlot(container, chartData, layout)
-
-  // const chartData = [{ x, y }]
-  // const chartLayout = merge(
-  //   {
-  //     xaxis: {
-  //       zeroline: false
-  //     },
-  //     yaxis: {
-  //       zeroline: false
-  //     }
-  //   },
-  //   layout
-  // )
-  // Plotly.newPlot(container, chartData, chartLayout)
-}
-
-function table() {
-  console.log('TODO: summary table')
-}
-
-function renderBaseContentChart(data) {
-  const container = document.createElement('div')
-  chartsContainer.appendChild(container)
-  const title = data.name
-  const x = data.pos
-  const chartData = []
-  for (const base of 'ACGTN') {
-    chartData.push({
-      name: base,
-      mode: 'scatter',
-      x,
-      y: data[base]
-    })
-  }
-  const layout = {
-    title,
-    xaxis: {
-      title: 'Position in read',
-      zeroline: false
-    },
-    yaxis: {
-      title: 'Base count',
-      zeroline: false
-    }
-  }
   Plotly.newPlot(container, chartData, layout)
 }
 
-function lineChart(x, y, layout = {}) {
-  const container = document.createElement('div')
-  chartsContainer.appendChild(container)
-  const chartData = [{ x, y }]
-  const chartLayout = merge(
-    {
-      xaxis: {
-        zeroline: false
-      },
-      yaxis: {
-        zeroline: false
-      }
-    },
-    layout
-  )
-  Plotly.newPlot(container, chartData, chartLayout)
-}
-
-function renderReadLengthChart(data) {
-  lineChart(data.length, data.count, {
-    title: data.name,
-    xaxis: {
-      title: 'Read length'
-    },
-    yaxis: {
-      title: 'Count'
-    }
-  })
-}
-
-function renderBaseQualityChart(data) {
-  lineChart(data.pos, data.qual, {
-    title: data.name,
-    xaxis: {
-      title: 'Position in read'
-    },
-    yaxis: {
-      title: 'Mean base quality'
-    }
-  })
-}
-
-function renderMappingQualityChart(data) {
-  lineChart(data.pos, data.qual, {
-    title: data.name,
-    xaxis: {
-      title: 'Mapping quality'
-    },
-    yaxis: {
-      title: 'Count'
-    }
-  })
-}
-
-function renderCoverageChart(data) {
-  lineChart(data.coverage, data.count, {
-    title: data.name,
-    xaxis: {
-      title: 'Coverage',
-      range: [0, 60]
-    },
-    yaxis: {
-      title: 'Count'
-    }
-  })
-}
-
-function renderInsertSizeChart(data) {
-  const container = document.createElement('div')
-  chartsContainer.appendChild(container)
-  const title = data.name
-  const x = data.insertSize
-  const chartData = []
-  const orientationLabel = {
-    fMinus: 'F-',
-    fPlus: 'F+',
-    rMinus: 'R-',
-    rPlus: 'R+'
-  }
-  for (const orientation of ['fMinus', 'fPlus', 'rMinus', 'rPlus']) {
-    chartData.push({
-      name: orientationLabel[orientation],
-      mode: 'scatter',
-      x,
-      y: data[orientation]
-    })
-  }
-  const layout = {
-    title,
-    xaxis: {
-      title: 'Insert size',
-      range: [0, 1000],
-      zeroline: false
-    },
-    yaxis: {
-      title: 'Count',
-      zeroline: false
-    }
-  }
-  Plotly.newPlot(container, chartData, layout)
-}
-
-function renderOnTargetRateChart(data) {
-  lineChart(data.targetExtension, data.fractionOnTarget, {
-    title: data.name,
-    xaxis: {
-      title: 'Left/right extension of target region'
-    },
-    yaxis: {
-      title: 'Fraction of reads on-target'
-    }
-  })
-}
-
-function renderTargetCoverageChart(data) {
-  lineChart(data.coverageLevel, data.fractionAboveCoverage, {
-    title: data.name,
-    xaxis: {
-      title: 'Coverage'
-    },
-    yaxis: {
-      title: 'Fraction of targets above given coverage'
-    }
-  })
+function table(tableData) {
+  const html = `
+    <h4>${tableData.title}</h4>
+    <table class="table table-sm table-striped table-hover">
+      <thead>
+        <tr>
+          ${tableData.data.columns.map(
+            title => `<th scope="col">${title}</th>`
+          ).join('')}
+        </tr>
+      </thead>
+      <tbody>
+        ${tableData.data.rows.map(
+          row => `<tr>
+            ${row.map(
+              value => `<td>${value}</td>`
+            ).join('')}
+          </tr>`
+        ).join('')}
+      </tbody>
+    </table>
+  `
+  const element = document.createElement('div')
+  element.innerHTML = html
+  chartsContainer.appendChild(element)
 }
 
 function showExample() {
