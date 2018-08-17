@@ -321,6 +321,26 @@ namespace bamstats
 	}
 	rfile << "], \"title\": \"Sample\"}], \"axis\": {\"title\": \"Normalized Fraction\"}}, \"type\": \"line\"}";
       }
+
+      // Homopolymer InDel Context
+      {
+	rfile << ",{\"id\": \"homIndelContext\", \"title\": \"InDel Context\",";
+	rfile << "\"x\": {\"data\": [{\"values\": [\"A\",\"C\",\"G\",\"T\",\"N\",\"None\"]";
+	rfile << "}], \"axis\": {\"title\": \"Homopolymer\"}},";
+	rfile << "\"y\": {\"data\": [";
+	rfile << "{\"values\": [";
+	for(uint32_t i = 0; i < itRg->second.bc.delHomACGTN.size(); ++i) {
+	  if (i > 0) rfile << ",";
+	  rfile << itRg->second.bc.delHomACGTN[i];
+	}
+	rfile << "], \"title\": \"Deletion\"},";
+	rfile << "{\"values\": [";	
+	for(uint32_t i = 0; i < itRg->second.bc.insHomACGTN.size(); ++i) {
+	  if (i > 0) rfile << ",";
+	  rfile << itRg->second.bc.insHomACGTN[i];
+	}
+	rfile << "], \"title\": \"Insertion\"}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"line\"}";
+      }
       
       // Mapping statistics by chromosome
       {
