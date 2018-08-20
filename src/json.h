@@ -50,6 +50,36 @@ namespace bamstats
     // Sample information
     rfile << "{\"samples\": [{";
     rfile << "\"id\": \"" << c.sampleName << "\",";
+
+    // Summary Table
+    rfile << "\"summary\": ";
+    {
+      rfile << "{\"id\": \"summaryTable\",";
+      rfile << "\"title\": \"Summary Statistics\",";
+      rfile << "\"data\": {\"columns\": [\"Sample\", \"Library\", \"#QCFail\", \"QCFailFraction\", \"#DuplicateMarked\", \"DuplicateFraction\", \"#Unmapped\", \"UnmappedFraction\", \"#Mapped\", \"MappedFraction\"], \"rows\": ["; 
+      for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
+	uint64_t totalReadCount = _totalReadCount(itRg);
+	uint64_t mappedCount = itRg->second.rc.mapped1 + itRg->second.rc.mapped2;
+	if (itRg != rgMap.begin()) rfile << ",";
+	rfile << "[";
+	rfile << "\"" << c.sampleName << "\"" << ",";
+	rfile << "\"" << itRg->first << "\"" << ",";
+	rfile << "\"" << itRg->second.rc.qcfail << "\"" << ",";
+	rfile << "\"" << (double) itRg->second.rc.qcfail / (double) totalReadCount << "\"" << ",";
+	rfile << "\"" << itRg->second.rc.dup << "\"" << ",";
+	rfile << "\"" << (double) itRg->second.rc.dup / (double) totalReadCount << "\"" << ",";
+	rfile << "\"" << itRg->second.rc.unmap << "\"" << ",";
+	rfile << "\"" << (double) itRg->second.rc.unmap / (double) totalReadCount << "\"" << ",";
+	rfile << "\"" << mappedCount << "\"" << ",";
+	rfile << "\"" << (double) mappedCount / (double) totalReadCount << "\"";
+	rfile << "]";
+      }
+      rfile << "]},";
+      rfile << "\"type\": \"table\"}";
+    }
+    rfile << ",";
+    
+    // Read-group information
     rfile << "\"readGroups\": [";
 
     // All read-groups
