@@ -56,7 +56,7 @@ namespace bamstats
     {
       rfile << "{\"id\": \"summaryTable\",";
       rfile << "\"title\": \"Summary Statistics\",";
-      rfile << "\"data\": {\"columns\": [\"Sample\", \"Library\", \"#QCFail\", \"QCFailFraction\", \"#DuplicateMarked\", \"DuplicateFraction\", \"#Unmapped\", \"UnmappedFraction\", \"#Mapped\", \"MappedFraction\"], \"rows\": ["; 
+      rfile << "\"data\": {\"columns\": [\"Sample\", \"Library\", \"#QCFail\", \"QCFailFraction\", \"#DuplicateMarked\", \"DuplicateFraction\", \"#Unmapped\", \"UnmappedFraction\", \"#Mapped\", \"MappedFraction\", \"#MappedRead1\", \"#MappedRead2\", \"RatioMapped2vsMapped1\", \"#MappedForward\", \"MappedForwardFraction\", \"#MappedReverse\", \"MappedReverseFraction\"], \"rows\": ["; 
       for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
 	uint64_t totalReadCount = _totalReadCount(itRg);
 	uint64_t mappedCount = itRg->second.rc.mapped1 + itRg->second.rc.mapped2;
@@ -64,14 +64,21 @@ namespace bamstats
 	rfile << "[";
 	rfile << "\"" << c.sampleName << "\"" << ",";
 	rfile << "\"" << itRg->first << "\"" << ",";
-	rfile << "\"" << itRg->second.rc.qcfail << "\"" << ",";
-	rfile << "\"" << (double) itRg->second.rc.qcfail / (double) totalReadCount << "\"" << ",";
-	rfile << "\"" << itRg->second.rc.dup << "\"" << ",";
-	rfile << "\"" << (double) itRg->second.rc.dup / (double) totalReadCount << "\"" << ",";
-	rfile << "\"" << itRg->second.rc.unmap << "\"" << ",";
-	rfile << "\"" << (double) itRg->second.rc.unmap / (double) totalReadCount << "\"" << ",";
-	rfile << "\"" << mappedCount << "\"" << ",";
-	rfile << "\"" << (double) mappedCount / (double) totalReadCount << "\"";
+	rfile << itRg->second.rc.qcfail << ",";
+	rfile << (double) itRg->second.rc.qcfail / (double) totalReadCount << ",";
+	rfile << itRg->second.rc.dup << ",";
+	rfile << (double) itRg->second.rc.dup / (double) totalReadCount << ",";
+	rfile << itRg->second.rc.unmap << ",";
+	rfile << (double) itRg->second.rc.unmap / (double) totalReadCount << ",";
+	rfile << mappedCount << ",";
+	rfile << (double) mappedCount / (double) totalReadCount << ",";
+	rfile << itRg->second.rc.mapped1 << ",";
+	rfile << itRg->second.rc.mapped2 << ",";
+	rfile << (double) itRg->second.rc.mapped2 / (double) itRg->second.rc.mapped1 << ",";
+	rfile << itRg->second.rc.forward << ",";
+	rfile << (double) itRg->second.rc.forward / (double) mappedCount << ",";
+	rfile << itRg->second.rc.reverse << ",";
+	rfile << (double) itRg->second.rc.reverse / (double) mappedCount;	
 	rfile << "]";
       }
       rfile << "]},";
