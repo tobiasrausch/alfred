@@ -16,7 +16,7 @@ submitButton.addEventListener('click', function() {
   run()
 })
 
-let data, exampleData
+let data, exampleData, readGroups
 const exampleButton = document.getElementById('btn-example')
 exampleButton.addEventListener('click', showExample)
 const urlExample = document.getElementById('link-example')
@@ -29,6 +29,7 @@ const resultInfo = document.getElementById('result-info')
 const resultError = document.getElementById('result-error')
 const selectSample = document.getElementById('select-sample')
 const selectReadGroup = document.getElementById('select-rg')
+const summaryTab = document.getElementById('summary-tab')
 
 function run() {
   const file = inputFile.files[0]
@@ -39,6 +40,7 @@ function run() {
   hideElement(resultContainer)
   hideElement(resultError)
   showElement(resultInfo)
+  summaryTab.innerHTML = ''
 
   const fileReader = new FileReader()
   const isGzip = /\.gz$/.test(file.name)
@@ -65,7 +67,7 @@ function handleSuccess(data) {
   chartsContainer.innerHTML = ''
 
   const samples = data.samples.map(sample => sample.id)
-  const readGroups = {}
+  readGroups = {}
   data.samples.forEach(sample => {
     readGroups[sample.id] = sample.readGroups.map(rg => rg.id)
   })
@@ -75,6 +77,19 @@ function handleSuccess(data) {
   selectReadGroup.innerHTML = readGroups[samples[0]]
     .map(rg => `<option>${rg}</option>`)
     .join('')
+
+  table(
+    {
+      title: data.samples[0].summary.title,
+      data: {
+        columns: data.samples[0].summary.data.columns,
+        rows: data.samples
+          .map(s => s.summary.data.rows)
+          .reduce((acc, cur) => acc.concat(cur))
+      }
+    },
+    summaryTab
+  )
 
   vis(data, samples[0], readGroups[samples[0]][0])
 }
@@ -110,13 +125,13 @@ function vis(data, sample, readGroup) {
     .readGroups.find(rg => rg.id === readGroup)
 
   for (const metric of dataRg.metrics) {
-    chartDispatch[metric.type](metric)
+    chartDispatch[metric.type](metric, chartsContainer)
   }
 }
 
-function chart(metricData) {
+function chart(metricData, parent) {
   const container = document.createElement('div')
-  chartsContainer.appendChild(container)
+  parent.appendChild(container)
 
   const xData = metricData.x.data[0].values
   const chartData = []
@@ -126,7 +141,7 @@ function chart(metricData) {
       y: y.values,
       name: y.title || ''
     }
-    if (metricData.type === 'bar'){
+    if (metricData.type === 'bar') {
       trace.type = 'bar'
     }
     chartData.push(trace)
@@ -159,7 +174,7 @@ function chart(metricData) {
   Plotly.newPlot(container, chartData, layout)
 }
 
-function table(tableData) {
+function table(tableData, parent) {
   const html = `
     <h4>${tableData.title}</h4>
     <table class="table table-sm table-striped table-hover">
@@ -183,12 +198,13 @@ function table(tableData) {
   `
   const element = document.createElement('div')
   element.innerHTML = html
-  chartsContainer.appendChild(element)
+  parent.appendChild(element)
 }
 
 function showExample() {
   hideElement(resultContainer)
   chartsContainer.innerHTML = ''
+  summaryTab.innerHTML = ''
   showElement(resultInfo)
   resultLink.click()
 

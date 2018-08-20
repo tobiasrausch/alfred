@@ -6,7 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <title>Alfred: BAM Alignment Statistics | GEAR</title>
   <meta name="description" content="BAM Alignment Statistics.">
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
+    crossorigin="anonymous">
   <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.6/css/all.css">
   <link rel="stylesheet" href="static/css/gear.css">
 </head>
@@ -15,14 +16,14 @@
   <header class="px-0 py-4">
     <div class="container">
       <h1 class="display-4 app-name">Alfred</h1>
-        <p class="lead">BAM Alignment Statistics.</p>
-        <a class="plain" href="https://www-db.embl.de/EMBLPersonGroup-PersonPicture/MailForm/?recipient=ggenomics" target="_blank">
-          <i class="fas fa-question"></i> Get help
-        </a>
-        ·
-        <a class="plain" target="_blank" href="https://github.com/gear-genomics/alfred-ui">
-          <i class="fab fa-github-alt"></i> Source
-        </a>
+      <p class="lead">BAM Alignment Statistics.</p>
+      <a class="plain" href="https://www-db.embl.de/EMBLPersonGroup-PersonPicture/MailForm/?recipient=ggenomics" target="_blank">
+        <i class="fas fa-question"></i> Get help
+      </a>
+      ·
+      <a class="plain" target="_blank" href="https://github.com/gear-genomics/alfred-ui">
+        <i class="fab fa-github-alt"></i> Source
+      </a>
     </div>
   </header>
 
@@ -34,18 +35,25 @@
         <a class="nav-link active" href="#input-tab">Input</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="#result-tab" id="link-results">Results</a>
+        <a class="nav-link" href="#result-tab" id="link-results">Sample stats</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="#summary-tab" id="link-summary">Summary stats</a>
       </li>
     </ul>
     <div class="tab-content" id="main-tabs">
       <div class="tab-pane show active" id="input-tab">
-	<div class="form-group">
-	  <label for="inputFile">
-	    This is the web front end of <a href="https://github.com/tobiasrausch/alfred/">Alfred</a>, an efficient and versatile BAM alignment quality control method. You can use the web application to visualize and plot Alfred's statistic file. Please first QC your BAM file using <a href="https://github.com/tobiasrausch/alfred/">Alfred</a> and then upload the JSON statistics file below (<code>.json.gz</code>).
-	  </label>
+        <div class="form-group">
+          <label for="inputFile">
+            This is the web front end of
+            <a href="https://github.com/tobiasrausch/alfred/">Alfred</a>, an efficient and versatile BAM alignment quality control method. You can use the web application
+            to visualize and plot Alfred's statistic file. Please first QC your BAM file using
+            <a href="https://github.com/tobiasrausch/alfred/">Alfred</a> and then upload the JSON statistics file below (
+            <code>.json.gz</code>).
+          </label>
           <input type="file" class="form-control-file" id="inputFile" />
         </div>
-	
+
         <button type="submit" class="btn btn-outline-primary" id="btn-submit">
           <i class="fas fa-rocket" style="margin-right: 5px;"></i>
           Launch Analysis
@@ -75,24 +83,20 @@
           <div class="form-row my-3">
             <div class="col">
               <label for="">Sample</label>
-              <select
-                id="select-sample"
-                class="custom-select"
-                onchange="handleSampleSelectChange()"
-              ></select>
+              <select id="select-sample" class="custom-select" onchange="handleSampleSelectChange()"></select>
             </div>
             <div class="col">
-                <label for="">Read group</label>
-              <select
-                id="select-rg"
-                class="custom-select"
-                onchange="handleReadGroupSelectChange()"
-              ></select>
+              <label for="">Read group</label>
+              <select id="select-rg" class="custom-select" onchange="handleReadGroupSelectChange()"></select>
             </div>
           </div>
           <div id="charts-container"></div>
         </div>
       </div>
+      
+      <div class="tab-pane" id="summary-tab">
+      </div>
+
     </div>
   </main>
 
@@ -126,9 +130,12 @@
     </div>
   </footer>
 
-  <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+  <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+    crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+    crossorigin="anonymous"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+    crossorigin="anonymous"></script>
   <script src="https://cdn.plot.ly/plotly-1.39.4.min.js"></script>
 
   <script src="static/js/alfred.js"></script>
