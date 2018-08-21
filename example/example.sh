@@ -53,6 +53,12 @@ then
 	cd ${BASEDIR}/../gtf/ && ./downloadGTF.sh && cd ${BASEDIR}
     fi
 
+    # Generate exon target file
+    if [ ! -f hg38.exon.bed.gz ]
+    then
+ 	zcat ${BASEDIR}/../gtf/Homo_sapiens.GRCh38.91.gtf.gz  | grep "^[1-9X]" | grep -P "\texon\t" | grep "protein_coding" | grep -P "\tensembl" | cut -f 1,4,5 | sort -k1,1V -k2,2n | sed 's/^/chr/' | gzip -c > hg38.exon.bed.gz
+    fi
+    
     # Download 1000 Genomes exome cram file
     if [ ! -f HG00114.alt_bwamem_GRCh38DH.20150826.GBR.exome.cram ]
     then
@@ -61,7 +67,7 @@ then
     fi
 
     # Run alfred
-    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o HG00114.exome.json.gz -b ${BASEDIR}/../gtf/Homo_sapiens.GRCh38.91.gtf.gz HG00114.alt_bwamem_GRCh38DH.20150826.GBR.exome.cram
+    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o HG00114.exome.json.gz -b hg38.exon.bed.gz HG00114.alt_bwamem_GRCh38DH.20150826.GBR.exome.cram
 
 elif [ ${1} == "benchmark" ]
 then
