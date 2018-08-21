@@ -175,29 +175,31 @@ function chart(metricData, parent) {
 function table(tableData, parent) {
   const html = `
     <h4>${tableData.title}</h4>
-    <table class="table table-sm table-striped table-hover">
-      <thead>
-        <tr>
-          ${tableData.data.columns
-            .map(title => `<th scope="col">${title}</th>`)
-            .join('')}
-        </tr>
-      </thead>
-      <tbody>
-        ${tableData.data.rows
-          .map(
-            row => `<tr>
-            ${row
-              .map(
-                (value, i) =>
-                  `<td title="${tableData.data.columns[i]}">${value}</td>`
-              )
+    <div style="overflow-x: auto;">
+      <table class="table table-sm table-striped table-hover">
+        <thead>
+          <tr>
+            ${tableData.data.columns
+              .map(title => `<th scope="col">${title}</th>`)
               .join('')}
-          </tr>`
-          )
-          .join('')}
-      </tbody>
-    </table>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableData.data.rows
+            .map(
+              row => `<tr>
+              ${row
+                .map(
+                  (value, i) =>
+                    `<td title="${tableData.data.columns[i]}">${value}</td>`
+                )
+                .join('')}
+            </tr>`
+            )
+            .join('')}
+        </tbody>
+      </table>
+    </div>
   `
   const element = document.createElement('div')
   element.innerHTML = html
