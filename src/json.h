@@ -57,7 +57,13 @@ namespace bamstats
       rfile << "{\"id\": \"summaryTable\",";
       rfile << "\"title\": \"Summary Statistics\",";
       rfile << "\"data\": {\"columns\": [\"Sample\", \"Library\", \"#QCFail\", \"QCFailFraction\", \"#DuplicateMarked\", \"DuplicateFraction\", \"#Unmapped\", \"UnmappedFraction\", \"#Mapped\", \"MappedFraction\", \"#MappedRead1\", \"#MappedRead2\", \"RatioMapped2vsMapped1\", \"#MappedForward\", \"MappedForwardFraction\", \"#MappedReverse\", \"MappedReverseFraction\", \"#SecondaryAlignments\", \"SecondaryAlignmentFraction\", \"#SupplementaryAlignments\", \"SupplementaryAlignmentFraction\", \"#SplicedAlignments\", \"SplicedAlignmentFraction\", ";
-      rfile << "\"#Pairs\", \"#MappedPairs\", \"MappedPairsFraction\", \"#MappedSameChr\", \"MappedSameChrFraction\", \"#MappedProperPair\", \"MappedProperFraction\"";
+      rfile << "\"#Pairs\", \"#MappedPairs\", \"MappedPairsFraction\", \"#MappedSameChr\", \"MappedSameChrFraction\", \"#MappedProperPair\", \"MappedProperFraction\", ";
+      rfile << "\"#ReferenceBp\", \"#ReferenceNs\", \"#AlignedBases\", \"#MatchedBases\", \"MatchRate\", \"#MismatchedBases\", \"MismatchRate\", \"#DeletionsCigarD\", \"DeletionRate\", \"HomopolymerContextDel\", \"#InsertionsCigarI\", \"InsertionRate\", \"HomopolymerContextIns\", \"#SoftClippedBases\", \"SoftClipRate\", \"#HardClippedBases\", \"HardClipRate\", \"ErrorRate\", ";
+      rfile << "\"MedianReadLength\", \"DefaultLibraryLayout\", \"MedianInsertSize\", \"MedianCoverage\", \"SDCoverage\", \"CoveredBp\", \"FractionCovered\", \"BpCov1ToCovNRatio\", \"BpCov1ToCov2Ratio\", \"MedianMAPQ\"";
+      if (c.hasRegionFile) {
+	rfile << ",";
+	rfile << "\"#TotalBedBp\", \"#AlignedBasesInBed\", \"FractionInBed\", \"EnrichmentOverBed\"";
+      }
       rfile << "], \"rows\": ["; 
       for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
 	uint64_t totalReadCount = _totalReadCount(itRg);
@@ -105,7 +111,69 @@ namespace bamstats
 	rfile << mappedSameChr << ",";
 	rfile << mappedpairedchrfrac << ",";
 	rfile << mappedProper << ",";
-	rfile << mappedproperfrac;
+	rfile << mappedproperfrac << ",";
+
+	// Homopolymer Context of InDels
+	double insFrac = _homopolymerIndel(itRg->second.bc.insHomACGTN);
+	double delFrac = _homopolymerIndel(itRg->second.bc.delHomACGTN);
+
+	// Error rates
+	uint64_t alignedbases = itRg->second.bc.matchCount + itRg->second.bc.mismatchCount;
+	double errRate = (double) (itRg->second.bc.mismatchCount + itRg->second.bc.delCount + itRg->second.bc.insCount + itRg->second.bc.softClipCount + itRg->second.bc.hardClipCount) / (double) alignedbases;
+	rfile << rf.referencebp << ",";
+	rfile << rf.ncount << ",";
+	rfile << alignedbases << ",";
+	rfile << itRg->second.bc.matchCount << ",";
+	rfile << (double) itRg->second.bc.matchCount / (double) alignedbases << ",";
+	rfile << itRg->second.bc.mismatchCount << ",";
+	rfile << (double) itRg->second.bc.mismatchCount / (double) alignedbases << ",";
+	rfile << itRg->second.bc.delCount << ",";
+	rfile << (double) itRg->second.bc.delCount / (double) alignedbases << ",";
+	rfile << delFrac << ",";
+	rfile << itRg->second.bc.insCount << ",";
+	rfile << (double) itRg->second.bc.insCount / (double) alignedbases << ",";
+	rfile << insFrac << ",";
+	rfile << itRg->second.bc.softClipCount << ",";
+	rfile << (double) itRg->second.bc.softClipCount / (double) alignedbases << ",";
+	rfile << itRg->second.bc.hardClipCount << ",";
+	rfile << (double) itRg->second.bc.hardClipCount / (double) alignedbases << ",";
+	rfile << errRate << ",";
+
+	// Median coverage, read length, etc.
+	int32_t deflayout = _defLayout(itRg);
+	int32_t medISize = _medISize(itRg, deflayout);
+
+	// Standardized SD of genomic coverage
+	double ssdcov = 1000 * sdFromHistogram(itRg->second.bc.bpWithCoverage) / std::sqrt((double) mappedCount);
+	double fraccovbp = (double) itRg->second.bc.nd / (double) (rf.referencebp - rf.ncount);
+	double pbc1 = (double) itRg->second.bc.n1 / (double) itRg->second.bc.nd;
+	double pbc2 = (double) itRg->second.bc.n1 / (double) itRg->second.bc.n2;
+
+	rfile << medianFromHistogram(itRg->second.rc.lRc) << ",";
+	rfile << deflayout << ",";
+	rfile << medISize << ",";
+	rfile <<  medianFromHistogram(itRg->second.bc.bpWithCoverage) << ",";
+	rfile << ssdcov << ",";
+	rfile << itRg->second.bc.nd << ",";
+	rfile << fraccovbp << ",";
+	rfile << pbc1 << ",";
+	rfile << pbc2 << ",";
+	rfile << medianFromHistogram(itRg->second.qc.qcount);
+
+	// Bed metrics
+	if (c.hasRegionFile) {
+	  uint64_t nonN = rf.referencebp - rf.ncount;
+	  typename BedCounts::TOnTargetMap::const_iterator itOT = be.onTarget.find(itRg->first);
+	  uint64_t alignedBedBases = itOT->second[0];
+	  double fractioninbed = (double) alignedBedBases / (double) alignedbases;
+	  double enrichment = fractioninbed / ((double) rf.totalBedSize / (double) nonN);
+	  rfile << ",";
+	  rfile << rf.totalBedSize << ",";
+	  rfile << alignedBedBases << ",";
+	  rfile << fractioninbed << ",";
+	  rfile << enrichment;
+	}
+	
 	rfile << "]";
       }
       rfile << "]},";

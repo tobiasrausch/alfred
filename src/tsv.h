@@ -37,6 +37,43 @@ namespace bamstats
 {
 
   template<typename TVector>
+  inline double
+  _homopolymerIndel(TVector const& vec) {
+    double vecTotal = 0;
+    for(uint32_t i = 0; i < vec.size(); ++i) vecTotal += vec[i];
+    double vecFrac = 0;
+    if (vecTotal > 0) {
+      for(uint32_t i = 0; i < vec.size() - 1; ++i) vecFrac += vec[i];
+      vecFrac /= vecTotal;
+    }
+    return vecFrac;
+  }
+
+  template<typename TRgMapIterator>
+  inline int32_t
+  _medISize(TRgMapIterator const& itRg, int32_t const deflayout) {
+    int32_t medISize = 0;
+    switch(deflayout) {
+    case 0:
+      medISize = medianFromHistogram(itRg->second.pc.fPlus);
+      break;
+    case 1:
+      medISize = medianFromHistogram(itRg->second.pc.fMinus);
+      break;
+    case 2:
+      medISize = medianFromHistogram(itRg->second.pc.rPlus);
+      break;
+    case 3:
+      medISize = medianFromHistogram(itRg->second.pc.rMinus);
+      break;
+    default:
+      break;
+    }
+    return medISize;
+  }
+
+  
+  template<typename TVector>
   inline uint32_t
   _lastNonZeroIdx(TVector const& vec) {
     uint32_t lastNonZeroIdx = 0;
@@ -159,44 +196,17 @@ namespace bamstats
       rcfile << paired << "\t" << mapped << "\t" << mappedpairedfrac << "\t" << mappedSameChr << "\t" << mappedpairedchrfrac << "\t" << mappedProper << "\t" << mappedproperfrac << "\t";
 
       // Homopolymer Context of InDels
-      double insTotal = 0;
-      for(uint32_t i = 0; i < itRg->second.bc.insHomACGTN.size(); ++i) insTotal += itRg->second.bc.insHomACGTN[i];
-      double insFrac = 0;
-      if (insTotal > 0) {
-	for(uint32_t i = 0; i < itRg->second.bc.insHomACGTN.size() - 1; ++i) insFrac += itRg->second.bc.insHomACGTN[i];
-	insFrac /= insTotal;
-      }
-      double delTotal = 0;
-      for(uint32_t i = 0; i < itRg->second.bc.delHomACGTN.size(); ++i) delTotal += itRg->second.bc.delHomACGTN[i];
-      double delFrac = 0;
-      if (delTotal > 0) {
-	for(uint32_t i = 0; i < itRg->second.bc.delHomACGTN.size() - 1; ++i) delFrac += itRg->second.bc.delHomACGTN[i];
-	delFrac /= delTotal;
-      }
-	
+      double insFrac = _homopolymerIndel(itRg->second.bc.insHomACGTN);
+      double delFrac = _homopolymerIndel(itRg->second.bc.delHomACGTN);
+      
       // Error rates
       uint64_t alignedbases = itRg->second.bc.matchCount + itRg->second.bc.mismatchCount;
-      rcfile << rf.referencebp << "\t" << rf.ncount << "\t" << alignedbases << "\t" << itRg->second.bc.matchCount << "\t" << (double) itRg->second.bc.matchCount / (double) alignedbases << "\t" << itRg->second.bc.mismatchCount << "\t" << (double) itRg->second.bc.mismatchCount / (double) alignedbases << "\t" << itRg->second.bc.delCount << "\t" << (double) itRg->second.bc.delCount / (double) alignedbases << "\t" << delFrac << "\t" << itRg->second.bc.insCount << "\t" << (double) itRg->second.bc.insCount / (double) alignedbases << "\t" << insFrac << "\t" << itRg->second.bc.softClipCount << "\t" << (double) itRg->second.bc.softClipCount / (double) alignedbases << "\t" << itRg->second.bc.hardClipCount << "\t" << (double) itRg->second.bc.hardClipCount / (double) alignedbases << "\t" << (double) (itRg->second.bc.mismatchCount + itRg->second.bc.delCount + itRg->second.bc.insCount + itRg->second.bc.softClipCount + itRg->second.bc.hardClipCount) / (double) alignedbases  << "\t";
+      double errRate = (double) (itRg->second.bc.mismatchCount + itRg->second.bc.delCount + itRg->second.bc.insCount + itRg->second.bc.softClipCount + itRg->second.bc.hardClipCount) / (double) alignedbases;
+      rcfile << rf.referencebp << "\t" << rf.ncount << "\t" << alignedbases << "\t" << itRg->second.bc.matchCount << "\t" << (double) itRg->second.bc.matchCount / (double) alignedbases << "\t" << itRg->second.bc.mismatchCount << "\t" << (double) itRg->second.bc.mismatchCount / (double) alignedbases << "\t" << itRg->second.bc.delCount << "\t" << (double) itRg->second.bc.delCount / (double) alignedbases << "\t" << delFrac << "\t" << itRg->second.bc.insCount << "\t" << (double) itRg->second.bc.insCount / (double) alignedbases << "\t" << insFrac << "\t" << itRg->second.bc.softClipCount << "\t" << (double) itRg->second.bc.softClipCount / (double) alignedbases << "\t" << itRg->second.bc.hardClipCount << "\t" << (double) itRg->second.bc.hardClipCount / (double) alignedbases << "\t" << errRate  << "\t";
 
       // Median coverage, read length, etc.
-      int32_t medISize = 0;
       int32_t deflayout = _defLayout(itRg);
-      switch(deflayout) {
-      case 0:
-	medISize = medianFromHistogram(itRg->second.pc.fPlus);
-	break;
-      case 1:
-	medISize = medianFromHistogram(itRg->second.pc.fMinus);
-	break;
-      case 2:
-	medISize = medianFromHistogram(itRg->second.pc.rPlus);
-	break;
-      case 3:
-	medISize = medianFromHistogram(itRg->second.pc.rMinus);
-	break;
-      default:
-	break;
-      }
+      int32_t medISize = _medISize(itRg, deflayout);
 
       // Standardized SD of genomic coverage
       double ssdcov = 1000 * sdFromHistogram(itRg->second.bc.bpWithCoverage) / std::sqrt((double) mappedCount);
