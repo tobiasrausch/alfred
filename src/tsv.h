@@ -98,6 +98,21 @@ namespace bamstats
     return itRg->second.rc.qcfail + itRg->second.rc.dup + itRg->second.rc.unmap + itRg->second.rc.mapped1 + itRg->second.rc.mapped2;
   }
 
+  template<typename TRgMapIterator>
+  inline int32_t
+  _defLayout(TRgMapIterator const& itRg) {
+    int32_t deflayout = 0;
+    int32_t maxcount = itRg->second.pc.orient[0];
+    for(int32_t i = 1; i<4; ++i) {
+      if (itRg->second.pc.orient[i] > maxcount) {
+	maxcount = itRg->second.pc.orient[i];
+	deflayout = i;
+      }
+    }
+    return deflayout;
+  }
+
+  
   template<typename TConfig, typename TRGMap>
   inline void
   qcTsvOut(TConfig const& c, bam_hdr_t const* hdr, TRGMap const& rgMap, BedCounts const& be, ReferenceFeatures const& rf) {
@@ -135,14 +150,6 @@ namespace bamstats
       int64_t mapped = itRg->second.pc.mapped / 2;
       int64_t mappedSameChr = itRg->second.pc.mappedSameChr / 2;
       int64_t mappedProper = itRg->second.pc.mappedProper / 2;
-      int32_t deflayout = 0;
-      int32_t maxcount = itRg->second.pc.orient[0];
-      for(int32_t i = 1; i<4; ++i) {
-	if (itRg->second.pc.orient[i] > maxcount) {
-	  maxcount = itRg->second.pc.orient[i];
-	  deflayout = i;
-	}
-      }
       double mappedpairedfrac = 0;
       if (paired > 0) mappedpairedfrac = (double) mapped / (double) paired;
       double mappedpairedchrfrac = 0;
@@ -173,6 +180,7 @@ namespace bamstats
 
       // Median coverage, read length, etc.
       int32_t medISize = 0;
+      int32_t deflayout = _defLayout(itRg);
       switch(deflayout) {
       case 0:
 	medISize = medianFromHistogram(itRg->second.pc.fPlus);

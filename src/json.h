@@ -56,7 +56,9 @@ namespace bamstats
     {
       rfile << "{\"id\": \"summaryTable\",";
       rfile << "\"title\": \"Summary Statistics\",";
-      rfile << "\"data\": {\"columns\": [\"Sample\", \"Library\", \"#QCFail\", \"QCFailFraction\", \"#DuplicateMarked\", \"DuplicateFraction\", \"#Unmapped\", \"UnmappedFraction\", \"#Mapped\", \"MappedFraction\", \"#MappedRead1\", \"#MappedRead2\", \"RatioMapped2vsMapped1\", \"#MappedForward\", \"MappedForwardFraction\", \"#MappedReverse\", \"MappedReverseFraction\"], \"rows\": ["; 
+      rfile << "\"data\": {\"columns\": [\"Sample\", \"Library\", \"#QCFail\", \"QCFailFraction\", \"#DuplicateMarked\", \"DuplicateFraction\", \"#Unmapped\", \"UnmappedFraction\", \"#Mapped\", \"MappedFraction\", \"#MappedRead1\", \"#MappedRead2\", \"RatioMapped2vsMapped1\", \"#MappedForward\", \"MappedForwardFraction\", \"#MappedReverse\", \"MappedReverseFraction\", \"#SecondaryAlignments\", \"SecondaryAlignmentFraction\", \"#SupplementaryAlignments\", \"SupplementaryAlignmentFraction\", \"#SplicedAlignments\", \"SplicedAlignmentFraction\", ";
+      rfile << "\"#Pairs\", \"#MappedPairs\", \"MappedPairsFraction\", \"#MappedSameChr\", \"MappedSameChrFraction\", \"#MappedProperPair\", \"MappedProperFraction\"";
+      rfile << "], \"rows\": ["; 
       for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
 	uint64_t totalReadCount = _totalReadCount(itRg);
 	uint64_t mappedCount = itRg->second.rc.mapped1 + itRg->second.rc.mapped2;
@@ -78,13 +80,39 @@ namespace bamstats
 	rfile << itRg->second.rc.forward << ",";
 	rfile << (double) itRg->second.rc.forward / (double) mappedCount << ",";
 	rfile << itRg->second.rc.reverse << ",";
-	rfile << (double) itRg->second.rc.reverse / (double) mappedCount;	
+	rfile << (double) itRg->second.rc.reverse / (double) mappedCount << ",";
+	rfile << itRg->second.rc.secondary << ",";
+	rfile << (double) itRg->second.rc.secondary / (double) mappedCount << ",";
+	rfile << itRg->second.rc.supplementary << ",";
+	rfile << (double) itRg->second.rc.supplementary / (double) mappedCount << ",";
+	rfile << itRg->second.rc.spliced << ",";
+	rfile << (double) itRg->second.rc.spliced / (double) mappedCount << ",";
+
+	// Paired counts
+	int64_t paired = itRg->second.pc.paired / 2;
+	int64_t mapped = itRg->second.pc.mapped / 2;
+	int64_t mappedSameChr = itRg->second.pc.mappedSameChr / 2;
+	int64_t mappedProper = itRg->second.pc.mappedProper / 2;
+	double mappedpairedfrac = 0;
+	if (paired > 0) mappedpairedfrac = (double) mapped / (double) paired;
+	double mappedpairedchrfrac = 0;
+	if (paired > 0) mappedpairedchrfrac = (double) mappedSameChr / (double) paired;
+	double mappedproperfrac = 0;
+	if (paired > 0) mappedproperfrac = (double) mappedProper / (double) paired;
+	rfile << paired << ",";
+	rfile << mapped << ",";
+	rfile << mappedpairedfrac << ",";
+	rfile << mappedSameChr << ",";
+	rfile << mappedpairedchrfrac << ",";
+	rfile << mappedProper << ",";
+	rfile << mappedproperfrac;
 	rfile << "]";
       }
       rfile << "]},";
       rfile << "\"type\": \"table\"}";
     }
     rfile << ",";
+    rfile << std::endl;
     
     // Read-group information
     rfile << "\"readGroups\": [";
