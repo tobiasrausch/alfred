@@ -1,6 +1,5 @@
 <p align="center">
-   <img width="473" height="91" src="https://raw.githubusercontent.com/tobiasrausch/alfred/master/alfred.png">
-   <h1 align="center"></h1>
+   <img width="450" src="https://raw.githubusercontent.com/tobiasrausch/alfred/master/alfred.png">
 </p>
 
 [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat-square)](http://bioconda.github.io/recipes/alfred/README.html)
