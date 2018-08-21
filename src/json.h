@@ -64,6 +64,14 @@ namespace bamstats
 	rfile << ",";
 	rfile << "\"#TotalBedBp\", \"#AlignedBasesInBed\", \"FractionInBed\", \"EnrichmentOverBed\"";
       }
+      if (c.isMitagged) {
+	rfile << ",";
+	rfile << "\"#MItagged\", \"FractionMItagged\", \"#UMIs\"";
+      }
+      if (c.isHaplotagged) {
+	rfile << ",";
+	rfile << "\"#HaploTagged\", \"FractionHaploTagged\", \"#PhasedBlocks\", \"N50PhasedBlockLength\"";
+      }
       rfile << "], \"rows\": ["; 
       for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
 	uint64_t totalReadCount = _totalReadCount(itRg);
@@ -173,7 +181,20 @@ namespace bamstats
 	  rfile << fractioninbed << ",";
 	  rfile << enrichment;
 	}
-	
+	if (c.isMitagged) {
+	  rfile << ",";
+	  rfile << itRg->second.rc.mitagged << ",";
+	  rfile << (double) itRg->second.rc.mitagged / (double) totalReadCount << ",";
+	  rfile << itRg->second.rc.umi.count();
+	}
+	if (c.isHaplotagged) {
+	  int32_t n50ps = n50PhasedBlockLength(itRg->second.rc.brange);
+	  rfile << ",";
+	  rfile << itRg->second.rc.haplotagged << ",";
+	  rfile << (double) itRg->second.rc.haplotagged / (double) totalReadCount << ",";
+	  rfile << phasedBlocks(itRg->second.rc.brange) << ",";
+	  rfile << n50ps;
+	}
 	rfile << "]";
       }
       rfile << "]},";
