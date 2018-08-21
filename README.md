@@ -49,7 +49,7 @@ BAM Alignment Quality Control for Targeted Sequencing
 
 If target regions are provided, Alfred computes the average coverage for each target and the on-target rate.
 
-`./src/alfred qc -r <ref.fa> -b <targets.bed> -o <qc.tsv.gz> <align.bam>`
+`./src/alfred qc -r <ref.fa> -b <targets.bed.gz> -o <qc.tsv.gz> <align.bam>`
 
 For instance, for a human whole-exome data set.
 
