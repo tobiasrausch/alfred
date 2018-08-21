@@ -1,8 +1,6 @@
 import axios from 'axios'
 import pako from 'pako'
 
-const API_URL = process.env.API_URL
-
 $('#mainTab a').on('click', function(e) {
   e.preventDefault()
   $(this).tab('show')
