@@ -6,12 +6,20 @@ then
     exit -1
 fi
 
-# Check samtools
+# Check dependency tools
 samtools --version
 if [ $? -ne 0 ]
 then
     echo ""
     echo "Samtools is required!"
+    echo ""
+    exit
+fi
+python ../scripts/merge.py
+if [ $? -ne 0 ]
+then
+    echo ""
+    echo "Python is required!"
     echo ""
     exit
 fi
