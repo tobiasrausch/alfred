@@ -362,7 +362,9 @@ namespace bamstats
 	} else {
 	  ++itRg->second.rc.mappedchr[refIndex];
 	}
-	continue;
+	if (rec->core.flag & BAM_FSECONDARY) {
+	  if (!c.secondary) continue;
+	} else continue;
       }
       ++itRg->second.qc.qcount[(int32_t) rec->core.qual];
       ++itRg->second.rc.mappedchr[refIndex];

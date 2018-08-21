@@ -54,6 +54,7 @@ struct ConfigQC {
   bool singleRG;
   bool isHaplotagged;
   bool isMitagged;
+  bool secondary;
   std::string rgname;
   std::string sampleName;
   std::string format;
@@ -77,6 +78,7 @@ int qc(int argc, char **argv) {
     ("bed,b", boost::program_options::value<boost::filesystem::path>(&c.regionFile), "bed file with target regions (optional)")
     ("format,f", boost::program_options::value<std::string>(&c.format)->default_value("tsv"), "output format [tsv|json]")
     ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("qc.tsv.gz"), "gzipped output file")
+    ("secondary,s", "evaluate secondary alignments")
     ;
 
   boost::program_options::options_description rgopt("Read-group options");
@@ -110,6 +112,10 @@ int qc(int argc, char **argv) {
     std::cout << visible_options << "\n";
     return 1;
   }
+
+  // Secondary alignments
+  if (vm.count("secondary")) c.secondary = true;
+  else c.secondary = false;
 
   // Ignore read groups
   if (vm.count("ignore")) {
