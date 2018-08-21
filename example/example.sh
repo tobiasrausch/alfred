@@ -7,7 +7,7 @@ then
 fi
 
 # Check dependency tools
-wget --version
+wget --version > /dev/null
 if [ $? -ne 0 ]
 then
     echo ""
@@ -15,7 +15,7 @@ then
     echo ""
     exit
 fi
-samtools --version
+samtools --version > /dev/null
 if [ $? -ne 0 ]
 then
     echo ""
@@ -23,7 +23,7 @@ then
     echo ""
     exit
 fi
-python ../scripts/merge.py
+python ../scripts/merge.py > /dev/null
 if [ $? -ne 0 ]
 then
     echo ""
