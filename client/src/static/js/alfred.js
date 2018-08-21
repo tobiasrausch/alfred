@@ -189,7 +189,12 @@ function table(tableData, parent) {
         ${tableData.data.rows
           .map(
             row => `<tr>
-            ${row.map(value => `<td>${value}</td>`).join('')}
+            ${row
+              .map(
+                (value, i) =>
+                  `<td title="${tableData.data.columns[i]}">${value}</td>`
+              )
+              .join('')}
           </tr>`
           )
           .join('')}
