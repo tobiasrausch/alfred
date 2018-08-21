@@ -8,6 +8,7 @@
 [![Build Status](https://travis-ci.org/dellytools/delly.svg?branch=master)](https://travis-ci.org/tobiasrausch/alfred)
 [![GitHub license](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://raw.githubusercontent.com/tobiasrausch/alfred/master/LICENSE)
 [![GitHub Releases](https://img.shields.io/github/release/tobiasrausch/alfred.svg)](https://github.com/tobiasrausch/alfred/releases)
+[![GitHub Issues](https://img.shields.io/github/issues/tobiasrausch/alfred.svg)](https://github.com/tobiasrausch/alfred/issues)
 
 
 Alfred installation
