@@ -14,6 +14,7 @@ then
     # Run the E.coli example
     echo "tiny example"
     ${BASEDIR}/../src/alfred qc -r ${BASEDIR}/../exampledata/E.coli.fa.gz -f json -o ecoli.json.gz ${BASEDIR}/../exampledata/E.coli.cram
+
 elif [ ${1} == "full" ]
 then
     echo "full example"
@@ -51,6 +52,17 @@ then
     then
 	cd ${BASEDIR}/../gtf/ && ./downloadGTF.sh && cd ${BASEDIR}
     fi
+
+    # Download 1000 Genomes exome cram file
+    if [ ! -f HG00114.alt_bwamem_GRCh38DH.20150826.GBR.exome.cram ]
+    then
+	wget 'ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000_genomes_project/data/GBR/HG00114/exome_alignment/HG00114.alt_bwamem_GRCh38DH.20150826.GBR.exome.cram'
+	wget 'ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000_genomes_project/data/GBR/HG00114/exome_alignment/HG00114.alt_bwamem_GRCh38DH.20150826.GBR.exome.cram.crai'
+    fi
+
+    # Run alfred
+    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o HG00733.json.gz -b ${BASEDIR}/../gtf/Homo_sapiens.GRCh38.91.gtf.gz HG00733_I_045.alt_bwamem_GRCh38DH.20151004.CHS.monodinuc_strandseq.bam
+
 elif [ ${1} == "benchmark" ]
 then
     # Download 1000 Genomes exome cram file
