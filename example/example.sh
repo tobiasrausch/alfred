@@ -35,14 +35,6 @@ then
 	echo ""
 	exit
     fi
-    python ${BASEDIR}/../scripts/merge.py > /dev/null
-    if [ $? -ne 0 ]
-    then
-	echo ""
-	echo "Python is required!"
-	echo ""
-	exit
-    fi
     
     # Download and index reference
     if [ ! -f GRCh38_full_analysis_set_plus_decoy_hla.fa ]
@@ -54,6 +46,14 @@ then
 	samtools faidx GRCh38_full_analysis_set_plus_decoy_hla.fa
     fi
 
+    # Download gene annotation
+    if [ ! -f ${BASEDIR}/../gtf/Homo_sapiens.GRCh38.91.gtf.gz ]
+    then
+	cd ${BASEDIR}/../gtf/ && ./downloadGTF.sh && cd ${BASEDIR}
+    fi
+elif [ ${1} == "benchmark" ]
+then
+    # Download 1000 Genomes exome cram file
     if [ ! -f HG00733_I_045.alt_bwamem_GRCh38DH.20151004.CHS.monodinuc_strandseq.bam ]
     then
 	wget 'ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/working/20151203_strand_seq/HG00733/HG00733_I_045.alt_bwamem_GRCh38DH.20151004.CHS.monodinuc_strandseq.bam'
@@ -67,3 +67,4 @@ then
 else
     echo "Unknown mode ${1}"
 fi
+
