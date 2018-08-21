@@ -335,39 +335,42 @@ namespace bamstats
 
       // Insert Size Histogram
       {
-	rfile << ",{\"id\": \"insertSize\", \"title\": \"Insert size histogram\",";
-	rfile << "\"x\": {\"data\": [{\"values\": [";
 	uint32_t lastValidIS = _lastNonZeroIdxISize(itRg->second.pc);
-	for(uint32_t i = 0; i <= lastValidIS; ++i) {
-	  if (i > 0) rfile << ",";
-	  rfile << i;
+	// Only output for PE data
+	if (lastValidIS > 0) {
+	  rfile << ",{\"id\": \"insertSize\", \"title\": \"Insert size histogram\",";
+	  rfile << "\"x\": {\"data\": [{\"values\": [";
+	  for(uint32_t i = 0; i <= lastValidIS; ++i) {
+	    if (i > 0) rfile << ",";
+	    rfile << i;
+	  }
+	  rfile << "]}], \"axis\": {\"title\": \"Insert Size\", \"range\": [0,1000]}},";
+	  rfile << "\"y\": {\"data\": [";
+	  rfile << "{\"values\": [";
+	  for(uint32_t i = 0; i <= lastValidIS; ++i) {
+	    if (i > 0) rfile << ",";
+	    rfile << itRg->second.pc.fPlus[i];
+	  }
+	  rfile << "], \"title\": \"F+\"},";
+	  rfile << "{\"values\": [";
+	  for(uint32_t i = 0; i <= lastValidIS; ++i) {
+	    if (i > 0) rfile << ",";
+	    rfile << itRg->second.pc.fMinus[i];
+	  }
+	  rfile << "], \"title\": \"F-\"},";
+	  rfile << "{\"values\": [";
+	  for(uint32_t i = 0; i <= lastValidIS; ++i) {
+	    if (i > 0) rfile << ",";
+	    rfile << itRg->second.pc.rPlus[i];
+	  }
+	  rfile << "], \"title\": \"R+\"},";
+	  rfile << "{\"values\": [";
+	  for(uint32_t i = 0; i <= lastValidIS; ++i) {
+	    if (i > 0) rfile << ",";
+	    rfile << itRg->second.pc.rMinus[i];
+	  }
+	  rfile << "], \"title\": \"R-\"}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"line\"}";
 	}
-	rfile << "]}], \"axis\": {\"title\": \"Insert Size\", \"range\": [0,1000]}},";
-	rfile << "\"y\": {\"data\": [";
-	rfile << "{\"values\": [";
-	for(uint32_t i = 0; i <= lastValidIS; ++i) {
-	  if (i > 0) rfile << ",";
-	  rfile << itRg->second.pc.fPlus[i];
-	}
-	rfile << "], \"title\": \"F+\"},";
-	rfile << "{\"values\": [";
-	for(uint32_t i = 0; i <= lastValidIS; ++i) {
-	  if (i > 0) rfile << ",";
-	  rfile << itRg->second.pc.fMinus[i];
-	}
-	rfile << "], \"title\": \"F-\"},";
-	rfile << "{\"values\": [";
-	for(uint32_t i = 0; i <= lastValidIS; ++i) {
-	  if (i > 0) rfile << ",";
-	  rfile << itRg->second.pc.rPlus[i];
-	}
-	rfile << "], \"title\": \"R+\"},";
-	rfile << "{\"values\": [";
-	for(uint32_t i = 0; i <= lastValidIS; ++i) {
-	  if (i > 0) rfile << ",";
-	  rfile << itRg->second.pc.rMinus[i];
-	}
-	rfile << "], \"title\": \"R-\"}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"line\"}";
       }
 
       // Bed specific data
