@@ -4,6 +4,7 @@ src/count
 exon/
 gtf/
 bin/
+example/
 
 *.pyc
 *~
