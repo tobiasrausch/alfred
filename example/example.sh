@@ -7,6 +7,14 @@ then
 fi
 
 # Check dependency tools
+wget --version
+if [ $? -ne 0 ]
+then
+    echo ""
+    echo "wget is required!"
+    echo ""
+    exit
+fi
 samtools --version
 if [ $? -ne 0 ]
 then
