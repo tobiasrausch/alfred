@@ -451,9 +451,11 @@ namespace bamstats
 	rfile << "\"x\": {\"data\": [{\"values\": [";
 	double refTotal = 0;
 	double sampleTotal = 0;
+	double beTotal = 0;
 	for(uint32_t i = 0; i < 102; ++i) {
 	  refTotal += rf.refGcContent[i];
 	  sampleTotal += itRg->second.rc.gcContent[i];
+	  if (c.hasRegionFile) beTotal += be.bedGcContent[i];
 	}
 	for(uint32_t i = 0; i < 102; ++i) {
 	  if (i > 0) rfile << ",";
@@ -469,6 +471,16 @@ namespace bamstats
 	  rfile << frac;
 	}
 	rfile << "], \"title\": \"Reference\"},";
+	if (c.hasRegionFile) {
+	  rfile << "{\"values\": [";
+	  for(uint32_t i = 0; i < 102; ++i) {
+	    if (i > 0) rfile << ",";
+	    double frac = 0;
+	    if (beTotal > 0) frac = (double) be.bedGcContent[i] / beTotal;
+	    rfile << frac;
+	  }
+	  rfile << "], \"title\": \"Target\"},";
+	}
 	rfile << "{\"values\": [";
 	for(uint32_t i = 0; i < 102; ++i) {
 	  if (i > 0) rfile << ",";

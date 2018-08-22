@@ -281,6 +281,29 @@ namespace bamstats
 	    }
 	    if (!nsum) ++rf.refGcContent[gcsum];
 	  }
+	  if ((c.hasRegionFile) && (!rf.gRegions[refIndex].empty())) {
+	    // Target GC
+	    for(uint32_t k = 0; k < rf.gRegions[refIndex].size(); ++k) {
+	      int32_t regstart = std::max(rf.gRegions[refIndex][k].start, (int32_t) halfwin);
+	      int32_t regend = std::min(rf.gRegions[refIndex][k].end, (int32_t) (hdr->target_len[refIndex] - halfwin));
+	      if (regstart < regend) {
+		for(int32_t pos = regstart; pos < regend; ++pos) {
+		  if (pos == regstart) {
+		    for(int32_t i = pos - halfwin; i < (int32_t) (pos+halfwin+1); ++i) {
+		      nsum += nrun[i];
+		      gcsum += gcref[i];
+		    }
+		  } else {
+		    nsum -= nrun[pos - halfwin - 1];
+		    gcsum -= gcref[pos - halfwin - 1];
+		    nsum += nrun[pos + halfwin];
+		    gcsum += gcref[pos + halfwin];
+		  }
+		  if (!nsum) ++be.bedGcContent[gcsum];
+		}
+	      }
+	    }
+	  }
 	}
 	
 	// Resize coverage vectors

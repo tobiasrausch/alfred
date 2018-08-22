@@ -218,14 +218,17 @@ namespace bamstats
 
     typedef std::vector<int64_t> TOnTargetBp;
     typedef boost::unordered_map<std::string, TOnTargetBp> TOnTargetMap;
+    typedef std::vector<uint64_t> TGCContent;
     
     int32_t stepsize;
     int32_t onTSize;
     TGenomicBp gCov;
     TOnTargetMap onTarget;
+    TGCContent bedGcContent;
     
     BedCounts(int32_t nchr, int32_t s, int32_t vs) : stepsize(s), onTSize(vs) {
       gCov.resize(nchr, TRgBpMap());
+      bedGcContent.resize(102, 0);
     }
   };
   
