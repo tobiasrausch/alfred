@@ -1,5 +1,7 @@
 import axios from 'axios'
+import { saveAs } from 'file-saver/FileSaver'
 import { zip } from 'lodash'
+import csv from 'papaparse'
 import pako from 'pako'
 
 $('#mainTab a').on('click', function(e) {
@@ -211,10 +213,16 @@ function table(tableData, parent) {
 function summaryTable(tableData, transpose = false) {
   let html = `
     <h4>${tableData.title}</h4>
-    <button type="button" class="btn btn-outline-primary mb-2" onclick="transpose()">
-      <i class="fas fa-redo-alt" style="margin-right: 5px;"></i>
-      Transpose table
-    </button>
+    <div class="mb-2">
+      <button type="button" class="btn btn-outline-primary" onclick="transpose()">
+        <i class="fas fa-redo-alt" style="margin-right: 5px;"></i>
+        Transpose table
+      </button>
+      <button type="button" class="btn btn-outline-primary" onclick="summaryDownload()">
+        <i class="fas fa-file-download" style="margin-right: 5px;"></i>
+        Download .csv
+      </button>
+    </div>
     <div style="overflow-x: auto;">
     `
   if (transpose) {
@@ -275,6 +283,22 @@ function transpose() {
   const tableElement = document.querySelector('#summary-table')
   const isTransposed = 'transposed' in tableElement.dataset
   summaryTable(summary, !isTransposed)
+}
+
+window.summaryDownload = summaryDownload
+function summaryDownload() {
+  const tableElement = document.querySelector('#summary-table')
+  const isTransposed = 'transposed' in tableElement.dataset
+  let data
+  if (isTransposed) {
+    data = zip(summary.data.columns, ...summary.data.rows)
+  } else {
+    data = [summary.data.columns, ...summary.data.rows]
+  }
+  const csvData = csv.unparse(data)
+  const blob = new Blob([csvData], { type: 'text/plain;charset=utf-8' })
+  // TODO generate file name from input
+  saveAs(blob, 'alfred-summary.txt')
 }
 
 function showExample() {
