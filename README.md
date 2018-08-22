@@ -12,9 +12,15 @@
 
 
 Alfred installation
----------------------
+-------------------
 
-The easiest way to get Alfred is to download a statically linked binary from the [Alfred github release page](https://github.com/tobiasrausch/alfred/releases/). Alternatively, you can build Alfred from source. You need some build essentials and the boost libraries, i.e. for Ubuntu:
+The easiest way to get Alfred is to download a statically linked binary from the [Alfred github release page](https://github.com/tobiasrausch/alfred/releases/) or via [Bioconda](https://anaconda.org/bioconda/alfred).
+
+
+Alfred installation from source
+-------------------------------
+
+To build Alfred from source you need some build essentials and the boost libraries, i.e. for Ubuntu:
 
 `apt install build-essential g++ cmake git-all liblzma-dev zlib1g-dev libbz2-dev liblzma-dev libboost-date-time-dev libboost-program-options-dev libboost-system-dev libboost-filesystem-dev libboost-iostreams-dev`
 
@@ -47,6 +53,18 @@ To convert all the alignment metrics from column format to rows to easily read i
 `zgrep ^ME qc.tsv.gz | cut -f 2- | datamash transpose | column -t`
 
 
+Interactive Quality Control Browser
+-----------------------------------
+
+Quality control metrics can be browsed interactively using the [web front end of Alfred](https://gear.embl.de/alfred).
+
+`./src/alfred qc -r <ref.fa> -f json -o qc.json.gz <align.bam>`
+
+Then just upload the qc.json.gz file to the Alfred GUI [https://gear.embl.de/alfred](https://gear.embl.de/alfred). A convenient feature of the web-front end is that multiple samples can be compared (as shown in the example) if json files are merged prior to the upload.
+
+`python ./scripts/merge.py sample1.json.gz sample2.json.gz sampleN.json.gz | gzip -c > multisample.json.gz`
+
+
 BAM Alignment Quality Control for Targeted Sequencing
 -----------------------------------------------------
 
@@ -61,6 +79,10 @@ For instance, for a human whole-exome data set.
 `./src/alfred qc -r <hg19.fa> -b maps/exonic.hg19.bed.gz -o qc.tsv.gz <exome.bam>`
 
 `Rscript R/stats.R qc.tsv.gz`
+
+Alternatively, one can use the [interactive GUI](https://gear.embl.de/alfred) and upload the json file.
+
+`./src/alfred qc -r <hg19.fa> -b maps/exonic.hg19.bed.gz -f json -o qc.json.gz <exome.bam>`
 
 
 BAM Alignment Quality Control for ATAC-Seq
@@ -80,12 +102,9 @@ ATAC-Seq libraries often have a large number of mitochondrial reads depending on
 
 `zgrep ^CM qc.tsv.gz | egrep "Mapped|chrM"`
 
+Alternatively, one can use the [interactive GUI](https://gear.embl.de/alfred) and upload the json file.
 
-Web Front End
--------------
-
-The Genome Analysis Server [GEAR](https://gear.embl.de) has a [web front end](https://gear.embl.de/alfred) for Alfred. Instead of plotting the alignment metrics and statistics with R you can also upload the QC output file of Alfred [here](https://gear.embl.de/alfred).
-
+`./src/alfred qc -r <hg19.fa> -b maps/hg19.promoter.bed.gz -f json -o qc.json.gz <atac.bam>`
 
 
 BAM Feature Counting for RNA-Seq
@@ -121,21 +140,23 @@ Alfred can also be used to annotate peaks from ChIP-Seq or ATAC-Seq experiments.
 Example E. coli data set
 ------------------------
 
+The github source code includes a minimal example to check that alfred compiled properly from source and that the web front end is working.
+
 `./src/alfred qc -r exampledata/E.coli.fa.gz -o exampledata/stats.tsv.gz exampledata/E.coli.cram`
 
 `Rscript R/stats.R exampledata/stats.tsv.gz`
 
-The final pdf is exampledata/stats.tsv.gz.pdf
+For the web front end.
+
+`./src/alfred qc -r exampledata/E.coli.fa.gz -f json -o ecoli.json.gz exampledata/E.coli.cram`
+
+Please upload ecoli.json.gz to the [Alfred web application](https://gear.embl.de/alfred).
 
 
-Example QC plots
-----------------
+Example plots
+-------------
 
-[Whole-genome paired-end data with multiple read groups](https://raw.githubusercontent.com/tobiasrausch/alfred/master/exampleplots/NA06985.pe.pdf)
-
-[Whole-exome paired-end data with on-target rate](https://raw.githubusercontent.com/tobiasrausch/alfred/master/exampleplots/HG00112.wes.pdf)
-
-[Whole-genome jumping library](https://raw.githubusercontent.com/tobiasrausch/alfred/master/exampleplots/HG00513.mp.pdf)
+The [Alfred web application](https://gear.embl.de/alfred) includes a multi-sample example for whole-exome data including multiple read-groups. Additional examples for whole-genome sequencing, long-read sequencing, Hi-C, ATAC-Seq and other data sets are coming soon.
 
 
 Credits
