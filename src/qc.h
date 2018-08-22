@@ -55,6 +55,7 @@ struct ConfigQC {
   bool isHaplotagged;
   bool isMitagged;
   bool secondary;
+  float nXChrLen;
   uint32_t minChrLen;
   std::string rgname;
   std::string sampleName;
@@ -91,6 +92,7 @@ int qc(int argc, char **argv) {
 
   boost::program_options::options_description hidden("Hidden options");
   hidden.add_options()
+    ("nxchrlen,n", boost::program_options::value<float>(&c.nXChrLen)->default_value(0.95), "N95 chromosome length to trim mapping table [0,1]")
     ("input-file", boost::program_options::value<boost::filesystem::path>(&c.bamFile), "input bam file")
     ;
 
@@ -118,6 +120,10 @@ int qc(int argc, char **argv) {
   // Secondary alignments
   if (vm.count("secondary")) c.secondary = true;
   else c.secondary = false;
+
+  // Check N95
+  if (c.nXChrLen > 1) c.nXChrLen = 1;
+  else if (c.nXChrLen < 0) c.nXChrLen = 0;
 
   // Ignore read groups
   if (vm.count("ignore")) {

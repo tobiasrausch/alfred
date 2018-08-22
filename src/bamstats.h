@@ -195,7 +195,7 @@ namespace bamstats
     TBitSet nrun;
     TBitSet gcref;
 
-    // Find N99 chromosome length
+    // Find N95 chromosome length
     {
       std::vector<uint32_t> chrlen(hdr->n_targets, 0);
       uint64_t genomelen = 0;
@@ -207,7 +207,7 @@ namespace bamstats
       uint64_t cumsum = 0;
       for(uint32_t i = 0; i < chrlen.size(); ++i) {
 	cumsum += chrlen[i];
-	if (cumsum > genomelen * 0.99) {
+	if (cumsum > genomelen * c.nXChrLen) {
 	  if (chrlen[i] < c.minChrLen) c.minChrLen = chrlen[i];
 	  break;
 	}
