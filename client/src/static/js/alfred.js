@@ -9,6 +9,10 @@ $('#mainTab a').on('click', function(e) {
   $(this).tab('show')
 })
 
+$(function() {
+  $('[data-toggle="tooltip"]').tooltip()
+})
+
 const resultLink = document.getElementById('link-results')
 
 const submitButton = document.getElementById('btn-submit')
@@ -30,6 +34,7 @@ const resultInfo = document.getElementById('result-info')
 const resultError = document.getElementById('result-error')
 const selectSample = document.getElementById('select-sample')
 const selectReadGroup = document.getElementById('select-rg')
+const selectToc = document.getElementById('select-toc')
 const summaryTab = document.getElementById('summary-tab')
 
 function run() {
@@ -91,6 +96,7 @@ function handleSuccess(data) {
 
   summaryTable(summary, true)
 
+  populateToc(data.samples[0].readGroups[0].metrics)
   vis(data, samples[0], readGroups[samples[0]][0])
 }
 
@@ -113,6 +119,18 @@ function handleSampleSelectChange() {
   vis(data, sample, readGroup)
 }
 
+function populateToc(metrics) {
+  selectToc.innerHTML = `${metrics.map(
+    metric => `<option value="${metric.id}">${metric.title}</option>`
+  )}`
+}
+
+window.handleTocChange = handleTocChange
+function handleTocChange() {
+  const id = selectToc.value
+  document.getElementById(id).scrollIntoView()
+}
+
 const chartDispatch = {
   bar: chart,
   line: chart,
@@ -131,6 +149,7 @@ function vis(data, sample, readGroup) {
 
 function chart(metricData, parent) {
   const container = document.createElement('div')
+  container.id = metricData.id
   parent.appendChild(container)
 
   const xData = metricData.x.data[0].values
@@ -184,28 +203,29 @@ function table(tableData, parent) {
         <thead>
           <tr>
             ${tableData.data.columns
-      .map(title => `<th scope="col">${title}</th>`)
-      .join('')}
+              .map(title => `<th scope="col">${title}</th>`)
+              .join('')}
           </tr>
         </thead>
         <tbody>
           ${tableData.data.rows
-      .map(
-        row => `<tr>
-              ${row
             .map(
-              (value, i) =>
-                `<td title="${tableData.data.columns[i]}">${value}</td>`
+              row => `<tr>
+              ${row
+                .map(
+                  (value, i) =>
+                    `<td title="${tableData.data.columns[i]}">${value}</td>`
+                )
+                .join('')}
+            </tr>`
             )
             .join('')}
-            </tr>`
-      )
-      .join('')}
         </tbody>
       </table>
     </div>
   `
   const element = document.createElement('div')
+  element.id = tableData.id
   element.innerHTML = html
   parent.appendChild(element)
 }
@@ -231,8 +251,8 @@ function summaryTable(tableData, transpose = false) {
       <table id="summary-table" class="table table-sm table-striped table-hover" data-transposed>
         <tbody>
         ${rows
-        .map(
-          row => `<tr>
+          .map(
+            row => `<tr>
             ${row
               .map((value, i) => {
                 if (i === 0) {
@@ -242,8 +262,8 @@ function summaryTable(tableData, transpose = false) {
               })
               .join('')}
           </tr>`
-        )
-        .join('')}
+          )
+          .join('')}
         </tbody>
       </table>
     `
@@ -253,23 +273,23 @@ function summaryTable(tableData, transpose = false) {
         <thead>
           <tr>
             ${tableData.data.columns
-        .map(title => `<th scope="col">${title}</th>`)
-        .join('')}
+              .map(title => `<th scope="col">${title}</th>`)
+              .join('')}
           </tr>
         </thead>
         <tbody>
           ${tableData.data.rows
-        .map(
-          row => `<tr>
+            .map(
+              row => `<tr>
               ${row
-              .map(
-                (value, i) =>
-                  `<td title="${tableData.data.columns[i]}">${value}</td>`
-              )
-              .join('')}
+                .map(
+                  (value, i) =>
+                    `<td title="${tableData.data.columns[i]}">${value}</td>`
+                )
+                .join('')}
             </tr>`
-        )
-        .join('')}
+            )
+            .join('')}
         </tbody>
       </table>
     `
