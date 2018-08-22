@@ -30,6 +30,7 @@ const resultInfo = document.getElementById('result-info')
 const resultError = document.getElementById('result-error')
 const selectSample = document.getElementById('select-sample')
 const selectReadGroup = document.getElementById('select-rg')
+const selectToc = document.getElementById('select-toc')
 const summaryTab = document.getElementById('summary-tab')
 
 function run() {
@@ -91,6 +92,7 @@ function handleSuccess(data) {
 
   summaryTable(summary, true)
 
+  populateToc(data.samples[0].readGroups[0].metrics)
   vis(data, samples[0], readGroups[samples[0]][0])
 }
 
@@ -113,6 +115,18 @@ function handleSampleSelectChange() {
   vis(data, sample, readGroup)
 }
 
+function populateToc(metrics) {
+  selectToc.innerHTML = `${metrics.map(metric =>
+    `<option value="${metric.id}">${metric.title}</option>`
+  )}`
+}
+
+window.handleTocChange = handleTocChange
+function handleTocChange() {
+  const id = selectToc.value
+  document.getElementById(id).scrollIntoView()
+}
+
 const chartDispatch = {
   bar: chart,
   line: chart,
@@ -131,6 +145,7 @@ function vis(data, sample, readGroup) {
 
 function chart(metricData, parent) {
   const container = document.createElement('div')
+  container.id = metricData.id
   parent.appendChild(container)
 
   const xData = metricData.x.data[0].values
@@ -206,6 +221,7 @@ function table(tableData, parent) {
     </div>
   `
   const element = document.createElement('div')
+  element.id = tableData.id
   element.innerHTML = html
   parent.appendChild(element)
 }
