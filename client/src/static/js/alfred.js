@@ -89,7 +89,7 @@ function handleSuccess(data) {
     }
   }
 
-  summaryTable(summary)
+  summaryTable(summary, true)
 
   vis(data, samples[0], readGroups[samples[0]][0])
 }
@@ -184,23 +184,23 @@ function table(tableData, parent) {
         <thead>
           <tr>
             ${tableData.data.columns
-              .map(title => `<th scope="col">${title}</th>`)
-              .join('')}
+      .map(title => `<th scope="col">${title}</th>`)
+      .join('')}
           </tr>
         </thead>
         <tbody>
           ${tableData.data.rows
-            .map(
-              row => `<tr>
+      .map(
+        row => `<tr>
               ${row
-                .map(
-                  (value, i) =>
-                    `<td title="${tableData.data.columns[i]}">${value}</td>`
-                )
-                .join('')}
-            </tr>`
+            .map(
+              (value, i) =>
+                `<td title="${tableData.data.columns[i]}">${value}</td>`
             )
             .join('')}
+            </tr>`
+      )
+      .join('')}
         </tbody>
       </table>
     </div>
@@ -231,8 +231,8 @@ function summaryTable(tableData, transpose = false) {
       <table id="summary-table" class="table table-sm table-striped table-hover" data-transposed>
         <tbody>
         ${rows
-          .map(
-            row => `<tr>
+        .map(
+          row => `<tr>
             ${row
               .map((value, i) => {
                 if (i === 0) {
@@ -242,8 +242,8 @@ function summaryTable(tableData, transpose = false) {
               })
               .join('')}
           </tr>`
-          )
-          .join('')}
+        )
+        .join('')}
         </tbody>
       </table>
     `
@@ -253,23 +253,23 @@ function summaryTable(tableData, transpose = false) {
         <thead>
           <tr>
             ${tableData.data.columns
-              .map(title => `<th scope="col">${title}</th>`)
-              .join('')}
+        .map(title => `<th scope="col">${title}</th>`)
+        .join('')}
           </tr>
         </thead>
         <tbody>
           ${tableData.data.rows
-            .map(
-              row => `<tr>
+        .map(
+          row => `<tr>
               ${row
-                .map(
-                  (value, i) =>
-                    `<td title="${tableData.data.columns[i]}">${value}</td>`
-                )
-                .join('')}
+              .map(
+                (value, i) =>
+                  `<td title="${tableData.data.columns[i]}">${value}</td>`
+              )
+              .join('')}
             </tr>`
-            )
-            .join('')}
+        )
+        .join('')}
         </tbody>
       </table>
     `
