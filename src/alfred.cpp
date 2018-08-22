@@ -60,6 +60,18 @@ Contact: Tobias Rausch (rausch@embl.de)
 
 using namespace bamstats;
 
+
+inline void
+asciiArt() {
+  std::cout << "           _  __              _ " << std::endl;
+  std::cout << "     /\\   | |/ _|            | |" << std::endl;
+  std::cout << "    /  \\  | | |_ _ __ ___  __| |" << std::endl;
+  std::cout << "   / /\\ \\ | |  _| '__/ _ \\/ _` |" << std::endl;
+  std::cout << "  / ____ \\| | | | | |  __/ (_| |" << std::endl;
+  std::cout << " /_/    \\_\\_|_| |_|  \\___|\\__,_|" << std::endl;
+  std::cout << std::endl;
+}
+
 inline void
 displayUsage() {
   std::cout << "Usage: alfred <command> <arguments>" << std::endl;
@@ -81,6 +93,7 @@ displayUsage() {
 
 int main(int argc, char **argv) {
   if (argc < 2) {
+    asciiArt();
     printTitle("Alfred");
     displayUsage();
     return 0;
