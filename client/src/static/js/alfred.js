@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { zip } from 'lodash'
 import pako from 'pako'
 
 $('#mainTab a').on('click', function(e) {
@@ -14,7 +15,7 @@ submitButton.addEventListener('click', function() {
   run()
 })
 
-let data, exampleData, readGroups
+let data, exampleData, readGroups, summary
 const exampleButton = document.getElementById('btn-example')
 exampleButton.addEventListener('click', showExample)
 const urlExample = document.getElementById('link-example')
@@ -76,18 +77,17 @@ function handleSuccess(data) {
     .map(rg => `<option>${rg}</option>`)
     .join('')
 
-  table(
-    {
-      title: data.samples[0].summary.title,
-      data: {
-        columns: data.samples[0].summary.data.columns,
-        rows: data.samples
-          .map(s => s.summary.data.rows)
-          .reduce((acc, cur) => acc.concat(cur))
-      }
-    },
-    summaryTab
-  )
+  summary = {
+    title: data.samples[0].summary.title,
+    data: {
+      columns: data.samples[0].summary.data.columns,
+      rows: data.samples
+        .map(s => s.summary.data.rows)
+        .reduce((acc, cur) => acc.concat(cur))
+    }
+  }
+
+  summaryTable(summary)
 
   vis(data, samples[0], readGroups[samples[0]][0])
 }
@@ -172,6 +172,8 @@ function chart(metricData, parent) {
   Plotly.newPlot(container, chartData, layout)
 }
 
+// TODO consolidate / refactor table functions
+
 function table(tableData, parent) {
   const html = `
     <h4>${tableData.title}</h4>
@@ -204,6 +206,75 @@ function table(tableData, parent) {
   const element = document.createElement('div')
   element.innerHTML = html
   parent.appendChild(element)
+}
+
+function summaryTable(tableData, transpose = false) {
+  let html = `
+    <h4>${tableData.title}</h4>
+    <button type="button" class="btn btn-outline-primary mb-2" onclick="transpose()">
+      <i class="fas fa-redo-alt" style="margin-right: 5px;"></i>
+      Transpose table
+    </button>
+    <div style="overflow-x: auto;">
+    `
+  if (transpose) {
+    const rows = zip(tableData.data.columns, ...tableData.data.rows)
+    html += `
+      <table id="summary-table" class="table table-sm table-striped table-hover" data-transposed>
+        <tbody>
+        ${rows
+          .map(
+            row => `<tr>
+            ${row
+              .map((value, i) => {
+                if (i === 0) {
+                  return `<th scope="row">${value}</th>`
+                }
+                return `<td title="${row[0]}">${value}</td>`
+              })
+              .join('')}
+          </tr>`
+          )
+          .join('')}
+        </tbody>
+      </table>
+    `
+  } else {
+    html += `
+      <table id="summary-table" class="table table-sm table-striped table-hover">
+        <thead>
+          <tr>
+            ${tableData.data.columns
+              .map(title => `<th scope="col">${title}</th>`)
+              .join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${tableData.data.rows
+            .map(
+              row => `<tr>
+              ${row
+                .map(
+                  (value, i) =>
+                    `<td title="${tableData.data.columns[i]}">${value}</td>`
+                )
+                .join('')}
+            </tr>`
+            )
+            .join('')}
+        </tbody>
+      </table>
+    `
+  }
+  html += '</div>'
+  summaryTab.innerHTML = html
+}
+
+window.transpose = transpose
+function transpose() {
+  const tableElement = document.querySelector('#summary-table')
+  const isTransposed = 'transposed' in tableElement.dataset
+  summaryTable(summary, !isTransposed)
 }
 
 function showExample() {
