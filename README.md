@@ -60,7 +60,7 @@ Quality control metrics can be browsed interactively using the [web front end of
 
 `./src/alfred qc -r <ref.fa> -f json -o qc.json.gz <align.bam>`
 
-Then just upload the qc.json.gz file to the Alfred GUI [https://gear.embl.de/alfred](https://gear.embl.de/alfred). A convenient feature of the web-front end is that multiple samples can be compared (as shown in the example) if json files are merged prior to the upload.
+Then just upload the qc.json.gz file to the Alfred GUI [https://gear.embl.de/alfred](https://gear.embl.de/alfred). A convenient feature of the web-front end is that multiple samples can be compared (as shown in the online example) if json files are merged prior to the upload.
 
 `python ./scripts/merge.py sample1.json.gz sample2.json.gz sampleN.json.gz | gzip -c > multisample.json.gz`
 
