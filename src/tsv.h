@@ -442,6 +442,15 @@ namespace bamstats
 	rcfile << "GC\tReference\tReference\t" << (double) i / (double) 101 << "\t" << frac << std::endl;
       }
     }
+    if (c.hasRegionFile) {
+      double total = 0;
+      for(uint32_t i = 0; i < 102; ++i) total += be.bedGcContent[i];
+      for(uint32_t i = 0; i < 102; ++i) {
+	double frac = 0;
+	if (total > 0) frac = (double) be.bedGcContent[i] / total;
+	rcfile << "GC\tTarget\tTarget\t" << (double) i / (double) 101 << "\t" << frac << std::endl;
+      }
+    }
     for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       double total = 0;
       for(uint32_t i = 0; i < 102; ++i) total += itRg->second.rc.gcContent[i];
