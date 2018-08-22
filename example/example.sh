@@ -13,8 +13,8 @@ if [ ${1} == "tiny" ]
 then
     # Run the E.coli example
     echo "tiny example"
-    ${BASEDIR}/../src/alfred qc -r ${BASEDIR}/../exampledata/E.coli.fa.gz -f json -o ecoli.json.gz ${BASEDIR}/../exampledata/E.coli.cram
-    ${BASEDIR}/../src/alfred qc -r ${BASEDIR}/../exampledata/E.coli.fa.gz -o ecoli.tsv.gz ${BASEDIR}/../exampledata/E.coli.cram
+    ${BASEDIR}/../src/alfred qc -r ${BASEDIR}/E.coli.fa.gz -f json -o ecoli.json.gz ${BASEDIR}/E.coli.cram
+    ${BASEDIR}/../src/alfred qc -r ${BASEDIR}/E.coli.fa.gz -o ecoli.tsv.gz ${BASEDIR}/E.coli.cram
     Rscript ${BASEDIR}/../R/stats.R ecoli.tsv.gz
 
 elif [ ${1} == "full" ]

@@ -142,13 +142,13 @@ Example E. coli data set
 
 The github source code includes a minimal example to check that alfred compiled properly from source and that the web front end is working.
 
-`./src/alfred qc -r exampledata/E.coli.fa.gz -o exampledata/stats.tsv.gz exampledata/E.coli.cram`
+`./src/alfred qc -r example/E.coli.fa.gz -o example/stats.tsv.gz example/E.coli.cram`
 
-`Rscript R/stats.R exampledata/stats.tsv.gz`
+`Rscript R/stats.R example/stats.tsv.gz`
 
 For the web front end.
 
-`./src/alfred qc -r exampledata/E.coli.fa.gz -f json -o ecoli.json.gz exampledata/E.coli.cram`
+`./src/alfred qc -r example/E.coli.fa.gz -f json -o ecoli.json.gz example/E.coli.cram`
 
 Please upload ecoli.json.gz to the [Alfred web application](https://gear.embl.de/alfred).
 
