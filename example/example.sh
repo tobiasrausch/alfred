@@ -86,6 +86,7 @@ then
 	fi
 	${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o ${SAMPLE}.exome.json.gz -b hg38.exon.bed.gz ${SAMPLE}.alt_bwamem_GRCh38DH.20150826.GBR.exome.cram
     done
+    python ${BASEDIR}/../scripts/merge.py *.exome.json.gz | gzip -c > dna.exome.json.gz
 
     # Low coverage WGS
     for SAMPLE in HG00110 HG00111 HG00112 HG00113 HG00114 HG00115
@@ -97,6 +98,7 @@ then
 	fi
 	${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o ${SAMPLE}.wgs.json.gz ${SAMPLE}.alt_bwamem_GRCh38DH.20150718.GBR.low_coverage.cram
     done
+    python ${BASEDIR}/../scripts/merge.py *.wgs.json.gz | gzip -c > dna.wgs.json.gz
 
 else
     echo "Unknown mode ${1}"
