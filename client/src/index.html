@@ -10,6 +10,7 @@
     crossorigin="anonymous">
   <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css">
   <link rel="stylesheet" href="static/css/gear.css">
+  <link rel="stylesheet" href="static/css/alfred.css">
 </head>
 
 <body>
@@ -65,6 +66,13 @@
       </div>
 
       <div class="tab-pane" id="result-tab">
+        <i
+          class="fas fa-angle-double-up float-btn"
+          data-toggle="tooltip"
+          data-placement="left"
+          title="Scroll to top"
+          onclick="window.scrollTo(0, 0)"
+        ></i>
         <div id="result-info" class="alert alert-info d-none" role="alert">
           <i class="fas fa-spinner spinner"></i>
           Analysis is running, please be patient.

@@ -9,6 +9,10 @@ $('#mainTab a').on('click', function(e) {
   $(this).tab('show')
 })
 
+$(function() {
+  $('[data-toggle="tooltip"]').tooltip()
+})
+
 const resultLink = document.getElementById('link-results')
 
 const submitButton = document.getElementById('btn-submit')
@@ -116,8 +120,8 @@ function handleSampleSelectChange() {
 }
 
 function populateToc(metrics) {
-  selectToc.innerHTML = `${metrics.map(metric =>
-    `<option value="${metric.id}">${metric.title}</option>`
+  selectToc.innerHTML = `${metrics.map(
+    metric => `<option value="${metric.id}">${metric.title}</option>`
   )}`
 }
 
@@ -199,23 +203,23 @@ function table(tableData, parent) {
         <thead>
           <tr>
             ${tableData.data.columns
-      .map(title => `<th scope="col">${title}</th>`)
-      .join('')}
+              .map(title => `<th scope="col">${title}</th>`)
+              .join('')}
           </tr>
         </thead>
         <tbody>
           ${tableData.data.rows
-      .map(
-        row => `<tr>
-              ${row
             .map(
-              (value, i) =>
-                `<td title="${tableData.data.columns[i]}">${value}</td>`
+              row => `<tr>
+              ${row
+                .map(
+                  (value, i) =>
+                    `<td title="${tableData.data.columns[i]}">${value}</td>`
+                )
+                .join('')}
+            </tr>`
             )
             .join('')}
-            </tr>`
-      )
-      .join('')}
         </tbody>
       </table>
     </div>
@@ -247,8 +251,8 @@ function summaryTable(tableData, transpose = false) {
       <table id="summary-table" class="table table-sm table-striped table-hover" data-transposed>
         <tbody>
         ${rows
-        .map(
-          row => `<tr>
+          .map(
+            row => `<tr>
             ${row
               .map((value, i) => {
                 if (i === 0) {
@@ -258,8 +262,8 @@ function summaryTable(tableData, transpose = false) {
               })
               .join('')}
           </tr>`
-        )
-        .join('')}
+          )
+          .join('')}
         </tbody>
       </table>
     `
@@ -269,23 +273,23 @@ function summaryTable(tableData, transpose = false) {
         <thead>
           <tr>
             ${tableData.data.columns
-        .map(title => `<th scope="col">${title}</th>`)
-        .join('')}
+              .map(title => `<th scope="col">${title}</th>`)
+              .join('')}
           </tr>
         </thead>
         <tbody>
           ${tableData.data.rows
-        .map(
-          row => `<tr>
+            .map(
+              row => `<tr>
               ${row
-              .map(
-                (value, i) =>
-                  `<td title="${tableData.data.columns[i]}">${value}</td>`
-              )
-              .join('')}
+                .map(
+                  (value, i) =>
+                    `<td title="${tableData.data.columns[i]}">${value}</td>`
+                )
+                .join('')}
             </tr>`
-        )
-        .join('')}
+            )
+            .join('')}
         </tbody>
       </table>
     `
