@@ -284,6 +284,8 @@ namespace bamstats
 	  if ((c.hasRegionFile) && (!rf.gRegions[refIndex].empty())) {
 	    // Target GC
 	    for(uint32_t k = 0; k < rf.gRegions[refIndex].size(); ++k) {
+	      nsum = 0;
+	      gcsum = 0;
 	      int32_t regstart = std::max(rf.gRegions[refIndex][k].start, (int32_t) halfwin);
 	      int32_t regend = std::min(rf.gRegions[refIndex][k].end, (int32_t) (hdr->target_len[refIndex] - halfwin));
 	      if (regstart < regend) {
