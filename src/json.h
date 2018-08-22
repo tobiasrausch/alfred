@@ -392,7 +392,7 @@ namespace bamstats
 	    if (i > 0) rfile << ",";
 	    rfile << (double) itOT->second[i] / (double) alignedbases;
 	  }
-	  rfile << "]}], \"axis\": {\"title\": \"Fraction on target\"}}, \"type\": \"line\"}";
+	  rfile << "]}], \"axis\": {\"title\": \"Fraction on target\", \"range\": [0,1]}}, \"type\": \"line\"}";
 	}
 
 	// Avg. target coverage
@@ -412,7 +412,7 @@ namespace bamstats
 	    if (i > 0) rfile << ", ";
 	    rfile << fracAboveCov[i];
 	  }
-	  rfile << "]}], \"axis\": {\"title\": \"Fraction above coverage\"}}, \"type\": \"line\"}";
+	  rfile << "]}], \"axis\": {\"title\": \"Fraction above coverage\", \"range\": [0,1]}}, \"type\": \"line\"}";
 	}
       }
 
@@ -505,26 +505,30 @@ namespace bamstats
 	rfile << "\"title\": \"Mapping statistics by chromosome\",";
 	rfile << "\"data\": {\"columns\": [\"Chr\", \"Size\", \"#N\", \"#GC\", \"GC-fraction\", \"mapped\", \"fracTotal\", \"observedExpected\"], \"rows\": [";
 	uint64_t totalMappedChr = 0;
+	bool firstVal = true;
 	for(uint32_t i = 0; i < itRg->second.rc.mappedchr.size(); ++i) totalMappedChr += itRg->second.rc.mappedchr[i];
 	for(uint32_t i = 0; i < itRg->second.rc.mappedchr.size(); ++i) {
-	  if (i > 0) rfile << ",";
-	  rfile << "[";
-	  double frac = 0;
-	  if (totalMappedChr > 0) frac = (double) itRg->second.rc.mappedchr[i] / (double) totalMappedChr;
-	  double expect = (double) (hdr->target_len[i] - rf.chrGC[i].ncount) / (double) (rf.referencebp - rf.ncount);
-	  double obsexprat = frac / expect;
-	  rfile << "\"" << hdr->target_name[i] << "\",";
-	  rfile << hdr->target_len[i] << ",";
-	  rfile << rf.chrGC[i].ncount << ",";
-	  rfile << rf.chrGC[i].gccount << ",";
-	  double totalBases = hdr->target_len[i] - rf.chrGC[i].ncount;
-	  double gcfrac = 0;
-	  if (totalBases > 0) gcfrac = (double) rf.chrGC[i].gccount / totalBases;
-	  rfile << gcfrac << ",";
-	  rfile << itRg->second.rc.mappedchr[i] << ",";
-	  rfile << frac << ",";
-	  rfile << obsexprat;
-	  rfile << "]";
+	  if (hdr->target_len[i] > c.minChrLen) {
+	    if (!firstVal) rfile << ",";
+	    else firstVal = false;
+	    rfile << "[";
+	    double frac = 0;
+	    if (totalMappedChr > 0) frac = (double) itRg->second.rc.mappedchr[i] / (double) totalMappedChr;
+	    double expect = (double) (hdr->target_len[i] - rf.chrGC[i].ncount) / (double) (rf.referencebp - rf.ncount);
+	    double obsexprat = frac / expect;
+	    rfile << "\"" << hdr->target_name[i] << "\",";
+	    rfile << hdr->target_len[i] << ",";
+	    rfile << rf.chrGC[i].ncount << ",";
+	    rfile << rf.chrGC[i].gccount << ",";
+	    double totalBases = hdr->target_len[i] - rf.chrGC[i].ncount;
+	    double gcfrac = 0;
+	    if (totalBases > 0) gcfrac = (double) rf.chrGC[i].gccount / totalBases;
+	    rfile << gcfrac << ",";
+	    rfile << itRg->second.rc.mappedchr[i] << ",";
+	    rfile << frac << ",";
+	    rfile << obsexprat;
+	    rfile << "]";
+	  }
 	}
 	rfile << "]},";
 	rfile << "\"type\": \"table\"}";

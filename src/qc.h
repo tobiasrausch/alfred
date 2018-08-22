@@ -55,6 +55,7 @@ struct ConfigQC {
   bool isHaplotagged;
   bool isMitagged;
   bool secondary;
+  uint32_t minChrLen;
   std::string rgname;
   std::string sampleName;
   std::string format;
@@ -69,6 +70,7 @@ int qc(int argc, char **argv) {
   ConfigQC c;
   c.isHaplotagged = false;
   c.isMitagged = false;
+  c.minChrLen = 10000000;
 
   // Parameter
   boost::program_options::options_description generic("Generic options");
