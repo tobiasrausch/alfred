@@ -66,7 +66,7 @@ namespace bamstats
     explicit ReferenceFeatures(uint32_t const nc) : referencebp(0), ncount(0), totalBedSize(0), nchr(nc) {
       chrGC.resize(nc, ChrGC());
       gRegions.resize(nc, TChromosomeRegions());
-      refGcContent.resize(101, 0);
+      refGcContent.resize(102, 0);
     }
   };
 
@@ -153,7 +153,7 @@ namespace bamstats
       tCount.resize(maxReadLength + 1, 0);
       nCount.resize(maxReadLength + 1, 0);
       bqCount.resize(maxReadLength + 1, 0);
-      gcContent.resize(101, 0);
+      gcContent.resize(102, 0);
     }
   };
 

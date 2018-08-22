@@ -451,18 +451,18 @@ namespace bamstats
 	rfile << "\"x\": {\"data\": [{\"values\": [";
 	double refTotal = 0;
 	double sampleTotal = 0;
-	for(uint32_t i = 0; i < 101; ++i) {
+	for(uint32_t i = 0; i < 102; ++i) {
 	  refTotal += rf.refGcContent[i];
 	  sampleTotal += itRg->second.rc.gcContent[i];
 	}
-	for(uint32_t i = 0; i < 101; ++i) {
+	for(uint32_t i = 0; i < 102; ++i) {
 	  if (i > 0) rfile << ",";
-	  rfile << (double) i / (double) 100;
+	  rfile << (double) i / (double) 101;
 	}
 	rfile << "]}], \"axis\": {\"title\": \"GC fraction\"}},";
 	rfile << "\"y\": {\"data\": [";
 	rfile << "{\"values\": [";
-	for(uint32_t i = 0; i < 101; ++i) {
+	for(uint32_t i = 0; i < 102; ++i) {
 	  if (i > 0) rfile << ",";
 	  double frac = 0;
 	  if (refTotal > 0) frac = (double) (rf.refGcContent[i]) / refTotal;
@@ -470,7 +470,7 @@ namespace bamstats
 	}
 	rfile << "], \"title\": \"Reference\"},";
 	rfile << "{\"values\": [";
-	for(uint32_t i = 0; i < 101; ++i) {
+	for(uint32_t i = 0; i < 102; ++i) {
 	  if (i > 0) rfile << ",";
 	  double frac = 0;
 	  if (sampleTotal > 0) frac = (double) itRg->second.rc.gcContent[i] / sampleTotal;

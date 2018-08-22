@@ -194,8 +194,6 @@ namespace bamstats
     typedef boost::dynamic_bitset<> TBitSet;
     TBitSet nrun;
     TBitSet gcref;
-    int32_t gcRunnerIdx = 0;
-    int32_t gcRunnerCount = 0;
 
     // Find N99 chromosome length
     {
@@ -265,20 +263,21 @@ namespace bamstats
 	// Reference GC
 	rf.chrGC[refIndex].ncount = nrun.count();
 	rf.chrGC[refIndex].gccount = gcref.count();
-	if ((hdr->target_len[refIndex] > 100) && (hdr->target_len[refIndex] >= c.minChrLen)) {
+	if ((hdr->target_len[refIndex] > 101) && (hdr->target_len[refIndex] >= c.minChrLen)) {
 	  uint32_t nsum = 0;
 	  uint32_t gcsum = 0;
-	  for(uint32_t pos = 0; pos < hdr->target_len[refIndex] - 100; ++pos) {
-	    if (pos == 0) {
-	      for(uint32_t i = 0; i < 100; ++i) {
+	  uint32_t halfwin = 50;
+	  for(uint32_t pos = halfwin; pos < hdr->target_len[refIndex] - halfwin; ++pos) {
+	    if (pos == halfwin) {
+	      for(uint32_t i = pos - halfwin; i<pos+halfwin+1; ++i) {
 		nsum += nrun[i];
 		gcsum += gcref[i];
 	      }
 	    } else {
-	      nsum -= nrun[pos - 1];
-	      gcsum -= gcref[pos - 1];
-	      nsum += nrun[pos + 99];
-	      gcsum += gcref[pos + 99];
+	      nsum -= nrun[pos - halfwin - 1];
+	      gcsum -= gcref[pos - halfwin - 1];
+	      nsum += nrun[pos + halfwin];
+	      gcsum += gcref[pos + halfwin];
 	    }
 	    if (!nsum) ++rf.refGcContent[gcsum];
 	  }
@@ -455,27 +454,27 @@ namespace bamstats
       }
 
       // Sequence GC content
-      if (sequence.size() > 100) {
-	uint32_t offset = (sequence.size() - 100) / 2;
-	int32_t gccont = 0;
-	for(uint32_t i = offset; i < (offset + 100); ++i) {
-	  if ((sequence[i] == 'c') || (sequence[i] == 'C') || (sequence[i] == 'g') || (sequence[i] == 'G')) ++gccont;
-	}
-	++itRg->second.rc.gcContent[gccont];
-      } else {
-	// Most likely some tag-counting application, ignore the first 20bp
-	if (!(rec->core.flag & BAM_FREVERSE)) {
-	  for(uint32_t i = 20; i < sequence.size(); ++i, ++gcRunnerIdx) {
-	    if ((sequence[i] == 'c') || (sequence[i] == 'C') || (sequence[i] == 'g') || (sequence[i] == 'G')) ++gcRunnerCount;
-	    if (gcRunnerIdx == 100) {
-	      ++itRg->second.rc.gcContent[gcRunnerCount];
-	      gcRunnerIdx = 0;
-	      gcRunnerCount = 0;
+      {
+	int32_t halfwin = 50;
+	int32_t pos = rec->core.pos + 51;
+	if (rec->core.flag & BAM_FREVERSE) pos = rec->core.pos - 51;
+	int32_t fragstart = pos - halfwin;
+	int32_t fragend = pos + halfwin + 1;
+	if ((fragstart >= 0) && (fragend < (int32_t) hdr->target_len[refIndex])) {
+	  int32_t ncount = 0;
+	  for(int32_t i = fragstart; i < fragend; ++i) {
+	    if (nrun[i]) ++ncount;
+	  }
+	  if (!ncount) {
+	    int32_t gccont = 0;
+	    for(int32_t i = fragstart; i < fragend; ++i) {
+	      if (gcref[i]) ++gccont;
 	    }
+	    ++itRg->second.rc.gcContent[gccont];
 	  }
 	}
       }
-    
+      
       // Get the reference slice
       std::string refslice = boost::to_upper_copy(std::string(seq + rec->core.pos, seq + lastAlignedPosition(rec)));
       

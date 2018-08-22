@@ -435,20 +435,20 @@ namespace bamstats
     rcfile << "GC\tSample\tLibrary\tGCcontent\tfractionOfReads" << std::endl;
     {
       double total = 0;
-      for(uint32_t i = 0; i < 101; ++i) total += rf.refGcContent[i];
-      for(uint32_t i = 0; i < 101; ++i) {
+      for(uint32_t i = 0; i < 102; ++i) total += rf.refGcContent[i];
+      for(uint32_t i = 0; i < 102; ++i) {
 	double frac = 0;
 	if (total > 0) frac = (double) rf.refGcContent[i] / total;
-	rcfile << "GC\tReference\tReference\t" << (double) i / (double) 100 << "\t" << frac << std::endl;
+	rcfile << "GC\tReference\tReference\t" << (double) i / (double) 101 << "\t" << frac << std::endl;
       }
     }
     for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
       double total = 0;
-      for(uint32_t i = 0; i < 101; ++i) total += itRg->second.rc.gcContent[i];
-      for(uint32_t i = 0; i < 101; ++i) {
+      for(uint32_t i = 0; i < 102; ++i) total += itRg->second.rc.gcContent[i];
+      for(uint32_t i = 0; i < 102; ++i) {
 	double frac = 0;
 	if (total > 0) frac = (double) itRg->second.rc.gcContent[i] / total;
-	rcfile << "GC\t" << c.sampleName << "\t" << itRg->first << "\t" << (double) i / (double) 100 << "\t" << frac << std::endl;
+	rcfile << "GC\t" << c.sampleName << "\t" << itRg->first << "\t" << (double) i / (double) 101 << "\t" << frac << std::endl;
       }
     }
 
