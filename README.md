@@ -46,7 +46,7 @@ Alfred computes various alignment metrics and summary statistics by read group
 
 Plotting alignment statistics
 
-`Rscript R/stats.R qc.tsv.gz`
+`Rscript scripts/stats.R qc.tsv.gz`
 
 To convert all the alignment metrics from column format to rows to easily read it on screen
 
@@ -78,7 +78,7 @@ For instance, for a human whole-exome data set.
 
 `./src/alfred qc -r <hg19.fa> -b maps/exonic.hg19.bed.gz -o qc.tsv.gz <exome.bam>`
 
-`Rscript R/stats.R qc.tsv.gz`
+`Rscript scripts/stats.R qc.tsv.gz`
 
 Alternatively, one can use the [interactive GUI](https://gear.embl.de/alfred) and upload the json file.
 
@@ -94,7 +94,7 @@ For ATAC-Seq data, the insert size distribution should reveal the DNA pitch and 
 
 `./src/alfred qc -r <hg19.fa> -b maps/hg19.promoter.bed.gz -o qc.tsv.gz <atac.bam>`
 
-`Rscript R/stats.R qc.tsv.gz`
+`Rscript scripts/stats.R qc.tsv.gz`
 
 `zgrep ^ME qc.tsv.gz | datamash transpose | egrep "^Dup|^MappedFraction|^SD|^Enrich"`
 
@@ -126,7 +126,7 @@ For DNA sequencing, Alfred can be used to calculate the coverage in overlapping 
 
 To plot the whole-chromosome coverage profile for chr1-22 and chrX.
 
-`Rscript R/rd.R <cov.gz>`
+`Rscript scripts/rd.R <cov.gz>`
 
 
 BAM Feature Annotation
@@ -144,7 +144,7 @@ The github source code includes a minimal example to check that alfred compiled 
 
 `./src/alfred qc -r example/E.coli.fa.gz -o example/stats.tsv.gz example/E.coli.cram`
 
-`Rscript R/stats.R example/stats.tsv.gz`
+`Rscript scripts/stats.R example/stats.tsv.gz`
 
 For the web front end.
 

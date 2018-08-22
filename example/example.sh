@@ -15,7 +15,7 @@ then
     echo "tiny example"
     ${BASEDIR}/../src/alfred qc -r ${BASEDIR}/E.coli.fa.gz -f json -o ecoli.json.gz ${BASEDIR}/E.coli.cram
     ${BASEDIR}/../src/alfred qc -r ${BASEDIR}/E.coli.fa.gz -o ecoli.tsv.gz ${BASEDIR}/E.coli.cram
-    Rscript ${BASEDIR}/../R/stats.R ecoli.tsv.gz
+    Rscript ${BASEDIR}/../scripts/stats.R ecoli.tsv.gz
 
 elif [ ${1} == "full" ]
 then
@@ -71,7 +71,7 @@ then
     # Run alfred
     ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o HG00114.exome.illumina.json.gz -b ${BASEDIR}/../maps/exonic.hg38.bed.gz HG00114.alt_bwamem_GRCh38DH.20150826.GBR.exome.cram
     ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -o HG00114.exome.illumina.tsv.gz -b ${BASEDIR}/../maps/exonic.hg38.bed.gz HG00114.alt_bwamem_GRCh38DH.20150826.GBR.exome.cram
-    Rscript ${BASEDIR}/../R/stats.R HG00114.exome.illumina.tsv.gz
+    Rscript ${BASEDIR}/../scripts/stats.R HG00114.exome.illumina.tsv.gz
 
 elif [ ${1} == "benchmark" ]
 then
