@@ -56,9 +56,9 @@ then
     fi
 
     # Generate exon target file
-    if [ ! -f hg38.exon.bed.gz ]
+    if [ ! -f ${BASEDIR}/../maps/exonic.hg38.bed.gz ]
     then
- 	zcat ${BASEDIR}/../gtf/Homo_sapiens.GRCh38.91.gtf.gz  | grep "^[1-9X]" | grep -P "\texon\t" | grep "protein_coding" | grep -P "\tensembl" | cut -f 1,4,5 | sort -k1,1V -k2,2n | sed 's/^/chr/' | gzip -c > hg38.exon.bed.gz
+	cd ${BASEDIR}/../maps/ && Rscript exon.R && cd ${BASEDIR}
     fi
     
     # Download 1000 Genomes exome cram file
@@ -69,8 +69,8 @@ then
     fi
 
     # Run alfred
-    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o HG00114.exome.illumina.json.gz -b hg38.exon.bed.gz HG00114.alt_bwamem_GRCh38DH.20150826.GBR.exome.cram
-    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -o HG00114.exome.illumina.tsv.gz -b hg38.exon.bed.gz HG00114.alt_bwamem_GRCh38DH.20150826.GBR.exome.cram
+    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o HG00114.exome.illumina.json.gz -b ${BASEDIR}/../maps/exonic.hg38.bed.gz HG00114.alt_bwamem_GRCh38DH.20150826.GBR.exome.cram
+    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -o HG00114.exome.illumina.tsv.gz -b ${BASEDIR}/../maps/exonic.hg38.bed.gz HG00114.alt_bwamem_GRCh38DH.20150826.GBR.exome.cram
     Rscript ${BASEDIR}/../R/stats.R HG00114.exome.illumina.tsv.gz
 
 elif [ ${1} == "benchmark" ]
@@ -90,7 +90,7 @@ then
 	fi
 	if [ ! -f ${SAMPLE}.exome.illumina.json.gz ]
 	then
-	    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o ${SAMPLE}.exome.illumina.json.gz -b hg38.exon.bed.gz ${SAMPLE}.alt_bwamem_GRCh38DH.20150826.GBR.exome.cram
+	    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o ${SAMPLE}.exome.illumina.json.gz -b ${BASEDIR}/../maps/exonic.hg38.bed.gz ${SAMPLE}.alt_bwamem_GRCh38DH.20150826.GBR.exome.cram
 	fi
     done
     python ${BASEDIR}/../scripts/merge.py *.exome.illumina.json.gz | gzip -c > dna.exome.illumina.ms.json.gz
