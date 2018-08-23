@@ -227,34 +227,49 @@ namespace bamstats
 	rfile << "\"y\": {\"data\": [";
 	rfile << "{\"values\": [";
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	  if (i > 0) rfile << ",";
-	  rfile << itRg->second.rc.aCount[i];
+	  uint64_t bcount = itRg->second.rc.aCount[i] + itRg->second.rc.cCount[i] + itRg->second.rc.gCount[i] + itRg->second.rc.tCount[i] + itRg->second.rc.nCount[i];
+	  if (bcount > 0) {
+	    if (i > 0) rfile << ",";
+	    rfile << (double) itRg->second.rc.aCount[i] / (double) bcount;
+	  }
 	}
 	rfile << "], \"title\": \"A\"},";
 	rfile << "{\"values\": [";
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	  if (i > 0) rfile << ",";
-	  rfile << itRg->second.rc.cCount[i];
+	  uint64_t bcount = itRg->second.rc.aCount[i] + itRg->second.rc.cCount[i] + itRg->second.rc.gCount[i] + itRg->second.rc.tCount[i] + itRg->second.rc.nCount[i];
+	  if (bcount > 0) {
+	    if (i > 0) rfile << ",";
+	    rfile << (double) itRg->second.rc.cCount[i] / (double) bcount;
+	  }
 	}
 	rfile << "], \"title\": \"C\"},";
 	rfile << "{\"values\": [";
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	  if (i > 0) rfile << ",";
-	  rfile << itRg->second.rc.gCount[i];
+	  uint64_t bcount = itRg->second.rc.aCount[i] + itRg->second.rc.cCount[i] + itRg->second.rc.gCount[i] + itRg->second.rc.tCount[i] + itRg->second.rc.nCount[i];
+	  if (bcount > 0) {
+	    if (i > 0) rfile << ",";
+	    rfile << (double) itRg->second.rc.gCount[i] / (double) bcount;
+	  }
 	}
 	rfile << "], \"title\": \"G\"},";
 	rfile << "{\"values\": [";
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	  if (i > 0) rfile << ",";
-	  rfile << itRg->second.rc.tCount[i];
+	  uint64_t bcount = itRg->second.rc.aCount[i] + itRg->second.rc.cCount[i] + itRg->second.rc.gCount[i] + itRg->second.rc.tCount[i] + itRg->second.rc.nCount[i];
+	  if (bcount > 0) {
+	    if (i > 0) rfile << ",";
+	    rfile << (double) itRg->second.rc.tCount[i] / (double) bcount;
+	  }
 	}
 	rfile << "], \"title\": \"T\"},";
 	rfile << "{\"values\": [";
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	  if (i > 0) rfile << ",";
-	  rfile << itRg->second.rc.nCount[i];
+	  uint64_t bcount = itRg->second.rc.aCount[i] + itRg->second.rc.cCount[i] + itRg->second.rc.gCount[i] + itRg->second.rc.tCount[i] + itRg->second.rc.nCount[i];
+	  if (bcount > 0) {
+	    if (i > 0) rfile << ",";
+	    rfile << (double) itRg->second.rc.nCount[i] / (double) bcount;
+	  }
 	}
-	rfile << "], \"title\": \"N\"}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"line\"}";
+	rfile << "], \"title\": \"N\"}], \"axis\": {\"title\": \"Base Fraction\"}}, \"type\": \"line\"}";
       }
 	
       // Read-length
