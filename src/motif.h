@@ -48,12 +48,25 @@ namespace bamstats
   struct Pfm {
     typedef boost::multi_array<int32_t, 2> T2DArray;
     T2DArray pfm;
-
+    
     std::string matrixId;
     std::string symbol;
   };
 
 
+  inline void
+  revComp(Pfm const& pfm, Pfm& out) {
+    out.matrixId = pfm.matrixId;
+    out.symbol = pfm.symbol;
+    out.pfm.resize(boost::extents[4][pfm.pfm.shape()[1]]);
+    for(uint32_t i = 0; i < 4; ++i) {
+      uint32_t r = out.pfm.shape()[1] - 1;
+      for(uint32_t j = 0; j < out.pfm.shape()[1]; ++j, --r) {
+	out.pfm[(3-i)][r] = pfm.pfm[i][j];
+      }
+    }
+  }
+  
   template<typename TConfig>
   inline bool
   parseJaspar(TConfig const& c, std::vector<Pfm>& pfms) {
@@ -127,19 +140,6 @@ namespace bamstats
 	}
 	uint32_t col = 0;
 	for(Tokenizer::iterator tokIter = tokens.begin(); tokIter!=tokens.end(); ++tokIter, ++col) pfms[id].pfm[acgt][col] = boost::lexical_cast<int32_t>(*tokIter);
-
-	// Debug code
-	//if (acgt == 3) {
-	//std::cout << ">" << id << "," << pfms[id].matrixId << ',' << pfms[id].symbol << std::endl;
-	//for(uint32_t i = 0; i < pfms[id].pfm.shape()[0]; ++i) {
-	//for(uint32_t j = 0; j < pfms[id].pfm.shape()[1]; ++j) {
-	//std::cerr << pfms[id].pfm[i][j] << ',';
-	//}
-	//std::cerr << std::endl;
-	//}
-	//}
-
-	
 	++acgt;
       }
 

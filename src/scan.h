@@ -66,6 +66,19 @@ namespace bamstats
       return 1;
     }
     std::cout << pfms.size() << std::endl;
+    Pfm bla;
+    revComp(pfms[0], bla);
+    pfms[0] = bla;
+    // Debug code
+    std::cout << ">" << pfms[0].matrixId << ',' << pfms[0].symbol << std::endl;
+    for(uint32_t i = 0; i < pfms[0].pfm.shape()[0]; ++i) {
+      for(uint32_t j = 0; j < pfms[0].pfm.shape()[1]; ++j) {
+	std::cerr << pfms[0].pfm[i][j] << ',';
+      }
+      std::cerr << std::endl;
+    }
+
+	
       
     
     // Done
