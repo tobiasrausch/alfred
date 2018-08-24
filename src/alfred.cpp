@@ -53,6 +53,7 @@ Contact: Tobias Rausch (rausch@embl.de)
 #include "count_dna.h"
 #include "count_junction.h"
 #include "annotate.h"
+#include "scan.h"
 #include "tracks.h"
 #include "split.h"
 #include "ase.h"
@@ -133,6 +134,9 @@ int main(int argc, char **argv) {
   }
   else if ((std::string(argv[1]) == "annotate")) {
     return annotate(argc-1,argv+1);
+  }
+  else if ((std::string(argv[1]) == "scan")) {
+    return scan(argc-1,argv+1);
   }
   else if ((std::string(argv[1]) == "split")) {
     return split(argc-1,argv+1);
