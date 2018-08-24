@@ -48,7 +48,8 @@ namespace bamstats
   struct Pfm {
     typedef boost::multi_array<int32_t, 2> T2DArray;
     T2DArray matrix;
-    
+
+    int32_t id;
     std::string matrixId;
     std::string symbol;
   };
@@ -56,7 +57,8 @@ namespace bamstats
   struct Pwm {
     typedef boost::multi_array<double, 2> T2DArray;
     T2DArray matrix;
-    
+
+    int32_t id;
     std::string matrixId;
     std::string symbol;
   };
@@ -103,6 +105,7 @@ namespace bamstats
   convert(Pfm const& pfm, Pwm& pwm, std::vector<double> const& bg, double const pc) {
     pwm.matrixId = pfm.matrixId;
     pwm.symbol = pfm.symbol;
+    pwm.id = pfm.id;
     pwm.matrix.resize(boost::extents[4][pfm.matrix.shape()[1]]);
     double totalBg = 0;
     for(uint32_t i = 0; i < 4; ++i) totalBg += bg[i];
@@ -136,6 +139,7 @@ namespace bamstats
   revComp(TPositionMatrix const& pfm, TPositionMatrix& out) {
     out.matrixId = pfm.matrixId;
     out.symbol = pfm.symbol;
+    out.id = pfm.id;
     out.matrix.resize(boost::extents[4][pfm.matrix.shape()[1]]);
     for(uint32_t i = 0; i < 4; ++i) {
       uint32_t r = out.matrix.shape()[1] - 1;
@@ -145,55 +149,45 @@ namespace bamstats
     }
   }
 
-  inline void
-  scorePwm(std::string const& ref, Pwm const& pwm, char const strand, double fraction) {
-    if ((fraction >= 0) && (fraction <= 1)) {
-      uint32_t motiflen = pwm.matrix.shape()[1];
-      double maxscore = _maxScore(pwm);
-      double minscore = _minScore(pwm);
-      double threshold = minscore + (maxscore - minscore) * fraction;
-      if (motiflen <= ref.size()) {
-	
-	// Forward
-	if ((strand == '+') || (strand == '*')) {
-	  for(uint32_t i = 0; i < ref.size() - motiflen + 1; ++i) {
-	    double score = 0;
-	    for(uint32_t k = 0; k < motiflen; ++k) {
-	      if ((ref[i+k] == 'A') || (ref[i+k] == 'a')) score += pwm.matrix[0][k];
-	      else if ((ref[i+k] == 'C') || (ref[i+k] == 'c')) score += pwm.matrix[1][k];
-	      else if ((ref[i+k] == 'G') || (ref[i+k] == 'g')) score += pwm.matrix[2][k];
-	      else if ((ref[i+k] == 'T') || (ref[i+k] == 't')) score += pwm.matrix[3][k];
-	      else score += 0;
-	    }
-	    if (score > threshold) std::cout << i << ',' << score << std::endl;
-	  }
+  template<typename TMotifHits, typename TMotifCounts>
+  inline int32_t
+    scorePwm(char const* ref, int32_t const seqlen, Pwm const& pwm, char const strand, double const fraction, TMotifHits& mh, TMotifCounts& mc) {
+    int32_t hits = 0;
+    int32_t motiflen = pwm.matrix.shape()[1];
+    double maxscore = _maxScore(pwm);
+    double minscore = _minScore(pwm);
+    double threshold = minscore + (maxscore - minscore) * fraction;
+      
+    // Parse forward sequence
+    if ((strand == '+') || (strand == '*')) {
+      for(int32_t i = 0; i < seqlen - motiflen + 1; ++i) {
+	double score = 0;
+	for(int32_t k = 0; k < motiflen; ++k) {
+	  if ((ref[i+k] == 'A') || (ref[i+k] == 'a')) score += pwm.matrix[0][k];
+	  else if ((ref[i+k] == 'C') || (ref[i+k] == 'c')) score += pwm.matrix[1][k];
+	  else if ((ref[i+k] == 'G') || (ref[i+k] == 'g')) score += pwm.matrix[2][k];
+	  else if ((ref[i+k] == 'T') || (ref[i+k] == 't')) score += pwm.matrix[3][k];
+	  else score += 0;
 	}
-	
-	// Reverse
-	if ((strand == '-') || (strand == '*')) {
-	  Pwm rev;
-	  revComp(pwm, rev);
-	  for(uint32_t i = 0; i < ref.size() - motiflen + 1; ++i) {
-	    double score = 0;
-	    for(uint32_t k = 0; k < motiflen; ++k) {
-	      if ((ref[i+k] == 'A') || (ref[i+k] == 'a')) score += rev.matrix[0][k];
-	      else if ((ref[i+k] == 'C') || (ref[i+k] == 'c')) score += rev.matrix[1][k];
-	      else if ((ref[i+k] == 'G') || (ref[i+k] == 'g')) score += rev.matrix[2][k];
-	      else if ((ref[i+k] == 'T') || (ref[i+k] == 't')) score += rev.matrix[3][k];
-	    else score += 0;
-	    }
-	    if (score > threshold) std::cout << i << ',' << score << std::endl;
-	  }
-	}
+	if (score > threshold) ++hits;
       }
     }
+    
+    // Reverse
+    if ((strand == '-') || (strand == '*')) {
+      //ToDo
+      // Pwm rev;
+      //  revComp(pwm, rev);
+    }
+    return hits;
   }
 
-  inline void
-  scorePwm(std::string const& ref, Pwm const& pwm) {
+  template<typename TMotifHits, typename TMotifCounts>
+  inline int32_t
+    scorePwm(char const* seq, int32_t const seqlen, Pwm const& pwm, TMotifHits& mh, TMotifCounts& mc) {
     char strand = '*';
     double fraction = 0.8;
-    scorePwm(ref, pwm, strand, fraction);
+    return scorePwm(seq, seqlen, pwm, strand, fraction, mh, mc);
   }
   
   template<typename TConfig>
@@ -228,6 +222,7 @@ namespace bamstats
 	Tokenizer tokens(gline, sep);
 	Tokenizer::iterator tokIter = tokens.begin();
 	if (tokIter != tokens.end()) {
+	  pfms[id].id = id;
 	  pfms[id].matrixId = *tokIter++;
 	  pfms[id].symbol = "NA";
 	  if (tokIter != tokens.end()) {

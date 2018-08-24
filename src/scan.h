@@ -45,9 +45,11 @@ namespace bamstats
 {
 
   struct ScanConfig {
-    std::map<std::string, int32_t> nchr;
+    typedef std::map<std::string, uint32_t> TChrMap;
+    TChrMap nchr;
     boost::filesystem::path infile;
     boost::filesystem::path motifFile;
+    boost::filesystem::path genome;
     boost::filesystem::path outfile;
   };
 
@@ -60,18 +62,52 @@ namespace bamstats
     ProfilerStart("alfred.prof");
 #endif
 
+    // Load motifs
     std::vector<Pwm> pwms;
     if (!parseJasparPwm(c, pwms)) {
       std::cerr << "Motif file cannot be parsed!" << std::endl;
       return 1;
     }
-    std::cout << pwms.size() << std::endl;
 
-    std::string ref("GAATTCTCTCTTGTTGTAGTCTCTTGACAAAATG");
-    scorePwm(ref, pwms[0]);
+    // Motif finding
+    boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
+    std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Motif finding" << std::endl;
+    boost::progress_display show_progress(c.nchr.size());
+    
+    faidx_t* fai = fai_load(c.genome.string().c_str());
+    char* seq = NULL;
+    for(uint32_t refIndex=0; refIndex < c.nchr.size(); ++refIndex) {
+      ++show_progress;
+
+      // Load chromosome sequence
+      std::string tname = "NA";
+      for(typename ScanConfig::TChrMap::const_iterator itChr = c.nchr.begin(); itChr != c.nchr.end(); ++itChr) {
+	if (refIndex == itChr->second) {
+	  tname = itChr->first;
+	}
+      }
+      int32_t seqlen = -1;
+      seq = faidx_fetch_seq(fai, tname.c_str(), 0, faidx_seq_len(fai, tname.c_str()) + 1, &seqlen);
+
+      // Score PWMs
+      typedef std::pair<int32_t, int32_t> TPosScore;
+      typedef std::vector<TPosScore> TChrPosScore;
+      typedef std::vector<TChrPosScore> TStrandChrPosScore;
+      typedef std::vector<TStrandChrPosScore> TMotifHits;
+      TMotifHits mh(pwms.size(), TStrandChrPosScore());
+      typedef std::vector<int32_t> TMotifCounts;
+      TMotifCounts mc(pwms.size(), 0);
+      for(uint32_t i = 0; i<pwms.size(); ++i) mh[i].resize(2, TChrPosScore());      
+      for(uint32_t i = 0; i<pwms.size(); ++i) {
+	std::cout << i << "," << scorePwm(seq, seqlen, pwms[i], mh, mc) << std::endl;
+      }
+      
+      if (seq != NULL) free(seq);
+    }
+    fai_destroy(fai);
     
     // Done
-    boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
+    now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] Done." << std::endl;
     
 #ifdef PROFILE
@@ -89,6 +125,7 @@ namespace bamstats
     boost::program_options::options_description generic("Generic options");
     generic.add_options()
       ("help,?", "show help message")
+      ("reference,r", boost::program_options::value<boost::filesystem::path>(&c.genome), "reference fasta file (required)")
       ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("anno.bed"), "output file")
       ;
 
@@ -116,19 +153,35 @@ namespace bamstats
     boost::program_options::notify(vm);
 
     // Check command line arguments
-    if ((vm.count("help")) || (!vm.count("input-file")) || (!vm.count("motif"))) {
+    if ((vm.count("help")) || (!vm.count("input-file")) || (!vm.count("motif")) || (!vm.count("reference"))) {
       std::cout << std::endl;
-      std::cout << "Usage: alfred " << argv[0] << " [OPTIONS] -m <motif.jaspar> <peaks.bed>" << std::endl;
+      std::cout << "Usage: alfred " << argv[0] << " [OPTIONS] -r <genome.fa> -m <motif.jaspar> <peaks.bed>" << std::endl;
       std::cout << visible_options << "\n";
       return 1;
     }
 
+    // Check genome
+    if (!(boost::filesystem::exists(c.genome) && boost::filesystem::is_regular_file(c.genome) && boost::filesystem::file_size(c.genome))) {
+      std::cerr << "Input reference file is missing: " << c.genome.string() << std::endl;
+      return 1;
+    } else {
+      faidx_t* fai = fai_load(c.genome.string().c_str());
+      if (fai == NULL) {
+	if (fai_build(c.genome.string().c_str()) == -1) {
+	  std::cerr << "Fail to open genome fai index for " << c.genome.string() << std::endl;
+	  return 1;
+	} else fai = fai_load(c.genome.string().c_str());
+      }
+      fai_destroy(fai);
+    }
+    
     // Input BED file
     if (!(boost::filesystem::exists(c.infile) && boost::filesystem::is_regular_file(c.infile) && boost::filesystem::file_size(c.infile))) {
       std::cerr << "Input BED file is missing." << std::endl;
       return 1;
     } else {
       std::string oldChr = "";
+      faidx_t* fai = fai_load(c.genome.string().c_str());
       typedef std::set<std::string> TChrSet;
       TChrSet chrSet;
       std::ifstream chrFile(c.infile.string().c_str(), std::ifstream::in);
@@ -142,14 +195,24 @@ namespace bamstats
 	  Tokenizer::iterator tokIter = tokens.begin();
 	  if (tokIter!=tokens.end()) {
 	    std::string chrName = *tokIter++;
-	    if (chrName != oldChr) chrSet.insert(chrName);
+	    if (chrName.compare(oldChr) != 0) {
+	      oldChr = chrName;
+	      if (!faidx_has_seq(fai, chrName.c_str())) {
+		std::cerr << "Chromosome from bed file " << chrName << " is NOT present in your reference file " << c.genome.string() << std::endl;
+		return 1;
+	      } else {
+		chrSet.insert(chrName);
+	      }
+	    }
 	  }
 	}
 	chrFile.close();
       }
-      int32_t refIndex = 0;
+      uint32_t refIndex = 0;
       for(TChrSet::iterator itc = chrSet.begin(); itc != chrSet.end(); ++itc, ++refIndex) c.nchr.insert(std::make_pair(*itc, refIndex));
+      fai_destroy(fai);
     }
+    
     
     // Check region file
     if (!(boost::filesystem::exists(c.motifFile) && boost::filesystem::is_regular_file(c.motifFile) && boost::filesystem::file_size(c.motifFile))) {
