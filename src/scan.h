@@ -88,7 +88,17 @@ namespace bamstats
       }
       int32_t seqlen = -1;
       seq = faidx_fetch_seq(fai, tname.c_str(), 0, faidx_seq_len(fai, tname.c_str()) + 1, &seqlen);
+      std::vector<uint8_t> ref(seqlen, 0);
+      for(int32_t i = 0; i < seqlen; ++i) {
+	if ((seq[i] == 'A') || (seq[i] == 'a')) ref[i] = 0;
+	else if ((seq[i] == 'C') || (seq[i] == 'c')) ref[i] = 1;
+	else if ((seq[i] == 'G') || (seq[i] == 'g')) ref[i] = 2;
+	else if ((seq[i] == 'T') || (seq[i] == 't')) ref[i] = 3;
+	else ref[i] = 4;
+      }
+      if (seq != NULL) free(seq);
 
+      
       // Score PWMs
       typedef std::pair<int32_t, int32_t> TPosScore;
       typedef std::vector<TPosScore> TChrPosScore;
@@ -99,10 +109,10 @@ namespace bamstats
       TMotifCounts mc(pwms.size(), 0);
       for(uint32_t i = 0; i<pwms.size(); ++i) mh[i].resize(2, TChrPosScore());      
       for(uint32_t i = 0; i<pwms.size(); ++i) {
-	std::cout << i << "," << scorePwm(seq, seqlen, pwms[i], mh, mc) << std::endl;
+	typedef std::pair<int32_t, int32_t> TFwdRevHits;
+	TFwdRevHits hits = scorePwm(ref, pwms[i], 0.8, mh);
+	//std::cout << i << "," << hits.first << "," << hits.second << std::endl;
       }
-      
-      if (seq != NULL) free(seq);
     }
     fai_destroy(fai);
     

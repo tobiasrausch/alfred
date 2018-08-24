@@ -149,47 +149,40 @@ namespace bamstats
     }
   }
 
-  template<typename TMotifHits, typename TMotifCounts>
-  inline int32_t
-    scorePwm(char const* ref, int32_t const seqlen, Pwm const& pwm, char const strand, double const fraction, TMotifHits& mh, TMotifCounts& mc) {
-    int32_t hits = 0;
+  template<typename TMotifHits>
+  inline std::pair<int32_t, int32_t>
+  scorePwm(std::vector<uint8_t> const& ref, Pwm const& pwm, double const fraction, TMotifHits& mh) {
+    int32_t hitsFwd = 0;
+    int32_t hitsRev = 0;
     int32_t motiflen = pwm.matrix.shape()[1];
     double maxscore = _maxScore(pwm);
     double minscore = _minScore(pwm);
     double threshold = minscore + (maxscore - minscore) * fraction;
-      
-    // Parse forward sequence
-    if ((strand == '+') || (strand == '*')) {
-      for(int32_t i = 0; i < seqlen - motiflen + 1; ++i) {
-	double score = 0;
-	for(int32_t k = 0; k < motiflen; ++k) {
-	  if ((ref[i+k] == 'A') || (ref[i+k] == 'a')) score += pwm.matrix[0][k];
-	  else if ((ref[i+k] == 'C') || (ref[i+k] == 'c')) score += pwm.matrix[1][k];
-	  else if ((ref[i+k] == 'G') || (ref[i+k] == 'g')) score += pwm.matrix[2][k];
-	  else if ((ref[i+k] == 'T') || (ref[i+k] == 't')) score += pwm.matrix[3][k];
-	  else score += 0;
-	}
-	if (score > threshold) ++hits;
-      }
-    }
+    Pwm pwmRev;
+    revComp(pwm, pwmRev);
     
-    // Reverse
-    if ((strand == '-') || (strand == '*')) {
-      //ToDo
-      // Pwm rev;
-      //  revComp(pwm, rev);
+    // Parse sequence
+    double scoreFwd = 0;
+    double scoreRev = 0;
+    typedef std::vector<uint8_t> TNucMap;
+    TNucMap::const_iterator n = ref.begin();
+    int32_t k = 0;
+    for(TNucMap::const_iterator itNuc = ref.begin(); itNuc < ref.end() - motiflen + 1; ++itNuc) {
+      scoreFwd = 0;
+      scoreRev = 0;
+      n = itNuc;
+      for(k = 0; k < motiflen; ++k, ++n) {
+	if (*n < 4) {
+	  scoreFwd += pwm.matrix[*n][k];
+	  scoreRev += pwmRev.matrix[*n][k];
+	} else break;
+      }
+      if (scoreFwd > threshold) ++hitsFwd;
+      if (scoreRev > threshold) ++hitsRev;
     }
-    return hits;
+    return std::make_pair(hitsFwd, hitsRev);
   }
 
-  template<typename TMotifHits, typename TMotifCounts>
-  inline int32_t
-    scorePwm(char const* seq, int32_t const seqlen, Pwm const& pwm, TMotifHits& mh, TMotifCounts& mc) {
-    char strand = '*';
-    double fraction = 0.8;
-    return scorePwm(seq, seqlen, pwm, strand, fraction, mh, mc);
-  }
-  
   template<typename TConfig>
   inline bool
   parseJasparPfm(TConfig const& c, std::vector<Pfm>& pfms) {
