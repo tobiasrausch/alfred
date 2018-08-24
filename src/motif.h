@@ -47,29 +47,158 @@ namespace bamstats
 
   struct Pfm {
     typedef boost::multi_array<int32_t, 2> T2DArray;
-    T2DArray pfm;
+    T2DArray matrix;
     
     std::string matrixId;
     std::string symbol;
   };
 
+  struct Pwm {
+    typedef boost::multi_array<double, 2> T2DArray;
+    T2DArray matrix;
+    
+    std::string matrixId;
+    std::string symbol;
+  };
+
+  inline double
+  _minScore(Pwm const& pwm) {
+    double ms = 0;
+    for(uint32_t j = 0; j < pwm.matrix.shape()[1]; ++j) {
+      double minJ = pwm.matrix[0][j];
+      for(uint32_t i = 1; i < 4; ++i) {
+	if (pwm.matrix[i][j] < minJ) minJ = pwm.matrix[i][j];
+      }
+      ms += minJ;
+    }
+    return ms;
+  }
+
+  inline double
+  _maxScore(Pwm const& pwm) {
+    double ms = 0;
+    for(uint32_t j = 0; j < pwm.matrix.shape()[1]; ++j) {
+      double maxJ = pwm.matrix[0][j];
+      for(uint32_t i = 1; i < 4; ++i) {
+	if (pwm.matrix[i][j] > maxJ) maxJ = pwm.matrix[i][j];
+      }
+      ms += maxJ;
+    }
+    return ms;
+  }
 
   inline void
-  revComp(Pfm const& pfm, Pfm& out) {
-    out.matrixId = pfm.matrixId;
-    out.symbol = pfm.symbol;
-    out.pfm.resize(boost::extents[4][pfm.pfm.shape()[1]]);
+  scale(Pwm& pwm) {
+    double minsc = _minScore(pwm);
+    double maxsc = _maxScore(pwm);
+    double cols = pwm.matrix.shape()[1];
     for(uint32_t i = 0; i < 4; ++i) {
-      uint32_t r = out.pfm.shape()[1] - 1;
-      for(uint32_t j = 0; j < out.pfm.shape()[1]; ++j, --r) {
-	out.pfm[(3-i)][r] = pfm.pfm[i][j];
+      for(uint32_t j = 0; j < pwm.matrix.shape()[1]; ++j) {
+	pwm.matrix[i][j] = ((pwm.matrix[i][j] - minsc / cols) / (maxsc - minsc));
       }
     }
   }
   
+  inline void
+  convert(Pfm const& pfm, Pwm& pwm, std::vector<double> const& bg, double const pc) {
+    pwm.matrixId = pfm.matrixId;
+    pwm.symbol = pfm.symbol;
+    pwm.matrix.resize(boost::extents[4][pfm.matrix.shape()[1]]);
+    double totalBg = 0;
+    for(uint32_t i = 0; i < 4; ++i) totalBg += bg[i];
+    for(uint32_t j = 0; j < pwm.matrix.shape()[1]; ++j) {
+      int32_t total = 0;
+      for(uint32_t i = 0; i < 4; ++i) total += pfm.matrix[i][j];
+      for(uint32_t i = 0; i < 4; ++i) {
+	pwm.matrix[i][j] = ((double) pfm.matrix[i][j] + bg[i] * pc) / ((double) total + totalBg * pc);
+	pwm.matrix[i][j] = std::log(pwm.matrix[i][j] / (bg[i] / totalBg)) / log(2);
+      }
+    }
+  }
+
+  inline void
+  convert(Pfm const& pfm, Pwm& pwm, double const pc) {
+    std::vector<double> bg;
+    bg.push_back(0.25);
+    bg.push_back(0.25);
+    bg.push_back(0.25);
+    bg.push_back(0.25);
+    convert(pfm, pwm, bg, pc);
+  }
+
+  inline void
+  convert(Pfm const& pfm, Pwm& pwm) {
+    convert(pfm, pwm, 0.8);
+  }
+  
+  template<typename TPositionMatrix>
+  inline void
+  revComp(TPositionMatrix const& pfm, TPositionMatrix& out) {
+    out.matrixId = pfm.matrixId;
+    out.symbol = pfm.symbol;
+    out.matrix.resize(boost::extents[4][pfm.matrix.shape()[1]]);
+    for(uint32_t i = 0; i < 4; ++i) {
+      uint32_t r = out.matrix.shape()[1] - 1;
+      for(uint32_t j = 0; j < out.matrix.shape()[1]; ++j, --r) {
+	out.matrix[(3-i)][r] = pfm.matrix[i][j];
+      }
+    }
+  }
+
+  inline void
+  scorePwm(std::string const& ref, Pwm const& pwm, char const strand, double fraction) {
+    if ((fraction >= 0) && (fraction <= 1)) {
+      uint32_t motiflen = pwm.matrix.shape()[1];
+      double maxscore = _maxScore(pwm);
+      double minscore = _minScore(pwm);
+      double threshold = minscore + (maxscore - minscore) * fraction;
+      if (motiflen <= ref.size()) {
+	
+	// Forward
+	if ((strand == '+') || (strand == '*')) {
+	  for(uint32_t i = 0; i < ref.size() - motiflen + 1; ++i) {
+	    double score = 0;
+	    for(uint32_t k = 0; k < motiflen; ++k) {
+	      if ((ref[i+k] == 'A') || (ref[i+k] == 'a')) score += pwm.matrix[0][k];
+	      else if ((ref[i+k] == 'C') || (ref[i+k] == 'c')) score += pwm.matrix[1][k];
+	      else if ((ref[i+k] == 'G') || (ref[i+k] == 'g')) score += pwm.matrix[2][k];
+	      else if ((ref[i+k] == 'T') || (ref[i+k] == 't')) score += pwm.matrix[3][k];
+	      else score += 0;
+	    }
+	    if (score > threshold) std::cout << i << ',' << score << std::endl;
+	  }
+	}
+	
+	// Reverse
+	if ((strand == '-') || (strand == '*')) {
+	  Pwm rev;
+	  revComp(pwm, rev);
+	  for(uint32_t i = 0; i < ref.size() - motiflen + 1; ++i) {
+	    double score = 0;
+	    for(uint32_t k = 0; k < motiflen; ++k) {
+	      if ((ref[i+k] == 'A') || (ref[i+k] == 'a')) score += rev.matrix[0][k];
+	      else if ((ref[i+k] == 'C') || (ref[i+k] == 'c')) score += rev.matrix[1][k];
+	      else if ((ref[i+k] == 'G') || (ref[i+k] == 'g')) score += rev.matrix[2][k];
+	      else if ((ref[i+k] == 'T') || (ref[i+k] == 't')) score += rev.matrix[3][k];
+	    else score += 0;
+	    }
+	    if (score > threshold) std::cout << i << ',' << score << std::endl;
+	  }
+	}
+      }
+    }
+  }
+
+  inline void
+  scorePwm(std::string const& ref, Pwm const& pwm) {
+    char strand = '*';
+    double fraction = 0.8;
+    scorePwm(ref, pwm, strand, fraction);
+  }
+  
   template<typename TConfig>
   inline bool
-  parseJaspar(TConfig const& c, std::vector<Pfm>& pfms) {
+  parseJasparPfm(TConfig const& c, std::vector<Pfm>& pfms) {
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "JASPAR parsing" << std::endl;
 
@@ -136,15 +265,39 @@ namespace bamstats
 	if (acgt == 0) { 
 	  int32_t lenMotif = 0;
 	  for(Tokenizer::iterator tokIter = tokens.begin(); tokIter!=tokens.end(); ++tokIter) ++lenMotif;
-	  pfms[id].pfm.resize(boost::extents[4][lenMotif]);
+	  pfms[id].matrix.resize(boost::extents[4][lenMotif]);
 	}
 	uint32_t col = 0;
-	for(Tokenizer::iterator tokIter = tokens.begin(); tokIter!=tokens.end(); ++tokIter, ++col) pfms[id].pfm[acgt][col] = boost::lexical_cast<int32_t>(*tokIter);
+	for(Tokenizer::iterator tokIter = tokens.begin(); tokIter!=tokens.end(); ++tokIter, ++col) pfms[id].matrix[acgt][col] = boost::lexical_cast<int32_t>(*tokIter);
+
+	// Debug code
+	//if (acgt == 3) {
+	//std::cout << ">" << pfms[id].matrixId << ',' << pfms[id].symbol << std::endl;
+	//for(uint32_t i = 0; i < pfms[id].matrix.shape()[0]; ++i) {
+	// for(uint32_t j = 0; j < pfms[id].matrix.shape()[1]; ++j) {
+	//    std::cerr << pfms[id].matrix[i][j] << ',';
+	//  }
+	//  std::cerr << std::endl;
+	//}
+	//}
+	
 	++acgt;
       }
 
     }
     dataIn.pop();
+    return true;
+  }
+
+  template<typename TConfig>
+  inline bool
+  parseJasparPwm(TConfig const& c, std::vector<Pwm>& pwms) {
+    std::vector<Pfm> pfms;
+    if (!parseJasparPfm(c, pfms)) return false;
+    pwms.resize(pfms.size(), Pwm());
+    for(uint32_t i = 0; i < pfms.size(); ++i) {
+      convert(pfms[i], pwms[i]);
+    }
     return true;
   }
   
