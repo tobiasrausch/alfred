@@ -388,6 +388,9 @@ namespace bamstats
 	  if (!c.secondary) continue;
 	  // Evaluate secondary alignments
 	  // Sequence and quality strings might be '*' for secondary alignments
+	} else if (rec->core.flag & BAM_FSUPPLEMENTARY) {
+	  if (!c.supplementary) continue;
+	  // Evaluate supplementary alignments
 	} else continue;
       }
       ++itRg->second.qc.qcount[(int32_t) rec->core.qual];
