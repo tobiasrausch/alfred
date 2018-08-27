@@ -46,28 +46,50 @@ function run() {
   // TODO error handling
   if (fileObjects.length === 0) return
 
-  const fileObject = fileObjects[0]
-
   hideElement(resultContainer)
   hideElement(resultError)
   showElement(resultInfo)
   summaryTab.innerHTML = ''
 
+  mergeInputs(fileObjects)
+}
+
+function readFile(fileObject) {
   const fileReader = new FileReader()
   const isGzip = fileObject.fileExtension === 'gz'
+
   if (isGzip) {
     fileReader.readAsArrayBuffer(fileObject.file)
   } else {
     fileReader.readAsText(fileObject.file)
   }
-  fileReader.onload = event => {
-    let content = event.target.result
-    if (isGzip) {
-      content = pako.ungzip(content, { to: 'string' })
+
+  return new Promise(resolve => {
+    fileReader.onload = event => {
+      let content = event.target.result
+      if (isGzip) {
+        content = pako.ungzip(content, { to: 'string' })
+      }
+      data = JSON.parse(content)
+      resolve(data)
     }
-    data = JSON.parse(content)
-    handleSuccess(data)
+  })
+}
+
+function mergeInputs(fileObjects) {
+  const fileReads = []
+  for (const fileObject of fileObjects) {
+    fileReads.push(readFile(fileObject))
   }
+  Promise.all(fileReads).then(fileData => {
+    data = {
+      samples: fileData
+        .map(d => d.samples)
+        .reduce((acc, cur) => acc.concat(cur))
+        .sort((s1, s2) => (s1.id).localeCompare(s2.id))
+    }
+    handleSuccess(data)
+  })
 }
 
 function handleSuccess(data) {
