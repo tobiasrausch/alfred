@@ -49,7 +49,6 @@ namespace bamstats
     typedef boost::multi_array<int32_t, 2> T2DArray;
     T2DArray matrix;
 
-    int32_t id;
     std::string matrixId;
     std::string symbol;
   };
@@ -58,7 +57,6 @@ namespace bamstats
     typedef boost::multi_array<double, 2> T2DArray;
     T2DArray matrix;
 
-    int32_t id;
     std::string matrixId;
     std::string symbol;
   };
@@ -89,6 +87,26 @@ namespace bamstats
     return ms;
   }
 
+  inline std::string
+  _maxSimpleMotif(Pwm const& pwm) {
+    std::string motif;
+    for(uint32_t j = 0; j < pwm.matrix.shape()[1]; ++j) {
+      double maxJ = pwm.matrix[0][j];
+      uint32_t maxI = 0;
+      for(uint32_t i = 1; i < 4; ++i) {
+	if (pwm.matrix[i][j] > maxJ) {
+	  maxJ = pwm.matrix[i][j];
+	  maxI = i;
+	}
+      }
+      if (maxI == 0) motif += 'A';
+      else if (maxI == 1) motif += 'C';
+      else if (maxI == 2) motif += 'G';
+      else if (maxI == 3) motif += 'T';
+    }
+    return motif;
+  }
+
   inline void
   scale(Pwm& pwm) {
     double minsc = _minScore(pwm);
@@ -105,7 +123,6 @@ namespace bamstats
   convert(Pfm const& pfm, Pwm& pwm, std::vector<double> const& bg, double const pc) {
     pwm.matrixId = pfm.matrixId;
     pwm.symbol = pfm.symbol;
-    pwm.id = pfm.id;
     pwm.matrix.resize(boost::extents[4][pfm.matrix.shape()[1]]);
     double totalBg = 0;
     for(uint32_t i = 0; i < 4; ++i) totalBg += bg[i];
@@ -139,7 +156,6 @@ namespace bamstats
   revComp(TPositionMatrix const& pfm, TPositionMatrix& out) {
     out.matrixId = pfm.matrixId;
     out.symbol = pfm.symbol;
-    out.id = pfm.id;
     out.matrix.resize(boost::extents[4][pfm.matrix.shape()[1]]);
     for(uint32_t i = 0; i < 4; ++i) {
       uint32_t r = out.matrix.shape()[1] - 1;
@@ -149,46 +165,50 @@ namespace bamstats
     }
   }
 
-  template<typename TMotifHits>
-  inline std::pair<int32_t, int32_t>
-  scorePwm(std::vector<uint8_t> const& ref, Pwm const& pwm, double const fraction, TMotifHits& mh) {
-    int32_t hitsFwd = 0;
-    int32_t hitsRev = 0;
-    int32_t motiflen = pwm.matrix.shape()[1];
-    double maxscore = _maxScore(pwm);
-    double minscore = _minScore(pwm);
-    double threshold = minscore + (maxscore - minscore) * fraction;
+  template<typename TConfig, typename TBitSet, typename TMotifHits>
+  inline void
+  scorePwm(TConfig const& c, char const* seq, TBitSet const& evalPos, Pwm const& inpwm, TMotifHits& mh) {
+    Pwm pwmFwd(inpwm);
+    scale(pwmFwd);
     Pwm pwmRev;
-    revComp(pwm, pwmRev);
+    revComp(inpwm, pwmRev);
+    scale(pwmRev);
+    int32_t motiflen = pwmFwd.matrix.shape()[1];
+    //std::cerr << _minScore(pwmFwd) << ',' << _maxScore(pwmFwd) << std::endl;
+    //std::cerr << _minScore(pwmRev) << ',' << _maxScore(pwmRev) << std::endl;
     
     // Parse sequence
-    double scoreFwd = 0;
-    double scoreRev = 0;
-    typedef std::vector<uint8_t> TNucMap;
-    TNucMap::const_iterator n = ref.begin();
-    int32_t k = 0;
-    for(TNucMap::const_iterator itNuc = ref.begin(); itNuc < ref.end() - motiflen + 1; ++itNuc) {
-      scoreFwd = 0;
-      scoreRev = 0;
-      n = itNuc;
-      for(k = 0; k < motiflen; ++k, ++n) {
-	if (*n < 4) {
-	  scoreFwd += pwm.matrix[*n][k];
-	  scoreRev += pwmRev.matrix[*n][k];
-	} else break;
+    for(uint32_t pos = 0; pos < evalPos.size() - motiflen + 1; ++pos) {
+      if (evalPos[pos]) {
+	std::string ref = boost::to_upper_copy(std::string(seq + pos, seq + pos + motiflen));
+	double scoreFwd = 0;
+	double scoreRev = 0;
+	int32_t k = 0;
+	for(; k < motiflen; ++k) {
+	  if (evalPos[pos+k]) {
+	    int32_t n = 4;
+	    if (ref[k] == 'A') n = 0;
+	    else if (ref[k] == 'C') n = 1;
+	    else if (ref[k] == 'G') n = 2;
+	    else if (ref[k] == 'T') n = 3;
+	    if (n < 4) {
+	      scoreFwd += pwmFwd.matrix[n][k];
+	      scoreRev += pwmRev.matrix[n][k];
+	    } else break;
+	  } else break;
+	}
+	if ((k == motiflen) && ((scoreFwd > c.motifScoreQuantile) || (scoreRev > c.motifScoreQuantile))) {
+	  //std::cerr << "Genom:" << ref << "," << ref << std::endl;
+	  //std::cerr << "Query:" << _maxSimpleMotif(pwmFwd) << "," << _maxSimpleMotif(pwmRev) << std::endl;
+	  mh.push_back(pos);
+	}
       }
-      if (scoreFwd > threshold) ++hitsFwd;
-      if (scoreRev > threshold) ++hitsRev;
     }
-    return std::make_pair(hitsFwd, hitsRev);
   }
 
   template<typename TConfig>
   inline bool
   parseJasparPfm(TConfig const& c, std::vector<Pfm>& pfms) {
-    boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
-    std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "JASPAR parsing" << std::endl;
-
     // Check gzip
     if (!is_gz(c.motifFile)) {
       std::cerr << "JASPAR file is not gzipped!" << std::endl;
@@ -202,8 +222,8 @@ namespace bamstats
     dataIn.push(file);
     std::istream instream(&dataIn);
     std::string gline;
-    int32_t id = 0;
     int32_t acgt = 0;
+    int32_t id = 0;
     while(std::getline(instream, gline)) {
       // Header
       if ((gline.size()) && (gline[0] == '>')) {
@@ -215,7 +235,6 @@ namespace bamstats
 	Tokenizer tokens(gline, sep);
 	Tokenizer::iterator tokIter = tokens.begin();
 	if (tokIter != tokens.end()) {
-	  pfms[id].id = id;
 	  pfms[id].matrixId = *tokIter++;
 	  pfms[id].symbol = "NA";
 	  if (tokIter != tokens.end()) {
@@ -287,6 +306,134 @@ namespace bamstats
       convert(pfms[i], pwms[i]);
     }
     return true;
+  }
+
+  template<typename TConfig, typename TGenomicRegions, typename TMotifIds>
+  inline int32_t
+  parseJasparAll(TConfig const& c, TGenomicRegions& overlappingRegions, TMotifIds& motifIds) {
+    boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
+    std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Motif file parsing" << std::endl;
+
+    // Generate PWMs
+    std::vector<Pwm> pwms;
+    parseJasparPwm(c, pwms);
+
+    // Motif search
+    now = boost::posix_time::second_clock::local_time();
+    std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Motif search" << std::endl;
+    boost::progress_display show_progress(c.nchr.size());
+
+    // Iterate chromosomes
+    faidx_t* fai = fai_load(c.genome.string().c_str());
+    char* seq = NULL;
+    for(int32_t refIndex=0; refIndex < (int32_t) c.nchr.size(); ++refIndex) {
+      ++show_progress;
+
+      // Chromosome name and length
+      std::string tname = "NA";
+      for(typename TConfig::TChrMap::const_iterator itChr = c.nchr.begin(); itChr != c.nchr.end(); ++itChr) {
+	if (refIndex == itChr->second) {
+	  tname = itChr->first;
+	}
+      }
+      int32_t seqlen = faidx_seq_len(fai, tname.c_str());
+
+      // Pre-process bed file so we can speed-up motif search
+      typedef boost::dynamic_bitset<> TBitSet;
+      TBitSet evalPos(seqlen, false);
+      std::ifstream chrFile(c.infile.string().c_str(), std::ifstream::in);
+      if (chrFile.is_open()) {
+	while (chrFile.good()) {
+	  std::string chrFromFile;
+	  getline(chrFile, chrFromFile);
+	  typedef boost::tokenizer< boost::char_separator<char> > Tokenizer;
+	  boost::char_separator<char> sep(" \t,;");
+	  Tokenizer tokens(chrFromFile, sep);
+	  Tokenizer::iterator tokIter = tokens.begin();
+	  if (tokIter!=tokens.end()) {
+	    std::string chrName = *tokIter++;
+	    if (c.nchr.find(chrName)->second != refIndex) continue;
+	    int32_t start = boost::lexical_cast<int32_t>(*tokIter++);
+	    int32_t end = boost::lexical_cast<int32_t>(*tokIter++);
+	    std::string name = "NA";
+	    if (start >= end) continue;  // Bed has right-open intervals
+	    int32_t realstart = std::max(0, start - c.maxDistance);
+            int32_t realend = std::min(seqlen, end + c.maxDistance);
+	    for(int32_t i = realstart; i < realend; ++i) evalPos[i] = true;
+	  }
+	}
+	chrFile.close();
+      }
+
+      // Anything to annotate on this chromosome?
+      if (evalPos.count()) {
+	seqlen = -1;
+	seq = faidx_fetch_seq(fai, tname.c_str(), 0, faidx_seq_len(fai, tname.c_str()) + 1, &seqlen);
+
+	// Blacklist Ns
+	for(int32_t i = 0; i < seqlen; ++i) {
+	  if ((seq[i] == 'n') || (seq[i] == 'N')) evalPos[i] = false;
+	}
+	
+	// Score PWMs
+	for(uint32_t i = 0; i<pwms.size(); ++i) {
+	  typedef std::vector<int32_t> TMotifHits;
+	  TMotifHits mh;
+	  scorePwm(c, seq, evalPos, pwms[i], mh);
+
+	  int32_t motiflen = pwms[i].matrix.shape()[1];
+	  for(uint32_t hit = 0; hit < mh.size(); ++hit) {
+	    _insertInterval(overlappingRegions[refIndex], mh[hit], mh[hit] + motiflen, '*', i, 0);
+	  }
+	}
+
+	// Clean-up
+	if (seq != NULL) free(seq);
+      }
+    }
+
+    // Assign Motif Ids
+    for(uint32_t i = 0; i<pwms.size(); ++i) motifIds.push_back(pwms[i].symbol);
+
+    return motifIds.size();
+  }
+
+  
+  template<typename TConfig, typename TGenomicRegions, typename TMotifIds>
+  inline int32_t
+  parseJaspar(TConfig const& c, TGenomicRegions& gRegions, TMotifIds& motifIds) {
+    typedef typename TGenomicRegions::value_type TChromosomeRegions;
+
+    // Overlapping intervals for each label
+    TGenomicRegions overlappingRegions;
+    overlappingRegions.resize(gRegions.size(), TChromosomeRegions());
+    parseJasparAll(c, overlappingRegions, motifIds);
+    
+    // Make intervals non-overlapping for each label
+    for(uint32_t refIndex = 0; refIndex < overlappingRegions.size(); ++refIndex) {
+      // Sort by ID
+      std::sort(overlappingRegions[refIndex].begin(), overlappingRegions[refIndex].end(), SortIntervalLabel<IntervalLabel>());
+      int32_t runningId = -1;
+      char runningStrand = '*';
+      typedef boost::icl::interval_set<uint32_t> TIdIntervals;
+      typedef typename TIdIntervals::interval_type TIVal;
+      TIdIntervals idIntervals;
+      for(uint32_t i = 0; i < overlappingRegions[refIndex].size(); ++i) {
+	if (overlappingRegions[refIndex][i].lid != runningId) {
+	  for(typename TIdIntervals::iterator it = idIntervals.begin(); it != idIntervals.end(); ++it) {
+	    gRegions[refIndex].push_back(IntervalLabel(it->lower(), it->upper(), runningStrand, runningId));
+	  }
+	  idIntervals.clear();
+	  runningId = overlappingRegions[refIndex][i].lid;
+	  runningStrand = overlappingRegions[refIndex][i].strand;
+	}
+	idIntervals.insert(TIVal::right_open(overlappingRegions[refIndex][i].start, overlappingRegions[refIndex][i].end));
+      }
+      // Process last id
+      for(typename TIdIntervals::iterator it = idIntervals.begin(); it != idIntervals.end(); ++it) gRegions[refIndex].push_back(IntervalLabel(it->lower(), it->upper(), runningStrand, runningId));
+    }
+
+    return motifIds.size();
   }
   
 }
