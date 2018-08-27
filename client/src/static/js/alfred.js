@@ -1,4 +1,5 @@
 import axios from 'axios'
+import * as FilePond from 'filepond'
 import { saveAs } from 'file-saver/FileSaver'
 import { zip } from 'lodash'
 import csv from 'papaparse'
@@ -37,11 +38,15 @@ const selectReadGroup = document.getElementById('select-rg')
 const selectToc = document.getElementById('select-toc')
 const summaryTab = document.getElementById('summary-tab')
 
+const fileUpload = FilePond.create(inputFile)
+
 function run() {
-  const file = inputFile.files[0]
+  const fileObjects = fileUpload.getFiles()
 
   // TODO error handling
-  if (file === undefined) return
+  if (fileObjects.length === 0) return
+
+  const fileObject = fileObjects[0]
 
   hideElement(resultContainer)
   hideElement(resultError)
@@ -49,11 +54,11 @@ function run() {
   summaryTab.innerHTML = ''
 
   const fileReader = new FileReader()
-  const isGzip = /\.gz$/.test(file.name)
+  const isGzip = fileObject.fileExtension === 'gz'
   if (isGzip) {
-    fileReader.readAsArrayBuffer(file)
+    fileReader.readAsArrayBuffer(fileObject.file)
   } else {
-    fileReader.readAsText(file)
+    fileReader.readAsText(fileObject.file)
   }
   fileReader.onload = event => {
     let content = event.target.result
