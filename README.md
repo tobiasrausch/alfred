@@ -49,7 +49,7 @@ Plotting alignment statistics
 
 `Rscript scripts/stats.R qc.tsv.gz`
 
-To convert all the alignment metrics from column format to rows to easily read it on screen
+To convert all the alignment metrics from column format to row format for readability
 
 `zgrep ^ME qc.tsv.gz | cut -f 2- | datamash transpose | column -t`
 
