@@ -21,7 +21,7 @@ The easiest way to get Alfred is to download a statically linked binary from the
 Alfred installation from source
 -------------------------------
 
-To build Alfred from source you need some build essentials and the boost libraries, i.e. for Ubuntu:
+To build Alfred from source you need some build essentials and the Boost libraries, i.e. for Ubuntu:
 
 `apt install build-essential g++ cmake git-all liblzma-dev zlib1g-dev libbz2-dev liblzma-dev libboost-date-time-dev libboost-program-options-dev libboost-system-dev libboost-filesystem-dev libboost-iostreams-dev`
 
