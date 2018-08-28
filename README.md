@@ -15,7 +15,7 @@
 Alfred installation
 -------------------
 
-The easiest way to get Alfred is to download a statically linked binary from the [Alfred github release page](https://github.com/tobiasrausch/alfred/releases/) or via [Bioconda](https://anaconda.org/bioconda/alfred).
+Statically linked binaries are available from the [Alfred github release page](https://github.com/tobiasrausch/alfred/releases/). There is also an [Alfred Bioconda package](https://anaconda.org/bioconda/alfred).
 
 
 Alfred installation from source
