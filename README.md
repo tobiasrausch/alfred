@@ -111,7 +111,7 @@ Alternatively, one can use the [interactive GUI](https://gear.embl.de/alfred) an
 BAM Feature Counting for RNA-Seq
 --------------------------------
 
-Alfred can also assign reads to gene annotation features from a GTF file such as counting reads by gene or transcript identifier. Requires paired-end data.
+Alfred can also assign reads to gene annotation features from a GTF file such as counting reads by gene or transcript identifier.
 
 `cd gtf/ && ./downloadGTF.sh`
 
@@ -121,7 +121,7 @@ Alfred can also assign reads to gene annotation features from a GTF file such as
 BAM Read Counting for DNA-Seq
 -----------------------------
 
-For DNA sequencing, Alfred can be used to calculate the coverage in overlapping or non-overlapping windows or in given set of intervals. Requires paired-end data.
+For DNA sequencing, Alfred can be used to calculate the coverage in overlapping or non-overlapping windows or in given set of intervals.
 
 `./src/alfred count_dna -o <cov.gz> <align.GRCh37.bam>`
 
