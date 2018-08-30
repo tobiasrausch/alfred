@@ -55,6 +55,7 @@ struct ConfigQC {
   bool isHaplotagged;
   bool isMitagged;
   bool secondary;
+  bool supplementary;
   float nXChrLen;
   uint32_t minChrLen;
   std::string rgname;
@@ -82,6 +83,7 @@ int qc(int argc, char **argv) {
     ("format,f", boost::program_options::value<std::string>(&c.format)->default_value("tsv"), "output format [tsv|json]")
     ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("qc.tsv.gz"), "gzipped output file")
     ("secondary,s", "evaluate secondary alignments")
+    ("supplementary,u", "evaluate supplementary alignments") 
     ;
 
   boost::program_options::options_description rgopt("Read-group options");
@@ -121,6 +123,10 @@ int qc(int argc, char **argv) {
   if (vm.count("secondary")) c.secondary = true;
   else c.secondary = false;
 
+  // Supplementary alignments
+  if (vm.count("supplementary")) c.supplementary = true;
+  else c.supplementary = false;
+  
   // Check N95
   if (c.nXChrLen > 1) c.nXChrLen = 1;
   else if (c.nXChrLen < 0) c.nXChrLen = 0;

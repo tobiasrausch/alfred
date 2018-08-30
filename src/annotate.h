@@ -41,17 +41,21 @@ Contact: Tobias Rausch (rausch@embl.de)
 #include "gtf.h"
 #include "gff3.h"
 #include "bed.h"
-
+#include "motif.h"
 
 namespace bamstats
 {
 
   struct AnnotateConfig {
-    uint8_t inputFileFormat;   // 0 = gtf, 1 = bed, 2 = gff3
+    typedef std::map<std::string, int32_t> TChrMap;
+    uint8_t inputFileFormat;   // 0 = gtf, 1 = bed, 2 = gff3, 3 = motif file
     int32_t maxDistance;
-    std::map<std::string, int32_t> nchr;
+    float motifScoreQuantile;
+    TChrMap nchr;
     std::string idname;
     std::string feature;
+    boost::filesystem::path motifFile;
+    boost::filesystem::path genome;
     boost::filesystem::path gtfFile;
     boost::filesystem::path bedFile;
     boost::filesystem::path infile;
@@ -79,7 +83,6 @@ namespace bamstats
     // Iterate chromosomese
     for(int32_t refIndex=0; refIndex < (int32_t) c.nchr.size(); ++refIndex) {
       ++show_progress;
-      if (gRegions[refIndex].empty()) continue;
 
       // Sort by position
       std::sort(gRegions[refIndex].begin(), gRegions[refIndex].end(), SortIntervalStart<IntervalLabel>());
@@ -196,6 +199,7 @@ namespace bamstats
     if (c.inputFileFormat == 0) tf = parseGTF(c, gRegions, geneIds);
     else if (c.inputFileFormat == 1) tf = parseBED(c, gRegions, geneIds);
     else if (c.inputFileFormat == 2) tf = parseGFF3(c, gRegions, geneIds);
+    else if (c.inputFileFormat == 3) tf = parseJaspar(c, gRegions, geneIds);
     if (tf == 0) {
       std::cerr << "Error parsing GTF/GFF3/BED file!" << std::endl;
       std::cerr << "Please check that the chromosome names agree (chr1 versus 1) between input and annotation file." << std::endl;
@@ -238,6 +242,14 @@ namespace bamstats
       ("id,i", boost::program_options::value<std::string>(&c.idname)->default_value("gene_name"), "gtf/gff3 attribute")
       ("feature,f", boost::program_options::value<std::string>(&c.feature)->default_value("gene"), "gtf/gff3 feature")
       ;
+
+    boost::program_options::options_description motifopt("Motif annotation file options");
+    motifopt.add_options()
+      ("motif,m", boost::program_options::value<boost::filesystem::path>(&c.motifFile), "motif file in jaspar or raw format")
+      ("reference,r", boost::program_options::value<boost::filesystem::path>(&c.genome), "reference file")
+      ("quantile,q", boost::program_options::value<float>(&c.motifScoreQuantile)->default_value(0.95), "motif quantile score [0,1]")
+      ;
+    
     
     boost::program_options::options_description bedopt("BED annotation file options, columns chr, start, end, name");
     bedopt.add_options()
@@ -253,9 +265,9 @@ namespace bamstats
     pos_args.add("input-file", -1);
 
     boost::program_options::options_description cmdline_options;
-    cmdline_options.add(generic).add(gtfopt).add(bedopt).add(hidden);
+    cmdline_options.add(generic).add(gtfopt).add(bedopt).add(motifopt).add(hidden);
     boost::program_options::options_description visible_options;
-    visible_options.add(generic).add(gtfopt).add(bedopt);
+    visible_options.add(generic).add(gtfopt).add(bedopt).add(motifopt);
 
     // Parse command-line
     boost::program_options::variables_map vm;
@@ -263,10 +275,11 @@ namespace bamstats
     boost::program_options::notify(vm);
 
     // Check command line arguments
-    if ((vm.count("help")) || (!vm.count("input-file")) || ((!vm.count("gtf")) && (!vm.count("bed")))) {
+    if ((vm.count("help")) || (!vm.count("input-file")) || ((!vm.count("gtf")) && (!vm.count("bed")) && (!vm.count("motif")))) {
       std::cout << std::endl;
       std::cout << "Usage: alfred " << argv[0] << " [OPTIONS] -g <hg19.gtf.gz> <peaks.bed>" << std::endl;
       std::cout << "Usage: alfred " << argv[0] << " [OPTIONS] -b <hg19.bed.gz> <peaks.bed>" << std::endl;
+      std::cout << "Usage: alfred " << argv[0] << " [OPTIONS] -m <motif.jaspar.gz> -r <genome.fa> <peaks.bed>" << std::endl;
       std::cout << visible_options << "\n";
       return 1;
     }
@@ -302,8 +315,33 @@ namespace bamstats
     // Check region file
     if (!(boost::filesystem::exists(c.gtfFile) && boost::filesystem::is_regular_file(c.gtfFile) && boost::filesystem::file_size(c.gtfFile))) {
       if (!(boost::filesystem::exists(c.bedFile) && boost::filesystem::is_regular_file(c.bedFile) && boost::filesystem::file_size(c.bedFile))) {
-	std::cerr << "Input gtf/bed file is missing." << std::endl;
-	return 1;
+	if (!(boost::filesystem::exists(c.motifFile) && boost::filesystem::is_regular_file(c.motifFile) && boost::filesystem::file_size(c.motifFile))) {
+	  std::cerr << "Input gtf/bed/motif annotation file is missing." << std::endl;
+	  return 1;
+	} else {
+	  c.inputFileFormat = 3;
+	  if ((!(vm.count("reference")))  || (!(boost::filesystem::exists(c.genome) && boost::filesystem::is_regular_file(c.genome) && boost::filesystem::file_size(c.genome)))) {
+	    std::cerr << "Motif annotation requires a reference genome file." << std::endl;
+	    return 1;
+	  } else {
+	    faidx_t* fai = fai_load(c.genome.string().c_str());
+	    if (fai == NULL) {
+	      if (fai_build(c.genome.string().c_str()) == -1) {
+		std::cerr << "Fail to open genome fai index for " << c.genome.string() << std::endl;
+		return 1;
+	      } else fai = fai_load(c.genome.string().c_str());
+	    }
+	    // Check that all chromosomes in input file are present
+	    for(typename AnnotateConfig::TChrMap::const_iterator itC = c.nchr.begin(); itC != c.nchr.end(); ++itC) {
+	      std::string chrName(itC->first);
+	      if (!faidx_has_seq(fai, chrName.c_str())) {
+		 std::cerr << "Chromosome from bed file " << chrName << " is NOT present in your reference file " << c.genome.string() << std::endl;
+		 return 1;
+	      }
+	    }
+	    fai_destroy(fai);
+	  }
+	}
       } else c.inputFileFormat = 1;
     } else {
       if (is_gff3(c.gtfFile)) c.inputFileFormat = 2;

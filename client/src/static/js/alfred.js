@@ -122,8 +122,7 @@ function handleSuccess(data) {
   }
 
   summaryTable(summary, true)
-
-  populateToc(data.samples[0].readGroups[0].metrics)
+  populateToc(samples[0], readGroups[samples[0]][0])
   vis(data, samples[0], readGroups[samples[0]][0])
 }
 
@@ -132,6 +131,7 @@ function handleReadGroupSelectChange() {
   const sample = selectSample.value
   const readGroup = selectReadGroup.value
   chartsContainer.innerHTML = ''
+  populateToc(sample, readGroup)
   vis(data, sample, readGroup)
 }
 
@@ -143,11 +143,16 @@ function handleSampleSelectChange() {
     .join('')
   const readGroup = readGroups[sample][0]
   chartsContainer.innerHTML = ''
+  populateToc(sample, readGroup)
   vis(data, sample, readGroup)
 }
 
-function populateToc(metrics) {
-  selectToc.innerHTML = `${metrics.map(
+function populateToc(sample, readGroup) {
+  const dataRg = data.samples
+    .find(s => s.id === sample)
+    .readGroups.find(rg => rg.id === readGroup)
+
+  selectToc.innerHTML = `${dataRg.metrics.map(
     metric => `<option value="${metric.id}">${metric.title}</option>`
   )}`
 }

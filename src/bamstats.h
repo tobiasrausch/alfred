@@ -386,6 +386,11 @@ namespace bamstats
 	}
 	if (rec->core.flag & BAM_FSECONDARY) {
 	  if (!c.secondary) continue;
+	  // Evaluate secondary alignments
+	  // Sequence and quality strings might be '*' for secondary alignments
+	} else if (rec->core.flag & BAM_FSUPPLEMENTARY) {
+	  if (!c.supplementary) continue;
+	  // Evaluate supplementary alignments
 	} else continue;
       }
       ++itRg->second.qc.qcount[(int32_t) rec->core.qual];
@@ -394,8 +399,14 @@ namespace bamstats
       else ++itRg->second.rc.mapped1;
       if (rec->core.flag & BAM_FREVERSE) ++itRg->second.rc.reverse;
       else ++itRg->second.rc.forward;
-      if (rec->core.l_qseq < itRg->second.rc.maxReadLength) ++itRg->second.rc.lRc[rec->core.l_qseq];
-      else ++itRg->second.rc.lRc[itRg->second.rc.maxReadLength];
+      if (rec->core.l_qseq) {
+	if (rec->core.l_qseq < itRg->second.rc.maxReadLength) ++itRg->second.rc.lRc[rec->core.l_qseq];
+	else ++itRg->second.rc.lRc[itRg->second.rc.maxReadLength];
+      } else {
+	int32_t slen = sequenceLength(rec);
+	if (slen < itRg->second.rc.maxReadLength) ++itRg->second.rc.lRc[slen];
+	else ++itRg->second.rc.lRc[itRg->second.rc.maxReadLength];
+      }
 
       // Fetch molecule identifier
       uint8_t* miptr = bam_aux_get(rec, "MI");
@@ -428,7 +439,7 @@ namespace bamstats
 	  itRg->second.rc.brange[refIndex][psId].second = std::max((int32_t) lastAlignedPosition(rec), itRg->second.rc.brange[refIndex][psId].second);
 	}
       }
-      
+
       // Get the read sequence
       typedef std::vector<uint8_t> TQuality;
       TQuality quality;
@@ -510,6 +521,7 @@ namespace bamstats
 
       uint32_t rp = 0; // reference pointer
       uint32_t sp = 0; // sequence pointer
+
       
       // Parse the CIGAR
       uint32_t* cigar = bam_get_cigar(rec);
@@ -518,8 +530,13 @@ namespace bamstats
 	if ((bam_cigar_op(cigar[i]) == BAM_CMATCH) || (bam_cigar_op(cigar[i]) == BAM_CEQUAL) || (bam_cigar_op(cigar[i]) == BAM_CDIFF)) {
 	  // match or mismatch
 	  for(std::size_t k = 0; k<bam_cigar_oplen(cigar[i]);++k) {
-	    if (sequence[sp] == refslice[rp]) ++itRg->second.bc.matchCount;
-	    else ++itRg->second.bc.mismatchCount;
+	    if (rec->core.l_qseq) {
+	      if (sequence[sp] == refslice[rp]) ++itRg->second.bc.matchCount;
+	      else ++itRg->second.bc.mismatchCount;
+	    } else {
+	      if (bam_cigar_op(cigar[i]) == BAM_CEQUAL) ++itRg->second.bc.matchCount;
+	      else if (bam_cigar_op(cigar[i]) == BAM_CDIFF) ++itRg->second.bc.mismatchCount;
+	    }
 	    // Count bp-level coverage
 	    if (itRg->second.bc.cov[rec->core.pos + rp] < itRg->second.bc.maxCoverage) ++itRg->second.bc.cov[rec->core.pos + rp];
 	    ++sp;
@@ -527,13 +544,13 @@ namespace bamstats
 	  }
 	} else if (bam_cigar_op(cigar[i]) == BAM_CDEL) {
 	  ++itRg->second.bc.delCount;
-	  ++itRg->second.bc.delHomACGTN[homopolymerContext(sequence, sp, 3)];
+	  if (rec->core.l_qseq) ++itRg->second.bc.delHomACGTN[homopolymerContext(sequence, sp, 3)];
 	  if (bam_cigar_oplen(cigar[i]) < itRg->second.bc.maxIndelSize) ++itRg->second.bc.delSize[bam_cigar_oplen(cigar[i])];
 	  else ++itRg->second.bc.delSize[itRg->second.bc.maxIndelSize];
 	  rp += bam_cigar_oplen(cigar[i]);
 	} else if (bam_cigar_op(cigar[i]) == BAM_CINS) {
 	  ++itRg->second.bc.insCount;
-	  ++itRg->second.bc.insHomACGTN[homopolymerContext(sequence, sp, 3)];
+	  if (rec->core.l_qseq) ++itRg->second.bc.insHomACGTN[homopolymerContext(sequence, sp, 3)];
 	  if (bam_cigar_oplen(cigar[i]) < itRg->second.bc.maxIndelSize) ++itRg->second.bc.insSize[bam_cigar_oplen(cigar[i])];
 	  else ++itRg->second.bc.insSize[itRg->second.bc.maxIndelSize];
 	  sp += bam_cigar_oplen(cigar[i]);
@@ -554,6 +571,7 @@ namespace bamstats
 	}
       }
     }
+    
     // Summarize bp-level coverage
     if (refIndex != -1) {
       for(typename TRGMap::iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {

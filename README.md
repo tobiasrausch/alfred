@@ -15,13 +15,13 @@
 Alfred installation
 -------------------
 
-The easiest way to get Alfred is to download a statically linked binary from the [Alfred github release page](https://github.com/tobiasrausch/alfred/releases/) or via [Bioconda](https://anaconda.org/bioconda/alfred).
+Statically linked binaries are available from the [Alfred github release page](https://github.com/tobiasrausch/alfred/releases/). There is also an [Alfred Bioconda package](https://anaconda.org/bioconda/alfred).
 
 
 Alfred installation from source
 -------------------------------
 
-To build Alfred from source you need some build essentials and the boost libraries, i.e. for Ubuntu:
+To build Alfred from source you need some build essentials and the Boost libraries, i.e. for Ubuntu:
 
 `apt install build-essential g++ cmake git-all liblzma-dev zlib1g-dev libbz2-dev liblzma-dev libboost-date-time-dev libboost-program-options-dev libboost-system-dev libboost-filesystem-dev libboost-iostreams-dev`
 
@@ -49,7 +49,7 @@ Plotting alignment statistics
 
 `Rscript scripts/stats.R qc.tsv.gz`
 
-To convert all the alignment metrics from column format to rows to easily read it on screen
+To convert all the alignment metrics from column format to row format for readability
 
 `zgrep ^ME qc.tsv.gz | cut -f 2- | datamash transpose | column -t`
 
@@ -136,6 +136,12 @@ BAM Feature Annotation
 Alfred can also be used to annotate peaks from ChIP-Seq or ATAC-Seq experiments. For instance to annotate overlapping/neighboring genes up to a distance of 10,000bp:
 
 `./src/alfred annotate -d 10000 -g gtf/Homo_sapiens.GRCh37.75.gtf.gz <peaks.bed>`
+
+Motif annotation can also be done. For example:
+
+`cd motif/ && ./downloadMotifs.sh`
+
+`./src/alfred annotate -r <hg19.fa> -m motif/jaspar.gz <peaks.bed>`
 
 
 Example E. coli data set
