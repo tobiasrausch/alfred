@@ -179,9 +179,9 @@ namespace bamstats
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "BAM file parsing" << std::endl;
     boost::progress_display show_progress( hdr->n_targets );
 
-    // Pair qualities and features
-    typedef boost::unordered_map<std::size_t, uint8_t> TQualities;
-    TQualities qualities;
+    // Mate map
+    typedef boost::unordered_map<std::size_t, bool> TMateMap;
+    TMateMap mateMap;
 
     // Open output file
     boost::iostreams::filtering_ostream dataOut;
@@ -219,30 +219,33 @@ namespace bamstats
       int32_t lastAlignedPos = 0;
       std::set<std::size_t> lastAlignedPosReads;
       while (sam_itr_next(samfile, iter, rec) >= 0) {
-	if ((rec->core.flag & (BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP | BAM_FSUPPLEMENTARY | BAM_FUNMAP | BAM_FMUNMAP)) || (rec->core.tid != rec->core.mtid) || (!(rec->core.flag & BAM_FPAIRED))) continue;
+	if (rec->core.flag & (BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP | BAM_FSUPPLEMENTARY | BAM_FUNMAP)) continue;
+	if ((rec->core.flag & BAM_FPAIRED) && ((rec->core.flag & BAM_FMUNMAP) || (rec->core.tid != rec->core.mtid))) continue;
 	if (rec->core.qual < c.minQual) continue;
 
-	// Clean-up the read store for identical alignment positions
-	if (rec->core.pos > lastAlignedPos) {
-	  lastAlignedPosReads.clear();
-	  lastAlignedPos = rec->core.pos;
-	}
+	if (rec->core.flag & BAM_FPAIRED) {
+	  // Clean-up the read store for identical alignment positions
+	  if (rec->core.pos > lastAlignedPos) {
+	    lastAlignedPosReads.clear();
+	    lastAlignedPos = rec->core.pos;
+	  }
 	
-	if ((rec->core.pos < rec->core.mpos) || ((rec->core.pos == rec->core.mpos) && (lastAlignedPosReads.find(hash_string(bam_get_qname(rec))) == lastAlignedPosReads.end()))) {
-	  // First read
-	  lastAlignedPosReads.insert(hash_string(bam_get_qname(rec)));
-	  std::size_t hv = hash_pair(rec);
-	  qualities[hv] = rec->core.qual;
+	  if ((rec->core.pos < rec->core.mpos) || ((rec->core.pos == rec->core.mpos) && (lastAlignedPosReads.find(hash_string(bam_get_qname(rec))) == lastAlignedPosReads.end()))) {
+	    // First read
+	    lastAlignedPosReads.insert(hash_string(bam_get_qname(rec)));
+	    std::size_t hv = hash_pair(rec);
+	    mateMap[hv] = true;
+	  } else {
+	    // Second read
+	    std::size_t hv = hash_pair_mate(rec);
+	    if ((mateMap.find(hv) == mateMap.end()) || (!mateMap[hv])) continue; // Mate discarded
+	    mateMap[hv] = false;
+
+	    // Count mid point
+	    int32_t midPoint = rec->core.pos + halfAlignmentLength(rec);
+	    if ((midPoint < (int32_t) hdr->target_len[refIndex]) && (cov[midPoint] < maxCoverage - 1)) ++cov[midPoint];
+	  }
 	} else {
-	  // Second read
-	  std::size_t hv = hash_pair_mate(rec);
-	  if (qualities.find(hv) == qualities.end()) continue; // Mate discarded
-	  uint8_t pairQuality = std::min((uint8_t) qualities[hv], (uint8_t) rec->core.qual);
-	  qualities[hv] = 0;
-
-	  // Pair quality
-	  if (pairQuality < c.minQual) continue; // Low quality pair
-
 	  // Count mid point
 	  int32_t midPoint = rec->core.pos + halfAlignmentLength(rec);
 	  if ((midPoint < (int32_t) hdr->target_len[refIndex]) && (cov[midPoint] < maxCoverage - 1)) ++cov[midPoint];
@@ -251,7 +254,7 @@ namespace bamstats
       // Clean-up
       bam_destroy1(rec);
       hts_itr_destroy(iter);
-      qualities.clear();
+      mateMap.clear();
 
       // Assign read counts
       std::vector<ItvChr> itv;
