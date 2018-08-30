@@ -174,8 +174,6 @@ namespace bamstats
     boost::progress_display show_progress( hdr->n_targets );
 
     // Pair qualities and features
-    typedef boost::unordered_map<std::size_t, uint8_t> TQualities;
-    TQualities qualities;
     typedef boost::unordered_map<std::size_t, int32_t> TFeatures;
     TFeatures features;
 
@@ -205,8 +203,10 @@ namespace bamstats
       int32_t lastAlignedPos = 0;
       std::set<std::size_t> lastAlignedPosReads;
       while (sam_itr_next(samfile, iter, rec) >= 0) {
-	if ((rec->core.flag & (BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP | BAM_FSUPPLEMENTARY | BAM_FUNMAP | BAM_FMUNMAP)) || (rec->core.tid != rec->core.mtid) || (!(rec->core.flag & BAM_FPAIRED))) continue; 
-
+	if (rec->core.flag & (BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP | BAM_FSUPPLEMENTARY | BAM_FUNMAP)) continue;
+	if ((rec->core.flag & BAM_FPAIRED) && ((rec->core.flag & BAM_FMUNMAP) || (rec->core.tid != rec->core.mtid))) continue; 
+	if (rec->core.qual < c.minQual) continue; // Low quality pair
+	
 	// Clean-up the read store for identical alignment positions
 	if (rec->core.pos > lastAlignedPos) {
 	  lastAlignedPosReads.clear();
@@ -265,42 +265,40 @@ namespace bamstats
 	}
 	if (ambiguous) continue; // Ambiguous read
 
-	// First or Second Read?
-	if ((rec->core.pos < rec->core.mpos) || ((rec->core.pos == rec->core.mpos) && (lastAlignedPosReads.find(hash_string(bam_get_qname(rec))) == lastAlignedPosReads.end()))) {
-	  // First read
-	  lastAlignedPosReads.insert(hash_string(bam_get_qname(rec)));
-	  std::size_t hv = hash_pair(rec);
-	  qualities[hv] = rec->core.qual;
-	  features[hv] = featureid;
-	} else {
-	  // Second read
-	  std::size_t hv = hash_pair_mate(rec);
-	  if (qualities.find(hv) == qualities.end()) continue; // Mate discarded
-	  uint8_t pairQuality = std::min((uint8_t) qualities[hv], (uint8_t) rec->core.qual);
-	  int32_t featuremate = features[hv];
-	  qualities[hv] = 0;
-	  features[hv] = -1;
+	if (rec->core.flag & BAM_FPAIRED) {
+	  // First or Second Read?	
+	  if ((rec->core.pos < rec->core.mpos) || ((rec->core.pos == rec->core.mpos) && (lastAlignedPosReads.find(hash_string(bam_get_qname(rec))) == lastAlignedPosReads.end()))) {
+	    // First read
+	    lastAlignedPosReads.insert(hash_string(bam_get_qname(rec)));
+	    std::size_t hv = hash_pair(rec);
+	    features[hv] = featureid;
+	  } else {
+	    // Second read
+	    std::size_t hv = hash_pair_mate(rec);
+	    if (features.find(hv) == features.end()) continue; // Mate discarded
+	    int32_t featuremate = features[hv];
+	    features[hv] = -1;
+	    
+	    // Check feature agreement
+	    if ((featureid == -1) && (featuremate == -1)) continue; // No feature
+	    else if ((featureid == -1) && (featuremate != -1)) featureid = featuremate;
+	    else if ((featureid != -1) && (featuremate == -1)) featuremate = featureid;
+	    else {
+	      // Both reads have a feature assignment
+	      if (featureid != featuremate) continue; // Feature disagreement
+	    }
 
-	  // Pair quality
-	  if (pairQuality < c.minQual) continue; // Low quality pair
-
-	  // Check feature agreement
-	  if ((featureid == -1) && (featuremate == -1)) continue; // No feature
-	  else if ((featureid == -1) && (featuremate != -1)) featureid = featuremate;
-	  else if ((featureid != -1) && (featuremate == -1)) featuremate = featureid;
-	  else {
-	    // Both reads have a feature assignment
-	    if (featureid != featuremate) continue; // Feature disagreement
+	    // Hurray, we finally have a valid pair
+	    ++fc[featureid];
 	  }
-
-	  // Hurray, we finally have a valid pair
-	  ++fc[featureid];
+	} else {
+	  // Single-end
+	  if (featureid != -1) ++fc[featureid];
 	}
       }
       // Clean-up
       bam_destroy1(rec);
       hts_itr_destroy(iter);
-      qualities.clear();
       features.clear();
     }
 	  
