@@ -206,11 +206,13 @@ namespace bamstats
 	if (rec->core.flag & (BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP | BAM_FSUPPLEMENTARY | BAM_FUNMAP)) continue;
 	if ((rec->core.flag & BAM_FPAIRED) && ((rec->core.flag & BAM_FMUNMAP) || (rec->core.tid != rec->core.mtid))) continue; 
 	if (rec->core.qual < c.minQual) continue; // Low quality pair
-	
-	// Clean-up the read store for identical alignment positions
-	if (rec->core.pos > lastAlignedPos) {
-	  lastAlignedPosReads.clear();
-	  lastAlignedPos = rec->core.pos;
+
+	if (rec->core.flag & BAM_FPAIRED) {
+	  // Clean-up the read store for identical alignment positions
+	  if (rec->core.pos > lastAlignedPos) {
+	    lastAlignedPosReads.clear();
+	    lastAlignedPos = rec->core.pos;
+	  }
 	}
 
 	// Get read sequence
