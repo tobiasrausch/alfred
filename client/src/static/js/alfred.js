@@ -1,6 +1,7 @@
 import axios from 'axios'
+import * as FilePond from 'filepond'
 import { saveAs } from 'file-saver/FileSaver'
-import { zip } from 'lodash'
+import { uniq, zip } from 'lodash'
 import csv from 'papaparse'
 import pako from 'pako'
 
@@ -37,31 +38,79 @@ const selectReadGroup = document.getElementById('select-rg')
 const selectToc = document.getElementById('select-toc')
 const summaryTab = document.getElementById('summary-tab')
 
+const fileUpload = FilePond.create(inputFile)
+
 function run() {
-  const file = inputFile.files[0]
+  const fileObjects = fileUpload.getFiles()
 
   // TODO error handling
-  if (file === undefined) return
+  if (fileObjects.length === 0) return
 
   hideElement(resultContainer)
   hideElement(resultError)
   showElement(resultInfo)
   summaryTab.innerHTML = ''
 
+  mergeInputs(fileObjects)
+}
+
+function readFile(fileObject) {
   const fileReader = new FileReader()
-  const isGzip = /\.gz$/.test(file.name)
+  const isGzip = fileObject.fileExtension === 'gz'
+
   if (isGzip) {
-    fileReader.readAsArrayBuffer(file)
+    fileReader.readAsArrayBuffer(fileObject.file)
   } else {
-    fileReader.readAsText(file)
+    fileReader.readAsText(fileObject.file)
   }
-  fileReader.onload = event => {
-    let content = event.target.result
-    if (isGzip) {
-      content = pako.ungzip(content, { to: 'string' })
+
+  return new Promise(resolve => {
+    fileReader.onload = event => {
+      let content = event.target.result
+      if (isGzip) {
+        content = pako.ungzip(content, { to: 'string' })
+      }
+      data = JSON.parse(content)
+      resolve(data)
     }
-    data = JSON.parse(content)
+  })
+}
+
+function mergeInputs(fileObjects) {
+  const fileReads = []
+  for (const fileObject of fileObjects) {
+    fileReads.push(readFile(fileObject))
+  }
+  Promise.all(fileReads).then(fileData => {
+    data = {
+      samples: fileData
+        .map(d => d.samples)
+        .reduce((acc, cur) => acc.concat(cur))
+        .sort((s1, s2) => s1.id.localeCompare(s2.id))
+    }
+    consolidateSummaries(data)
     handleSuccess(data)
+  })
+}
+
+function consolidateSummaries(data) {
+  const allColumns = uniq(
+    data.samples
+      .map(s => s.summary.data.columns)
+      .reduce((acc, cur) => acc.concat(cur))
+  )
+  for (const sample of data.samples) {
+    const oldColumns = sample.summary.data.columns
+    const oldRows = sample.summary.data.rows.map(
+      row => new Map(zip(oldColumns, row))
+    )
+    sample.summary.data.columns = allColumns
+    sample.summary.data.rows = []
+    for (const row of oldRows) {
+      sample.summary.data.rows.push(
+        allColumns.map(col => (row.has(col) ? row.get(col) : null))
+      )
+    }
   }
 }
 
@@ -263,7 +312,7 @@ function summaryTable(tableData, transpose = false) {
                 if (i === 0) {
                   return `<th scope="row">${value}</th>`
                 }
-                return `<td title="${row[0]}">${value}</td>`
+                return `<td title="${row[0]}">${value === null ? '—' : value}</td>`
               })
               .join('')}
           </tr>`
@@ -289,7 +338,7 @@ function summaryTable(tableData, transpose = false) {
               ${row
                 .map(
                   (value, i) =>
-                    `<td title="${tableData.data.columns[i]}">${value}</td>`
+                    `<td title="${tableData.data.columns[i]}">${value === null ? '—' : value}</td>`
                 )
                 .join('')}
             </tr>`
@@ -323,7 +372,7 @@ function summaryDownload() {
   const csvData = csv.unparse(data)
   const blob = new Blob([csvData], { type: 'text/plain;charset=utf-8' })
   // TODO generate file name from input
-  saveAs(blob, 'alfred-summary.txt')
+  saveAs(blob, 'alfred-summary-stats.csv')
 }
 
 function showExample() {

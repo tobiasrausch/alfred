@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css">
   <link rel="stylesheet" href="static/css/gear.css">
   <link rel="stylesheet" href="static/css/alfred.css">
+  <link rel="stylesheet" href="../node_modules/filepond/dist/filepond.min.css">
 </head>
 
 <body>
@@ -44,16 +45,15 @@
     </ul>
     <div class="tab-content" id="main-tabs">
       <div class="tab-pane show active" id="input-tab">
-        <div class="form-group">
-          <label for="inputFile">
-            This is the web front end of
-            <a href="https://github.com/tobiasrausch/alfred/">Alfred</a>, an efficient and versatile BAM alignment quality control method. You can use the web application
-            to visualize and plot Alfred's statistic file. Please first QC your BAM file using
-            <a href="https://github.com/tobiasrausch/alfred/">Alfred</a> and then upload the JSON statistics file below (
-            <code>.json.gz</code>).
-          </label>
-          <input type="file" class="form-control-file" id="inputFile" />
+        <div class="alert alert-light mb-2" role="alert">
+          <i class="fas fa-info-circle"></i>
+          This is the web front end of
+          <a href="https://github.com/tobiasrausch/alfred/">Alfred</a>, an efficient and versatile BAM alignment quality control method. You can use the web application
+          to visualize and plot Alfred's statistic file. Please first QC your BAM file using
+          <a href="https://github.com/tobiasrausch/alfred/">Alfred</a> and then upload the JSON statistics file(s) below (
+          <code>.json.gz</code>).
         </div>
+        <input type="file" class="form-control-file" id="inputFile" multiple />
 
         <button type="submit" class="btn btn-outline-primary" id="btn-submit">
           <i class="fas fa-rocket" style="margin-right: 5px;"></i>
