@@ -1,7 +1,7 @@
 import axios from 'axios'
 import * as FilePond from 'filepond'
 import { saveAs } from 'file-saver/FileSaver'
-import { uniq, zip } from 'lodash'
+import { countBy, uniq, zip } from 'lodash'
 import csv from 'papaparse'
 import pako from 'pako'
 
@@ -42,15 +42,34 @@ const fileUpload = FilePond.create(inputFile)
 function run() {
   const fileObjects = fileUpload.getFiles()
 
-  // TODO error handling
-  if (fileObjects.length === 0) return
+  if (fileObjects.length === 0) {
+    showError('Error: no files specified')
+    return
+  }
+
+  const fileCounts = countBy(fileObjects.map(f => f.filename))
+  for (const [fileName, count] of Object.entries(fileCounts)) {
+    if (count > 1) {
+      showError(`Error: file <code>${fileName}</code> specified multiple times`)
+      return
+    }
+  }
 
   hideElement(resultContainer)
   hideElement(resultError)
   showElement(resultInfo)
   summaryTab.innerHTML = ''
 
-  mergeInputs(fileObjects)
+  mergeInputs(fileObjects).then(() => {
+    const sampleCounts = countBy(data.samples.map(s => s.id))
+    for (const [sampleId, count] of Object.entries(sampleCounts)) {
+      if (count > 1) {
+        showError(`Error: sample <code>${sampleId}</code> is not unique`)
+        return
+      }
+    }
+    handleSuccess(data)
+  })
 }
 
 function readFile(fileObject) {
@@ -80,7 +99,7 @@ function mergeInputs(fileObjects) {
   for (const fileObject of fileObjects) {
     fileReads.push(readFile(fileObject))
   }
-  Promise.all(fileReads).then(fileData => {
+  return Promise.all(fileReads).then(fileData => {
     data = {
       samples: fileData
         .map(d => d.samples)
@@ -88,7 +107,6 @@ function mergeInputs(fileObjects) {
         .sort((s1, s2) => s1.id.localeCompare(s2.id))
     }
     consolidateSummaries(data)
-    handleSuccess(data)
   })
 }
 
@@ -376,6 +394,7 @@ function summaryDownload() {
 
 function showExample() {
   hideElement(resultContainer)
+  hideElement(resultError)
   chartsContainer.innerHTML = ''
   summaryTab.innerHTML = ''
   showElement(resultInfo)
@@ -400,6 +419,15 @@ function showExample() {
         console.error(error)
       })
   }
+}
+
+function showError(message) {
+  hideElement(resultContainer)
+  hideElement(resultInfo)
+  summaryTab.innerHTML = ''
+
+  showElement(resultError)
+  document.querySelector('#error-message').innerHTML = message
 }
 
 function showElement(element) {
