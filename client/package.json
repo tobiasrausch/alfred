@@ -4,8 +4,8 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "build": "rimraf dist && parcel build src/index.html --no-cache --no-source-maps --public-url ./",
-    "dev": "parcel src/index.html --no-cache --open"
+    "build": "rimraf dist && mkdir -p dist/examples && cp -r src/static/examples dist/ && parcel build src/index.html --no-cache --no-source-maps --public-url ./",
+    "dev": "mkdir -p dist/examples && cp -r src/static/examples dist/ && parcel src/index.html --no-cache --open"
   },
   "keywords": [],
   "author": "",
@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "axios": "^0.18.0",
+    "choices.js": "^3.0.4",
     "file-saver": "^1.3.8",
     "filepond": "^2.1.1",
     "lodash": "^4.17.10",

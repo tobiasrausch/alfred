@@ -1,0 +1,10 @@
+[
+  {
+    "filename": "HG00114.json.gz",
+    "title": "Paired-end exome data, Project Foo"
+  },
+  {
+    "filename": "HG00115.json.gz",
+    "title": "Single-end RNA-seq data, Project Bar"
+  }
+]

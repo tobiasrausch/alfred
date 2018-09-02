@@ -14,3 +14,7 @@
   bottom: 70px;
   right: 20px;
 }
+
+.choices__inner {
+  background-color: transparent;
+}

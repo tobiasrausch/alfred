@@ -1,9 +1,12 @@
 import axios from 'axios'
+import Choices from 'choices.js'
 import * as FilePond from 'filepond'
 import { saveAs } from 'file-saver/FileSaver'
 import { countBy, uniq, zip } from 'lodash'
 import csv from 'papaparse'
 import pako from 'pako'
+
+import examples from '../examples/examples.json'
 
 $('#mainTab a').on('click', function(e) {
   e.preventDefault()
@@ -22,10 +25,19 @@ submitButton.addEventListener('click', function() {
   run()
 })
 
+const selectExamples = document.getElementById('select-examples')
+selectExamples.innerHTML = `<option placeholder>Please select an example</option>
+  ${examples
+    .map(ex => `<option value="${ex.filename}">${ex.title}</option>`)
+    .join('')}
+`
+selectExamples.addEventListener('change', event => {
+  showExample(event.target.value)
+})
+
+const exampleChoices = new Choices(selectExamples)
+
 let data, exampleData, readGroups, summary
-const exampleButton = document.getElementById('btn-example')
-exampleButton.addEventListener('click', showExample)
-const urlExample = document.getElementById('link-example')
 
 const inputFile = document.getElementById('inputFile')
 const chartsContainer = document.getElementById('charts-container')
@@ -329,7 +341,9 @@ function summaryTable(tableData, transpose = false) {
                 if (i === 0) {
                   return `<th scope="row">${value}</th>`
                 }
-                return `<td title="${row[0]}">${value === null ? '—' : value}</td>`
+                return `<td title="${row[0]}">${
+                  value === null ? '—' : value
+                }</td>`
               })
               .join('')}
           </tr>`
@@ -355,7 +369,9 @@ function summaryTable(tableData, transpose = false) {
               ${row
                 .map(
                   (value, i) =>
-                    `<td title="${tableData.data.columns[i]}">${value === null ? '—' : value}</td>`
+                    `<td title="${tableData.data.columns[i]}">${
+                      value === null ? '—' : value
+                    }</td>`
                 )
                 .join('')}
             </tr>`
@@ -392,7 +408,7 @@ function summaryDownload() {
   saveAs(blob, 'alfred-summary-stats.csv')
 }
 
-function showExample() {
+function showExample(filename) {
   hideElement(resultContainer)
   hideElement(resultError)
   chartsContainer.innerHTML = ''
@@ -400,25 +416,21 @@ function showExample() {
   showElement(resultInfo)
   resultLink.click()
 
-  if (exampleData) {
-    data = exampleData
-    handleSuccess(data)
-  } else {
-    axios
-      .get(urlExample, {
-        responseType: 'arraybuffer'
-      })
-      .then(response => {
-        const content = pako.ungzip(response.data, { to: 'string' })
-        exampleData = JSON.parse(content)
-        data = exampleData
-        handleSuccess(data)
-      })
-      .catch(error => {
-        // FIXME proper error handling
-        console.error(error)
-      })
-  }
+  const url = `./examples/${filename}`
+  axios
+    .get(url, {
+      responseType: 'arraybuffer'
+    })
+    .then(response => {
+      const content = pako.ungzip(response.data, { to: 'string' })
+      exampleData = JSON.parse(content)
+      data = exampleData
+      handleSuccess(data)
+    })
+    .catch(error => {
+      // FIXME proper error handling
+      console.error(error)
+    })
 }
 
 function showError(message) {

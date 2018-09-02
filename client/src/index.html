@@ -9,9 +9,10 @@
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
     crossorigin="anonymous">
   <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css">
+  <link rel="stylesheet" href="../node_modules/filepond/dist/filepond.min.css">
+  <link rel="stylesheet" href="../node_modules/choices.js/assets/styles/css/choices.min.css">
   <link rel="stylesheet" href="static/css/gear.css">
   <link rel="stylesheet" href="static/css/alfred.css">
-  <link rel="stylesheet" href="../node_modules/filepond/dist/filepond.min.css">
 </head>
 
 <body>
@@ -30,8 +31,6 @@
   </header>
 
   <main class="container">
-    <!-- tag should never be visible, it's just for storing the link -->
-    <a id="link-example" class="d-none" href="static/examples/dna.exome.json.gz"></a>
     <ul class="nav nav-fill mb-4" id="mainTab">
       <li class="nav-item">
         <a class="nav-link active" href="#input-tab">Input</a>
@@ -59,10 +58,12 @@
           <i class="fas fa-rocket" style="margin-right: 5px;"></i>
           Launch Analysis
         </button>
-        <button type="submit" class="btn btn-outline-primary" id="btn-example">
-          <i class="fas fa-eye" style="margin-right: 5px;"></i>
-          Show Example
-        </button>
+
+        <div style="margin-top: 1rem;">
+          ...or view one of the examples:
+          <select class="form-control" id="select-examples">
+        </div>
+
       </div>
 
       <div class="tab-pane" id="result-tab">
