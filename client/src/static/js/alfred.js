@@ -28,7 +28,6 @@ exampleButton.addEventListener('click', showExample)
 const urlExample = document.getElementById('link-example')
 
 const inputFile = document.getElementById('inputFile')
-const linkPdf = document.getElementById('link-pdf')
 const chartsContainer = document.getElementById('charts-container')
 const resultContainer = document.getElementById('result-container')
 const resultInfo = document.getElementById('result-info')
