@@ -110,13 +110,29 @@ then
     done
     python ${BASEDIR}/../scripts/merge.py *.wgs.illumina.json.gz | gzip -c > dna.wgs.illumina.ms.json.gz
 
+    # RNA-Seq
+    for SAMPLE in SRS008746 SRS008747
+    do
+	if [ ! -f ${SAMPLE}.gsnap_GRCh38Primary.20150922.PUR.mRNA.bam ]
+	then
+	    wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/working/20151026_strand_specific_mRNA/${SAMPLE}.gsnap_GRCh38Primary.20150922.PUR.mRNA.bam"
+	    wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/working/20151026_strand_specific_mRNA/${SAMPLE}.gsnap_GRCh38Primary.20150922.PUR.mRNA.bam.bai"
+	fi
+    done
+    
     # PacBio
     for SAMPLE in NA19239 NA19238
     do
 	if [ ! -f ${SAMPLE}.pacbio.bam ]
 	then
-	    wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/working/20180102_pacbio_blasr_reheader/${SAMPLE}.pacbio-blasr-grch38-reheader.20180102.chr*.bam.bai"
 	    wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/working/20180102_pacbio_blasr_reheader/${SAMPLE}.pacbio-blasr-grch38-reheader.20180102.chr*.bam"
+	    for F in ${SAMPLE}.pacbio-blasr-grch38-reheader.20180102.*.bam
+	    do
+		if [ ! -f ${F}.bai ]
+		then
+		    samtools index ${F}
+		fi
+	    done
 	    samtools merge ${SAMPLE}.pacbio.bam ${SAMPLE}.pacbio-blasr-grch38-reheader.20180102.*.bam
 	    samtools index ${SAMPLE}.pacbio.bam
 	fi
