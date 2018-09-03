@@ -110,31 +110,27 @@ then
     done
     python ${BASEDIR}/../scripts/merge.py *.wgs.illumina.json.gz | gzip -c > dna.wgs.illumina.ms.json.gz
 
+    # PacBio
+    for SAMPLE in NA19239 NA19238
+    do
+	if [ ! -f ${SAMPLE}.pacbio.bam ]
+	then
+	    wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/working/20180102_pacbio_blasr_reheader/${SAMPLE}.pacbio-blasr-grch38-reheader.20180102.chr*.bam.bai"
+	    wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/working/20180102_pacbio_blasr_reheader/${SAMPLE}.pacbio-blasr-grch38-reheader.20180102.chr*.bam"
+	    samtools merge ${SAMPLE}.pacbio.bam ${SAMPLE}.pacbio-blasr-grch38-reheader.20180102.*.bam
+	    samtools index ${SAMPLE}.pacbio.bam
+	fi
+    done
+    
     # Hi-C
     for SAMPLE in HG00732 HG00733
     do
 	if [ ! -f ${SAMPLE}_Hi-C_biorep2_merged_filtered.bam ]
 	then
-	    wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/working/20160822_HiC_bam_files/HG00733_Hi-C_biorep2_merged_filtered.bam"
+	    wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/working/20160822_HiC_bam_files/${SAMPLE}_Hi-C_biorep2_merged_filtered.bam"
 	    samtools index ${SAMPLE}_Hi-C_biorep2_merged_filtered.bam
 	fi
     done
-    
-    # PacBio WGS
-    for SAMPLE in NA19238 NA19239
-    do
-	if [ ! -f ${SAMPLE}_bwamem_GRCh38DH_YRI_20160905_pacbio.bam ]
-	then
-	    wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/working/20160905_smithm_pacbio_aligns/${SAMPLE}_bwamem_GRCh38DH_YRI_20160905_pacbio.bam"
-	    wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/working/20160905_smithm_pacbio_aligns/${SAMPLE}_bwamem_GRCh38DH_YRI_20160905_pacbio.bam.bai"
-	fi
-	if [ ! -f ${SAMPLE}.wgs.pacbio.json.gz ]
-	then
-	    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o ${SAMPLE}.wgs.pacbio.json.gz ${SAMPLE}_bwamem_GRCh38DH_YRI_20160905_pacbio.bam
-	fi
-    done
-    python ${BASEDIR}/../scripts/merge.py *.wgs.pacbio.json.gz | gzip -c > dna.wgs.pacbio.ms.json.gz
-
 else
     echo "Unknown mode ${1}"
 fi
