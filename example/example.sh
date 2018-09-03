@@ -110,6 +110,16 @@ then
     done
     python ${BASEDIR}/../scripts/merge.py *.wgs.illumina.json.gz | gzip -c > dna.wgs.illumina.ms.json.gz
 
+    # Hi-C
+    for SAMPLE in HG00732 HG00733
+    do
+	if [ ! -f ${SAMPLE}_Hi-C_biorep2_merged_filtered.bam ]
+	then
+	    wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/working/20160822_HiC_bam_files/HG00733_Hi-C_biorep2_merged_filtered.bam"
+	    samtools index ${SAMPLE}_Hi-C_biorep2_merged_filtered.bam
+	fi
+    done
+    
     # PacBio WGS
     for SAMPLE in NA19238 NA19239
     do
