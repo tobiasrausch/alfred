@@ -73,25 +73,18 @@ function run() {
   summaryTab.innerHTML = ''
 
   mergeInputs(fileObjects).then(() => {
-    const sampleCounts = countBy(data.samples.map(s => s.id))
-    for (const [sampleId, count] of Object.entries(sampleCounts)) {
-      if (count > 1) {
-        showError(`Error: sample <code>${sampleId}</code> is not unique`)
-        return
-      }
-    }
     handleSuccess(data)
   })
 }
 
-function readFile(fileObject) {
+function readFile(file) {
   const fileReader = new FileReader()
-  const isGzip = fileObject.fileExtension === 'gz'
+  const isGzip = file.name.endsWith('.gz')
 
   if (isGzip) {
-    fileReader.readAsArrayBuffer(fileObject.file)
+    fileReader.readAsArrayBuffer(file)
   } else {
-    fileReader.readAsText(fileObject.file)
+    fileReader.readAsText(file)
   }
 
   return new Promise(resolve => {
@@ -101,6 +94,7 @@ function readFile(fileObject) {
         content = pako.ungzip(content, { to: 'string' })
       }
       data = JSON.parse(content)
+      massageData(data, file.name)
       resolve(data)
     }
   })
@@ -109,7 +103,7 @@ function readFile(fileObject) {
 function mergeInputs(fileObjects) {
   const fileReads = []
   for (const fileObject of fileObjects) {
-    fileReads.push(readFile(fileObject))
+    fileReads.push(readFile(fileObject.file))
   }
   return Promise.all(fileReads).then(fileData => {
     data = {
@@ -119,6 +113,16 @@ function mergeInputs(fileObjects) {
         .sort((s1, s2) => s1.id.localeCompare(s2.id))
     }
     consolidateSummaries(data)
+  })
+}
+
+function massageData(data, filename) {
+  data.samples.forEach(s => {
+    s.filename = filename
+    s.summary.data.columns.splice(1, 0, 'Filename')
+    s.summary.data.rows.forEach(row => {
+      row.splice(1, 0, filename)
+    })
   })
 }
 
@@ -151,6 +155,7 @@ function handleSuccess(data) {
   chartsContainer.innerHTML = ''
 
   const samples = data.samples.map(sample => sample.id)
+  const filenames = data.samples.map(sample => sample.filename)
   readGroups = {}
   data.samples.forEach(sample => {
     readGroups[sample.id] = sample.readGroups.map(rg => rg.id)
@@ -159,7 +164,7 @@ function handleSuccess(data) {
   selectSample.setChoices(
     samples.map((s, i) => ({
       value: s,
-      label: s,
+      label: `${s} (${filenames[i]})`,
       selected: i === 0
     })),
     'value',
@@ -191,8 +196,8 @@ function handleSuccess(data) {
 
 window.handleReadGroupSelectChange = handleReadGroupSelectChange
 function handleReadGroupSelectChange() {
-  const sample = selectSample.value
-  const readGroup = selectReadGroup.value
+  const sample = selectSample.getValue(true)
+  const readGroup = selectReadGroup.getValue(true)
   chartsContainer.innerHTML = ''
   populateToc(sample, readGroup)
   vis(data, sample, readGroup)
@@ -200,7 +205,7 @@ function handleReadGroupSelectChange() {
 
 window.handleSampleSelectChange = handleSampleSelectChange
 function handleSampleSelectChange() {
-  const sample = selectSample.value
+  const sample = selectSample.getValue(true)
   selectReadGroup.innerHTML = readGroups[sample]
     .map(rg => `<option>${rg}</option>`)
     .join('')
@@ -446,6 +451,7 @@ function showExample(filename) {
       const content = pako.ungzip(response.data, { to: 'string' })
       exampleData = JSON.parse(content)
       data = exampleData
+      massageData(data, filename)
       handleSuccess(data)
     })
     .catch(error => {
