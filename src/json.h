@@ -274,11 +274,15 @@ namespace bamstats
 	
       // Read-length
       {
+	uint32_t lastValidRL = _lastNonZeroIdx(itRg->second.rc.lRc);
+	float lastFrac = _lastPercentage(itRg->second.rc.lRc, itRg->second.rc.maxReadLength);
 	rfile << ",{\"id\": \"readLength\",";
 	rfile << "\"title\": \"Read length distribution\",";
+	if (lastFrac > 0) {
+	  rfile << "\"subtitle\": \"" << lastFrac << "% of all reads >= " << itRg->second.rc.maxReadLength << "bp\",";
+	}
 	rfile << "\"x\": {\"data\": [{\"values\": [";
-	uint32_t lastValidRL = _lastNonZeroIdx(itRg->second.rc.lRc);
-	for(uint32_t i = 0; i <= lastValidRL; ++i) {
+	for(uint32_t i = 0; i < lastValidRL; ++i) {
 	  if (i > 0) rfile << ",";
 	  rfile << i;
 	}
@@ -332,10 +336,14 @@ namespace bamstats
 
       // Coverage Histogram
       {
-	rfile << ",{\"id\": \"coverageHistogram\", \"title\": \"Coverage histogram\",";
-	rfile << "\"x\": {\"data\": [{\"values\": [";
 	uint32_t lastValidCO = _lastNonZeroIdx(itRg->second.bc.bpWithCoverage);
-	for(uint32_t i = 0; i <= lastValidCO; ++i) {
+	float lastFrac = _lastPercentage(itRg->second.bc.bpWithCoverage, itRg->second.bc.maxCoverage);
+	rfile << ",{\"id\": \"coverageHistogram\", \"title\": \"Coverage histogram\",";
+	if (lastFrac > 0) {
+	  rfile << "\"subtitle\": \"" << lastFrac << "% of all bases with >= " << itRg->second.bc.maxCoverage << "x coverage\",";
+	}
+	rfile << "\"x\": {\"data\": [{\"values\": [";
+	for(uint32_t i = 0; i < lastValidCO; ++i) {
 	  if (i > 0) rfile << ",";
 	  rfile << i;
 	}

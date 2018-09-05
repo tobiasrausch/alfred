@@ -83,6 +83,14 @@ namespace bamstats
   }
 
   template<typename TVector>
+  inline float
+  _lastPercentage(TVector const& vec, uint32_t const lastIdx) {
+    float cumsum = 0;
+    for(uint32_t i = 0; i <= lastIdx; ++i) cumsum += vec[i];
+    return ((float) (vec[lastIdx]) * 100.0) / cumsum;
+  }
+
+  template<typename TVector>
   inline uint32_t
   _lastNonZeroIdxACGTN(TVector const& vec) {
     uint32_t lastNonZeroIdx = 0;
