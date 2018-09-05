@@ -72,15 +72,21 @@ namespace bamstats
     return medISize;
   }
 
+  template<typename TVector>
+  inline uint32_t
+  _lastNonZeroIdx(TVector const& vec, uint32_t const lastIdx) {
+    uint32_t lastNonZeroIdx = 0;
+    for(uint32_t i = 0; ((i < vec.size()) && (i < lastIdx)); ++i)
+      if (vec[i] > 0) lastNonZeroIdx = i;
+    return lastNonZeroIdx;
+  }
   
   template<typename TVector>
   inline uint32_t
   _lastNonZeroIdx(TVector const& vec) {
-    uint32_t lastNonZeroIdx = 0;
-    for(uint32_t i = 0; i < vec.size(); ++i)
-      if (vec[i] > 0) lastNonZeroIdx = i;
-    return lastNonZeroIdx;
+    return _lastNonZeroIdx(vec, vec.size());
   }
+
 
   template<typename TVector>
   inline float
