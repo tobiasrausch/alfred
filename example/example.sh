@@ -186,6 +186,15 @@ then
 	python ${BASEDIR}/../scripts/merge.py *.hic.illumina.pe.json.gz | gzip -c > hic.illumina.pe.ms.json.gz
 	rm *.hic.illumina.pe.json.gz
     fi
+
+    # ONT
+    if [ ! -f dna.wgs.ont.se.ms.json.gz ]
+    then
+	if [ -f /opt/dev/HG00733/HG00733.bam ]
+	then
+	    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o dna.wgs.ont.se.ms.json.gz /opt/dev/HG00733/HG00733.bam
+	fi
+    fi
 else
     echo "Unknown mode ${1}"
 fi
