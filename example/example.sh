@@ -43,10 +43,9 @@ then
     if [ ! -f GRCh38_full_analysis_set_plus_decoy_hla.fa ]
     then
 	wget 'ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/GRCh38_reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa'
-    fi
-    if [ ! -f GRCh38_full_analysis_set_plus_decoy_hla.fa.fai ]
-    then
 	samtools faidx GRCh38_full_analysis_set_plus_decoy_hla.fa
+	cat GRCh38_full_analysis_set_plus_decoy_hla.fa | sed 's/v1//' | sed 's/v2//' > GRCh38_full_analysis_set_plus_decoy_hla.mod.fa
+	samtools faidx GRCh38_full_analysis_set_plus_decoy_hla.mod.fa
     fi
 
     # Download gene annotation
@@ -162,11 +161,8 @@ then
 		samtools merge ${SAMPLE}.pacbio.bam ${SAMPLE}.pacbio-blasr-grch38-reheader.20180102.*.bam
 		samtools index ${SAMPLE}.pacbio.bam
 		rm ${SAMPLE}.pacbio-blasr-grch38-reheader.20180102.chr*
-		samtools view -b ${SAMPLE}.pacbio.bam chr1 chr2 chr3 chr4 chr5 chr6 chr7 chr8 chr9 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19 chr20 chr21 chr22 chrX chrY > ${SAMPLE}.pacbio.mc.bam
-		samtools index ${SAMPLE}.pacbio.mc.bam
-		rm ${SAMPLE}.pacbio.bam ${SAMPLE}.pacbio.bam.bai
 	    fi
-	    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o ${SAMPLE}.dna.pacbio.se.json.gz ${SAMPLE}.pacbio.bam
+	    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.mod.fa -f json -o ${SAMPLE}.dna.pacbio.se.json.gz ${SAMPLE}.pacbio.bam
 	done
 	mv ${SAMPLE}.dna.pacbio.se.json.gz dna.pacbio.se.ms.json.gz 
     fi
