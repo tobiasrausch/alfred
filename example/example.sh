@@ -146,30 +146,6 @@ then
 	rm *.rna.illumina.pe.json.gz
     fi
 
-    # PacBio
-    if [ ! -f dna.pacbio.se.ms.json.gz ]
-    then
-	for SAMPLE in NA19239
-	do
-	    if [ ! -f ${SAMPLE}.pacbio.bam ]
-	    then
-		wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/working/20180102_pacbio_blasr_reheader/${SAMPLE}.pacbio-blasr-grch38-reheader.20180102.chr*.bam"
-		for F in ${SAMPLE}.pacbio-blasr-grch38-reheader.20180102.*.bam
-		do
-		    if [ ! -f ${F}.bai ]
-		    then
-			samtools index ${F}
-		    fi
-		done
-		samtools merge ${SAMPLE}.pacbio.bam ${SAMPLE}.pacbio-blasr-grch38-reheader.20180102.*.bam
-		samtools index ${SAMPLE}.pacbio.bam
-		rm ${SAMPLE}.pacbio-blasr-grch38-reheader.20180102.chr*
-	    fi
-	    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.mod.fa -f json -o ${SAMPLE}.dna.pacbio.se.json.gz ${SAMPLE}.pacbio.bam
-	done
-	mv ${SAMPLE}.dna.pacbio.se.json.gz dna.pacbio.se.ms.json.gz 
-    fi
-    
     # Hi-C
     if [ ! -f hic.illumina.pe.ms.json.gz ]
     then
@@ -193,6 +169,22 @@ then
 	then
 	    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o dna.wgs.ont.se.ms.json.gz /opt/dev/HG00733/HG00733.bam
 	fi
+    fi
+
+    # PacBio
+    if [ ! -f dna.pacbio.se.ms.json.gz ]
+    then
+	for SAMPLE in NA19238 NA19239
+	do
+	    if [ ! -f ${SAMPLE}_bwamem_GRCh38DH_YRI_20160905_pacbio.bam ]
+	    then
+		wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/working/20160905_smithm_pacbio_aligns/${SAMPLE}_bwamem_GRCh38DH_YRI_20160905_pacbio.bam"
+		wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/working/20160905_smithm_pacbio_aligns/${SAMPLE}_bwamem_GRCh38DH_YRI_20160905_pacbio.bam.bai"
+	    fi
+	    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o ${SAMPLE}.dna.wgs.pacbio.se.json.gz ${SAMPLE}_bwamem_GRCh38DH_YRI_20160905_pacbio.bam
+	done
+	python ${BASEDIR}/../scripts/merge.py *.dna.wgs.pacbio.se.json.gz | gzip -c > dna.wgs.pacbio.se.ms.json.gz
+	rm *.dna.wgs.pacbio.se.json.gz
     fi
 else
     echo "Unknown mode ${1}"
