@@ -138,6 +138,7 @@ then
 		wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/working/20151026_strand_specific_mRNA/${SAMPLE}.gsnap_GRCh38Primary.20150922.PUR.mRNA.bam.bai"
 		samtools view -H ${SAMPLE}.gsnap_GRCh38Primary.20150922.PUR.mRNA.bam | grep -v "ERCC" | grep -v "GL00" | grep -v "KI27" | sed -e 's/SN:\([0-9XY]\)/SN:chr\1/' -e 's/SN:MT/SN:chrM/' | samtools reheader - ${SAMPLE}.gsnap_GRCh38Primary.20150922.PUR.mRNA.bam > ${SAMPLE}.bam
 		samtools index ${SAMPLE}.bam
+		rm ${SAMPLE}.gsnap_GRCh38Primary.20150922.PUR.mRNA.bam ${SAMPLE}.gsnap_GRCh38Primary.20150922.PUR.mRNA.bam.bai
 	    fi
 	    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o ${SAMPLE}.rna.illumina.pe.json.gz ${SAMPLE}.bam
 	done
