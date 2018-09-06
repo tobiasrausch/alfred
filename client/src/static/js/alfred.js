@@ -44,9 +44,15 @@ const chartsContainer = document.getElementById('charts-container')
 const resultContainer = document.getElementById('result-container')
 const resultInfo = document.getElementById('result-info')
 const resultError = document.getElementById('result-error')
-const selectSample = new Choices(document.getElementById('select-sample'), { shouldSort: false })
-const selectReadGroup = new Choices(document.getElementById('select-rg'), { shouldSort: false })
-const selectToc = new Choices(document.getElementById('select-toc'), { shouldSort: false })
+const selectSample = new Choices(document.getElementById('select-sample'), {
+  shouldSort: false
+})
+const selectReadGroup = new Choices(document.getElementById('select-rg'), {
+  shouldSort: false
+})
+const selectToc = new Choices(document.getElementById('select-toc'), {
+  shouldSort: false
+})
 const summaryTab = document.getElementById('summary-tab')
 
 const fileUpload = FilePond.create(inputFile)
@@ -94,7 +100,6 @@ function readFile(file) {
         content = pako.ungzip(content, { to: 'string' })
       }
       data = JSON.parse(content)
-      massageData(data, file.name)
       resolve(data)
     }
   })
@@ -113,16 +118,6 @@ function mergeInputs(fileObjects) {
         .sort((s1, s2) => s1.id.localeCompare(s2.id))
     }
     consolidateSummaries(data)
-  })
-}
-
-function massageData(data, filename) {
-  data.samples.forEach(s => {
-    s.filename = filename
-    s.summary.data.columns.splice(1, 0, 'Filename')
-    s.summary.data.rows.forEach(row => {
-      row.splice(1, 0, filename)
-    })
   })
 }
 
@@ -154,17 +149,23 @@ function handleSuccess(data) {
 
   chartsContainer.innerHTML = ''
 
-  const samples = data.samples.map(sample => sample.id)
-  const filenames = data.samples.map(sample => sample.filename)
+  const samples = uniq(data.samples.map(sample => sample.id))
+
   readGroups = {}
   data.samples.forEach(sample => {
-    readGroups[sample.id] = sample.readGroups.map(rg => rg.id)
+    if (!(sample.id in readGroups)) {
+      readGroups[sample.id] = new Set()
+    }
+    for (const rg of sample.readGroups) {
+      // FIXME verify it's unique
+      readGroups[sample.id].add(rg.id)
+    }
   })
 
   selectSample.setChoices(
     samples.map((s, i) => ({
       value: s,
-      label: `${s} (${filenames[i]})`,
+      label: s,
       selected: i === 0
     })),
     'value',
@@ -173,7 +174,11 @@ function handleSuccess(data) {
   )
 
   selectReadGroup.setChoices(
-    readGroups[samples[0]].map((rg, i) => ({ value: rg, label: rg, selected: i === 0 })),
+    [...readGroups[samples[0]].values()].map((rg, i) => ({
+      value: rg,
+      label: rg,
+      selected: i === 0
+    })),
     'value',
     'label',
     true
@@ -190,8 +195,8 @@ function handleSuccess(data) {
   }
 
   summaryTable(summary, true)
-  populateToc(samples[0], readGroups[samples[0]][0])
-  vis(data, samples[0], readGroups[samples[0]][0])
+  populateToc(samples[0], [...readGroups[samples[0]].values()][0])
+  vis(data, samples[0], [...readGroups[samples[0]].values()][0])
 }
 
 window.handleReadGroupSelectChange = handleReadGroupSelectChange
@@ -206,10 +211,18 @@ function handleReadGroupSelectChange() {
 window.handleSampleSelectChange = handleSampleSelectChange
 function handleSampleSelectChange() {
   const sample = selectSample.getValue(true)
-  selectReadGroup.innerHTML = readGroups[sample]
-    .map(rg => `<option>${rg}</option>`)
-    .join('')
-  const readGroup = readGroups[sample][0]
+  const rgs = [...readGroups[sample].values()]
+  selectReadGroup.setChoices(
+    rgs.map((rg, i) => ({
+      value: rg,
+      label: rg,
+      selected: i === 0
+    })),
+    'value',
+    'label',
+    true
+  )
+  const readGroup = rgs[0]
   chartsContainer.innerHTML = ''
   populateToc(sample, readGroup)
   vis(data, sample, readGroup)
@@ -217,7 +230,8 @@ function handleSampleSelectChange() {
 
 function populateToc(sample, readGroup) {
   const dataRg = data.samples
-    .find(s => s.id === sample)
+    .filter(s => s.id === sample)
+    .find(s => s.readGroups.find(rg => rg.id === readGroup))
     .readGroups.find(rg => rg.id === readGroup)
 
   selectToc.setChoices(
@@ -248,7 +262,8 @@ const chartDispatch = {
 
 function vis(data, sample, readGroup) {
   const dataRg = data.samples
-    .find(s => s.id === sample)
+    .filter(s => s.id === sample)
+    .find(s => s.readGroups.find(rg => rg.id === readGroup))
     .readGroups.find(rg => rg.id === readGroup)
 
   for (const metric of dataRg.metrics) {
@@ -451,7 +466,6 @@ function showExample(filename) {
       const content = pako.ungzip(response.data, { to: 'string' })
       exampleData = JSON.parse(content)
       data = exampleData
-      massageData(data, filename)
       handleSuccess(data)
     })
     .catch(error => {
