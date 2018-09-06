@@ -1,31 +1,30 @@
 [
-    {
-	"filename": "dna.exome.illumina.pe.ms.json.gz",
-	"title": "DNA-Seq, Exome, Paired-end, Illumina"
-    },
-    {
-	"filename": "dna.wgs.illumina.pe.ms.json.gz",
-	"title": "DNA-Seq, Whole-Genome, Paired-end, Illumina"
-    },
-    {
-	"filename": "dna.wgs.illumina.mp.ms.json.gz",
-	"title": "DNA-Seq, Whole-Genome, Mate-pair, Illumina"
-    },
-    {
-	"filename": "rna.illumina.pe.ms.json.gz",
-	"title": "RNA-Seq, Stranded, Paired-end, Illumina"
-    },
-    {
-	"filename": "hic.illumina.pe.ms.json.gz",
-	"title": "Hi-C, Paired-end, Illumina"
-    },
-    {
-	"filename": "dna.wgs.ont.se.ms.json.gz",
-	"title": "DNA-Seq, Whole-Genome, Single-end, Oxford Nanopore Technologies"
-    },
-    {
-	"filename": "dna.wgs.pacbio.se.ms.json.gz",
-	"title": "DNA-Seq, Whole-Genome, Single-end, Pacific Biosciences"
-    }
+  {
+    "filename": "dna.exome.illumina.pe.ms.json.gz",
+    "title": "DNA-Seq, Exome, Paired-end, Illumina"
+  },
+  {
+    "filename": "dna.wgs.illumina.pe.ms.json.gz",
+    "title": "DNA-Seq, Whole-Genome, Paired-end, Illumina"
+  },
+  {
+    "filename": "dna.wgs.illumina.mp.ms.json.gz",
+    "title": "DNA-Seq, Whole-Genome, Mate-pair, Illumina"
+  },
+  {
+    "filename": "rna.illumina.pe.ms.json.gz",
+    "title": "RNA-Seq, Stranded, Paired-end, Illumina"
+  },
+  {
+    "filename": "hic.illumina.pe.ms.json.gz",
+    "title": "Hi-C, Paired-end, Illumina"
+  },
+  {
+    "filename": "dna.wgs.ont.se.ms.json.gz",
+    "title": "DNA-Seq, Whole-Genome, Single-end, Oxford Nanopore Technologies"
+  },
+  {
+    "filename": "dna.wgs.pacbio.se.ms.json.gz",
+    "title": "DNA-Seq, Whole-Genome, Single-end, Pacific Biosciences"
+  }
 ]
-
