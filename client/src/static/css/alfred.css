@@ -18,3 +18,7 @@
 .choices__inner {
   background-color: transparent;
 }
+
+.choices__list {
+  z-index: 10;
+}

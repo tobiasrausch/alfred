@@ -26,7 +26,7 @@ submitButton.addEventListener('click', function() {
 })
 
 const selectExamples = document.getElementById('select-examples')
-selectExamples.innerHTML = `<option placeholder>Please select an example</option>
+selectExamples.innerHTML = `<option placeholder>Please select a data set</option>
   ${examples
     .map(ex => `<option value="${ex.filename}">${ex.title}</option>`)
     .join('')}
