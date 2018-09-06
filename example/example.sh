@@ -172,7 +172,7 @@ then
     fi
 
     # PacBio
-    if [ ! -f dna.pacbio.se.ms.json.gz ]
+    if [ ! -f dna.wgs.pacbio.se.ms.json.gz ]
     then
 	for SAMPLE in NA19238 NA19239
 	do
