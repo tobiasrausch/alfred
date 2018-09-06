@@ -72,14 +72,28 @@ namespace bamstats
     return medISize;
   }
 
+  template<typename TVector>
+  inline uint32_t
+  _lastNonZeroIdx(TVector const& vec, uint32_t const lastIdx) {
+    uint32_t lastNonZeroIdx = 0;
+    for(uint32_t i = 0; ((i < vec.size()) && (i < lastIdx)); ++i)
+      if (vec[i] > 0) lastNonZeroIdx = i;
+    return lastNonZeroIdx;
+  }
   
   template<typename TVector>
   inline uint32_t
   _lastNonZeroIdx(TVector const& vec) {
-    uint32_t lastNonZeroIdx = 0;
-    for(uint32_t i = 0; i < vec.size(); ++i)
-      if (vec[i] > 0) lastNonZeroIdx = i;
-    return lastNonZeroIdx;
+    return _lastNonZeroIdx(vec, vec.size());
+  }
+
+
+  template<typename TVector>
+  inline float
+  _lastPercentage(TVector const& vec, uint32_t const lastIdx) {
+    float cumsum = 0;
+    for(uint32_t i = 0; i <= lastIdx; ++i) cumsum += vec[i];
+    return ((float) (vec[lastIdx]) * 100.0) / cumsum;
   }
 
   template<typename TVector>
@@ -95,15 +109,24 @@ namespace bamstats
 
   template<typename TVector>
   inline uint32_t
-  _lastNonZeroIdxISize(TVector const& vec) {
-    uint32_t lastValidISIdx = 0;
-    for(uint32_t i = 0; i < vec.fPlus.size(); ++i) {
-      uint64_t tpecount = vec.fPlus[i] + vec.fMinus[i] + vec.rPlus[i] + vec.rMinus[i];
-      if (tpecount > 0) lastValidISIdx = i;
-    }
+  _lastNonZeroIdxISize(TVector const& vec, uint32_t const lastIdx) {
+    uint32_t maxFPlus = _lastNonZeroIdx(vec.fPlus, lastIdx);
+    uint32_t maxFMinus = _lastNonZeroIdx(vec.fMinus, lastIdx);
+    uint32_t maxRPlus = _lastNonZeroIdx(vec.rPlus, lastIdx);
+    uint32_t maxRMinus = _lastNonZeroIdx(vec.rMinus, lastIdx);
+    uint32_t lastValidISIdx = maxFPlus;
+    if (maxFMinus > lastValidISIdx) lastValidISIdx = maxFMinus;
+    if (maxRPlus > lastValidISIdx) lastValidISIdx = maxRPlus;
+    if (maxRMinus > lastValidISIdx) lastValidISIdx = maxRMinus;
     return lastValidISIdx;
   }
 
+  template<typename TVector>
+  inline uint32_t
+  _lastNonZeroIdxISize(TVector const& vec) {
+    return _lastNonZeroIdxISize(vec, vec.fPlus.size());
+  }
+  
   template<typename TVector>
   inline uint32_t
   _lastCoverageLevel(BedCounts const& be, ReferenceFeatures const& rf, uint32_t const nchr, TVector& fracAboveCov) {
@@ -149,6 +172,14 @@ namespace bamstats
     return deflayout;
   }
 
+  inline std::string
+  _defLayoutToString(int32_t const dl) {
+    if (dl == 0) return "F+";
+    else if (dl == 1) return "F-";
+    else if (dl == 2) return "R+";
+    else if (dl == 3) return "R-";
+    else return "NA";
+  }
   
   template<typename TConfig, typename TRGMap>
   inline void

@@ -158,7 +158,7 @@ namespace bamstats
 	double pbc2 = (double) itRg->second.bc.n1 / (double) itRg->second.bc.n2;
 
 	rfile << medianFromHistogram(itRg->second.rc.lRc) << ",";
-	rfile << deflayout << ",";
+	rfile << "\"" << _defLayoutToString(deflayout) << "\"" << ",";
 	rfile << medISize << ",";
 	rfile <<  medianFromHistogram(itRg->second.bc.bpWithCoverage) << ",";
 	rfile << ssdcov << ",";
@@ -274,10 +274,14 @@ namespace bamstats
 	
       // Read-length
       {
+	uint32_t lastValidRL = _lastNonZeroIdx(itRg->second.rc.lRc, itRg->second.rc.maxReadLength);
+	float lastFrac = _lastPercentage(itRg->second.rc.lRc, itRg->second.rc.maxReadLength);
 	rfile << ",{\"id\": \"readLength\",";
 	rfile << "\"title\": \"Read length distribution\",";
+	if (lastFrac > 0) {
+	  rfile << "\"subtitle\": \"" << lastFrac << "% of all reads >= " << itRg->second.rc.maxReadLength << "bp\",";
+	}
 	rfile << "\"x\": {\"data\": [{\"values\": [";
-	uint32_t lastValidRL = _lastNonZeroIdx(itRg->second.rc.lRc);
 	for(uint32_t i = 0; i <= lastValidRL; ++i) {
 	  if (i > 0) rfile << ",";
 	  rfile << i;
@@ -332,9 +336,13 @@ namespace bamstats
 
       // Coverage Histogram
       {
+	uint32_t lastValidCO = _lastNonZeroIdx(itRg->second.bc.bpWithCoverage, itRg->second.bc.maxCoverage);
+	float lastFrac = _lastPercentage(itRg->second.bc.bpWithCoverage, itRg->second.bc.maxCoverage);
 	rfile << ",{\"id\": \"coverageHistogram\", \"title\": \"Coverage histogram\",";
+	if (lastFrac > 0) {
+	  rfile << "\"subtitle\": \"" << lastFrac << "% of all bases with >= " << itRg->second.bc.maxCoverage << "x coverage\",";
+	}
 	rfile << "\"x\": {\"data\": [{\"values\": [";
-	uint32_t lastValidCO = _lastNonZeroIdx(itRg->second.bc.bpWithCoverage);
 	for(uint32_t i = 0; i <= lastValidCO; ++i) {
 	  if (i > 0) rfile << ",";
 	  rfile << i;
@@ -350,10 +358,20 @@ namespace bamstats
 
       // Insert Size Histogram
       {
-	uint32_t lastValidIS = _lastNonZeroIdxISize(itRg->second.pc);
+	uint32_t lastValidIS = _lastNonZeroIdxISize(itRg->second.pc, itRg->second.pc.maxInsertSize);	
 	// Only output for PE data
 	if (lastValidIS > 0) {
+	  int32_t deflayout = _defLayout(itRg);
+	  float lastFrac = 0;
+	  if (deflayout == 0) lastFrac = _lastPercentage(itRg->second.pc.fPlus, itRg->second.pc.maxInsertSize);
+	  else if (deflayout == 1) lastFrac = _lastPercentage(itRg->second.pc.fMinus, itRg->second.pc.maxInsertSize);
+	  else if (deflayout == 2) lastFrac = _lastPercentage(itRg->second.pc.rPlus, itRg->second.pc.maxInsertSize);
+	  else if (deflayout == 3) lastFrac = _lastPercentage(itRg->second.pc.rMinus, itRg->second.pc.maxInsertSize);
+	  else lastFrac = 0;
 	  rfile << ",{\"id\": \"insertSize\", \"title\": \"Insert size histogram\",";
+	  if (lastFrac > 0) {
+	    rfile << "\"subtitle\": \"" << lastFrac << "% of all " << _defLayoutToString(deflayout) << " pairs span >= " << itRg->second.pc.maxInsertSize << "bp\",";
+	  }
 	  rfile << "\"x\": {\"data\": [{\"values\": [";
 	  for(uint32_t i = 0; i <= lastValidIS; ++i) {
 	    if (i > 0) rfile << ",";

@@ -290,8 +290,13 @@ function chart(metricData, parent) {
     chartData.push(trace)
   }
 
+  let title = metricData.title
+  if (metricData.subtitle) {
+    title += `<br>${metricData.subtitle}`
+  }
+
   const layout = {
-    title: metricData.title,
+    title,
     xaxis: {
       title: metricData.x.axis.title,
       zeroline: false

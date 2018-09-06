@@ -43,10 +43,9 @@ then
     if [ ! -f GRCh38_full_analysis_set_plus_decoy_hla.fa ]
     then
 	wget 'ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/GRCh38_reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa'
-    fi
-    if [ ! -f GRCh38_full_analysis_set_plus_decoy_hla.fa.fai ]
-    then
 	samtools faidx GRCh38_full_analysis_set_plus_decoy_hla.fa
+	cat GRCh38_full_analysis_set_plus_decoy_hla.fa | sed 's/v1//' | sed 's/v2//' > GRCh38_full_analysis_set_plus_decoy_hla.mod.fa
+	samtools faidx GRCh38_full_analysis_set_plus_decoy_hla.mod.fa
     fi
 
     # Download gene annotation
@@ -80,51 +79,113 @@ then
     ########
 
     # Exome
-    for SAMPLE in HG00110 HG00111 HG00112 HG00113 HG00114 HG00115
-    do
-	# Download 1000 Genomes exome cram file
-	if [ ! -f ${SAMPLE}.alt_bwamem_GRCh38DH.20150826.GBR.exome.cram ]
-	then
-	    wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000_genomes_project/data/GBR/${SAMPLE}/exome_alignment/${SAMPLE}.alt_bwamem_GRCh38DH.20150826.GBR.exome.cram"
-	    wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000_genomes_project/data/GBR/${SAMPLE}/exome_alignment/${SAMPLE}.alt_bwamem_GRCh38DH.20150826.GBR.exome.cram.crai"
-	fi
-	if [ ! -f ${SAMPLE}.exome.illumina.json.gz ]
-	then
-	    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o ${SAMPLE}.exome.illumina.json.gz -b ${BASEDIR}/../maps/exonic.hg38.bed.gz ${SAMPLE}.alt_bwamem_GRCh38DH.20150826.GBR.exome.cram
-	fi
-    done
-    python ${BASEDIR}/../scripts/merge.py *.exome.illumina.json.gz | gzip -c > dna.exome.illumina.ms.json.gz
+    if [ ! -f dna.exome.illumina.pe.ms.json.gz ]
+    then
+	for SAMPLE in HG00110 HG00111 HG00112 HG00113 HG00114 HG00115
+	do
+	    # Download 1000 Genomes exome cram file
+	    if [ ! -f ${SAMPLE}.alt_bwamem_GRCh38DH.20150826.GBR.exome.cram ]
+	    then
+		wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000_genomes_project/data/GBR/${SAMPLE}/exome_alignment/${SAMPLE}.alt_bwamem_GRCh38DH.20150826.GBR.exome.cram"
+		wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000_genomes_project/data/GBR/${SAMPLE}/exome_alignment/${SAMPLE}.alt_bwamem_GRCh38DH.20150826.GBR.exome.cram.crai"
+	    fi
+	    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o ${SAMPLE}.exome.illumina.pe.json.gz -b ${BASEDIR}/../maps/exonic.hg38.bed.gz ${SAMPLE}.alt_bwamem_GRCh38DH.20150826.GBR.exome.cram
+	done
+	python ${BASEDIR}/../scripts/merge.py *.exome.illumina.pe.json.gz | gzip -c > dna.exome.illumina.pe.ms.json.gz
+	rm *.exome.illumina.pe.json.gz
+    fi
 
-    # Low coverage WGS
-    for SAMPLE in HG00110 HG00111 HG00112 HG00113 HG00114 HG00115
-    do
-	if [ ! -f ${SAMPLE}.alt_bwamem_GRCh38DH.20150718.GBR.low_coverage.cram ]
-	then
-	    wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000_genomes_project/data/GBR/${SAMPLE}/alignment/${SAMPLE}.alt_bwamem_GRCh38DH.20150718.GBR.low_coverage.cram"
-	    wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000_genomes_project/data/GBR/${SAMPLE}/alignment/${SAMPLE}.alt_bwamem_GRCh38DH.20150718.GBR.low_coverage.cram.crai"
-	fi
-	if [ ! -f ${SAMPLE}.wgs.illumina.json.gz ]
-	then
-	    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o ${SAMPLE}.wgs.illumina.json.gz ${SAMPLE}.alt_bwamem_GRCh38DH.20150718.GBR.low_coverage.cram
-	fi
-    done
-    python ${BASEDIR}/../scripts/merge.py *.wgs.illumina.json.gz | gzip -c > dna.wgs.illumina.ms.json.gz
+    # WGS
+    if [ ! -f dna.wgs.illumina.pe.ms.json.gz ]
+    then
+	for SAMPLE in HG00512 HG00513
+	do
+	    if [ ! -f ${SAMPLE}.alt_bwamem_GRCh38DH.20150715.CHS.high_coverage.cram ]
+	    then
+		wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/data/CHS/${SAMPLE}/high_cov_alignment/${SAMPLE}.alt_bwamem_GRCh38DH.20150715.CHS.high_coverage.cram"
+		wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/data/CHS/${SAMPLE}/high_cov_alignment/${SAMPLE}.alt_bwamem_GRCh38DH.20150715.CHS.high_coverage.cram.crai"
+	    fi
+	    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o ${SAMPLE}.wgs.illumina.pe.json.gz ${SAMPLE}.alt_bwamem_GRCh38DH.20150715.CHS.high_coverage.cram
+	done
+	python ${BASEDIR}/../scripts/merge.py *.wgs.illumina.pe.json.gz | gzip -c > dna.wgs.illumina.pe.ms.json.gz
+	rm *.wgs.illumina.pe.json.gz
+    fi
 
-    # PacBio WGS
-    for SAMPLE in NA19238 NA19239
-    do
-	if [ ! -f ${SAMPLE}_bwamem_GRCh38DH_YRI_20160905_pacbio.bam ]
-	then
-	    wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/working/20160905_smithm_pacbio_aligns/${SAMPLE}_bwamem_GRCh38DH_YRI_20160905_pacbio.bam"
-	    wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/working/20160905_smithm_pacbio_aligns/${SAMPLE}_bwamem_GRCh38DH_YRI_20160905_pacbio.bam.bai"
-	fi
-	if [ ! -f ${SAMPLE}.wgs.pacbio.json.gz ]
-	then
-	    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o ${SAMPLE}.wgs.pacbio.json.gz ${SAMPLE}_bwamem_GRCh38DH_YRI_20160905_pacbio.bam
-	fi
-    done
-    python ${BASEDIR}/../scripts/merge.py *.wgs.pacbio.json.gz | gzip -c > dna.wgs.pacbio.ms.json.gz
+    # WGS Mate-pairs
+    if [ ! -f dna.wgs.illumina.mp.ms.json.gz ]
+    then
+	for SAMPLE in HG00512 HG00513
+	do
+	    if [ ! -f ${SAMPLE}.alt_bwamem_GRCh38DH.20150724.CHS.sv_7kb_mate.cram ]
+	    then
+		wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/data/CHS/${SAMPLE}/sv_7kb_mate/${SAMPLE}.alt_bwamem_GRCh38DH.20150724.CHS.sv_7kb_mate.cram"
+		wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/data/CHS/${SAMPLE}/sv_7kb_mate/${SAMPLE}.alt_bwamem_GRCh38DH.20150724.CHS.sv_7kb_mate.cram.crai"
+	    fi
+	    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o ${SAMPLE}.wgs.illumina.mp.json.gz ${SAMPLE}.alt_bwamem_GRCh38DH.20150724.CHS.sv_7kb_mate.cram
+	done
+	python ${BASEDIR}/../scripts/merge.py *.wgs.illumina.mp.json.gz | gzip -c > dna.wgs.illumina.mp.ms.json.gz
+	rm *.wgs.illumina.mp.json.gz
+    fi
 
+    # RNA-Seq
+    if [ ! -f rna.illumina.pe.ms.json.gz ]
+    then
+	for SAMPLE in SRS008746 SRS008747
+	do
+	    if [ ! -f ${SAMPLE}.bam ]
+	    then
+		wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/working/20151026_strand_specific_mRNA/${SAMPLE}.gsnap_GRCh38Primary.20150922.PUR.mRNA.bam"
+		wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/working/20151026_strand_specific_mRNA/${SAMPLE}.gsnap_GRCh38Primary.20150922.PUR.mRNA.bam.bai"
+		samtools view -H ${SAMPLE}.gsnap_GRCh38Primary.20150922.PUR.mRNA.bam | grep -v "ERCC" | grep -v "GL00" | grep -v "KI27" | sed -e 's/SN:\([0-9XY]\)/SN:chr\1/' -e 's/SN:MT/SN:chrM/' | samtools reheader - ${SAMPLE}.gsnap_GRCh38Primary.20150922.PUR.mRNA.bam > ${SAMPLE}.bam
+		samtools index ${SAMPLE}.bam
+		rm ${SAMPLE}.gsnap_GRCh38Primary.20150922.PUR.mRNA.bam ${SAMPLE}.gsnap_GRCh38Primary.20150922.PUR.mRNA.bam.bai
+	    fi
+	    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o ${SAMPLE}.rna.illumina.pe.json.gz ${SAMPLE}.bam
+	done
+	python ${BASEDIR}/../scripts/merge.py *.rna.illumina.pe.json.gz | gzip -c > rna.illumina.pe.ms.json.gz
+	rm *.rna.illumina.pe.json.gz
+    fi
+
+    # Hi-C
+    if [ ! -f hic.illumina.pe.ms.json.gz ]
+    then
+	for SAMPLE in HG00732 HG00733
+	do
+	    if [ ! -f ${SAMPLE}_Hi-C_biorep2_merged_filtered.bam ]
+	    then
+		wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/working/20160822_HiC_bam_files/${SAMPLE}_Hi-C_biorep2_merged_filtered.bam"
+		samtools index ${SAMPLE}_Hi-C_biorep2_merged_filtered.bam
+	    fi
+	    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o ${SAMPLE}.hic.illumina.pe.json.gz ${SAMPLE}_Hi-C_biorep2_merged_filtered.bam
+	done
+	python ${BASEDIR}/../scripts/merge.py *.hic.illumina.pe.json.gz | gzip -c > hic.illumina.pe.ms.json.gz
+	rm *.hic.illumina.pe.json.gz
+    fi
+
+    # ONT
+    if [ ! -f dna.wgs.ont.se.ms.json.gz ]
+    then
+	if [ -f /opt/dev/HG00733/HG00733.bam ]
+	then
+	    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o dna.wgs.ont.se.ms.json.gz /opt/dev/HG00733/HG00733.bam
+	fi
+    fi
+
+    # PacBio
+    if [ ! -f dna.wgs.pacbio.se.ms.json.gz ]
+    then
+	for SAMPLE in NA19238 NA19239
+	do
+	    if [ ! -f ${SAMPLE}_bwamem_GRCh38DH_YRI_20160905_pacbio.bam ]
+	    then
+		wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/working/20160905_smithm_pacbio_aligns/${SAMPLE}_bwamem_GRCh38DH_YRI_20160905_pacbio.bam"
+		wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/working/20160905_smithm_pacbio_aligns/${SAMPLE}_bwamem_GRCh38DH_YRI_20160905_pacbio.bam.bai"
+	    fi
+	    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o ${SAMPLE}.dna.wgs.pacbio.se.json.gz ${SAMPLE}_bwamem_GRCh38DH_YRI_20160905_pacbio.bam
+	done
+	python ${BASEDIR}/../scripts/merge.py *.dna.wgs.pacbio.se.json.gz | gzip -c > dna.wgs.pacbio.se.ms.json.gz
+	rm *.dna.wgs.pacbio.se.json.gz
+    fi
 else
     echo "Unknown mode ${1}"
 fi
