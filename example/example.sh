@@ -147,7 +147,7 @@ then
     # PacBio
     if [ ! -f dna.pacbio.se.ms.json.gz ]
     then
-	for SAMPLE in NA19238
+	for SAMPLE in NA19239
 	do
 	    if [ ! -f ${SAMPLE}.pacbio.bam ]
 	    then
@@ -162,6 +162,9 @@ then
 		samtools merge ${SAMPLE}.pacbio.bam ${SAMPLE}.pacbio-blasr-grch38-reheader.20180102.*.bam
 		samtools index ${SAMPLE}.pacbio.bam
 		rm ${SAMPLE}.pacbio-blasr-grch38-reheader.20180102.chr*
+		samtools view -b ${SAMPLE}.pacbio.bam chr1 chr2 chr3 chr4 chr5 chr6 chr7 chr8 chr9 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19 chr20 chr21 chr22 chrX chrY > ${SAMPLE}.pacbio.mc.bam
+		samtools index ${SAMPLE}.pacbio.mc.bam
+		rm ${SAMPLE}.pacbio.bam ${SAMPLE}.pacbio.bam.bai
 	    fi
 	    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o ${SAMPLE}.dna.pacbio.se.json.gz ${SAMPLE}.pacbio.bam
 	done
