@@ -35,7 +35,7 @@ selectExamples.addEventListener('change', event => {
   showExample(event.target.value)
 })
 
-const exampleChoices = new Choices(selectExamples, { shouldSort: false })
+Select(selectExamples)
 
 let data, exampleData, readGroups, summary
 
@@ -44,15 +44,9 @@ const chartsContainer = document.getElementById('charts-container')
 const resultContainer = document.getElementById('result-container')
 const resultInfo = document.getElementById('result-info')
 const resultError = document.getElementById('result-error')
-const selectSample = new Choices(document.getElementById('select-sample'), {
-  shouldSort: false
-})
-const selectReadGroup = new Choices(document.getElementById('select-rg'), {
-  shouldSort: false
-})
-const selectToc = new Choices(document.getElementById('select-toc'), {
-  shouldSort: false
-})
+const selectSample = Select(document.getElementById('select-sample'))
+const selectReadGroup = Select(document.getElementById('select-rg'))
+const selectToc = Select(document.getElementById('select-toc'))
 const summaryTab = document.getElementById('summary-tab')
 
 const fileUpload = FilePond.create(inputFile)
@@ -80,6 +74,14 @@ function run() {
 
   mergeInputs(fileObjects).then(() => {
     handleSuccess(data)
+  })
+}
+
+function Select(element) {
+  return new Choices(element, {
+    shouldSort: false,
+    searchResultLimit: 50,
+    searchFields: ['label']
   })
 }
 
