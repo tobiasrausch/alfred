@@ -44,8 +44,10 @@ then
     then
 	wget 'ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/GRCh38_reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa'
 	samtools faidx GRCh38_full_analysis_set_plus_decoy_hla.fa
-	cat GRCh38_full_analysis_set_plus_decoy_hla.fa | sed 's/v1//' | sed 's/v2//' > GRCh38_full_analysis_set_plus_decoy_hla.mod.fa
-	samtools faidx GRCh38_full_analysis_set_plus_decoy_hla.mod.fa
+	wget 'ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/human_g1k_v37.fasta.gz'
+	zcat human_g1k_v37.fasta.gz  | sed 's/>\([0-9XYM][0-9T]*\) />chr\1 /' | sed 's/>chrMT/>chrM/' > hg19.fa
+	rm human_g1k_v37.fasta.gz
+	samtools faidx hg19.fa
     fi
 
     # Download gene annotation
@@ -127,20 +129,17 @@ then
 	rm *.wgs.illumina.mp.json.gz
     fi
 
-    # RNA-Seq
+    # RNA-Seq, Geuvadis
     if [ ! -f rna.illumina.pe.ms.json.gz ]
     then
-	for SAMPLE in SRS008746 SRS008747
+	for SAMPLE in HG00096.1.M_111124_6 HG00101.1.M_111124_4 HG00104.1.M_111124_5 HG00117.1.M_111124_2 HG00121.1.M_111124_7 
 	do
 	    if [ ! -f ${SAMPLE}.bam ]
 	    then
-		wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/working/20151026_strand_specific_mRNA/${SAMPLE}.gsnap_GRCh38Primary.20150922.PUR.mRNA.bam"
-		wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/hgsv_sv_discovery/working/20151026_strand_specific_mRNA/${SAMPLE}.gsnap_GRCh38Primary.20150922.PUR.mRNA.bam.bai"
-		samtools view -H ${SAMPLE}.gsnap_GRCh38Primary.20150922.PUR.mRNA.bam | grep -v "ERCC" | grep -v "GL00" | grep -v "KI27" | sed -e 's/SN:\([0-9XY]\)/SN:chr\1/' -e 's/SN:MT/SN:chrM/' | samtools reheader - ${SAMPLE}.gsnap_GRCh38Primary.20150922.PUR.mRNA.bam > ${SAMPLE}.bam
+		wget "https://www.ebi.ac.uk/arrayexpress/files/E-GEUV-1/${SAMPLE}.bam"
 		samtools index ${SAMPLE}.bam
-		rm ${SAMPLE}.gsnap_GRCh38Primary.20150922.PUR.mRNA.bam ${SAMPLE}.gsnap_GRCh38Primary.20150922.PUR.mRNA.bam.bai
 	    fi
-	    ${BASEDIR}/../src/alfred qc -r GRCh38_full_analysis_set_plus_decoy_hla.fa -f json -o ${SAMPLE}.rna.illumina.pe.json.gz ${SAMPLE}.bam
+	    ${BASEDIR}/../src/alfred qc -r hg19.fa -f json -o ${SAMPLE}.rna.illumina.pe.json.gz ${SAMPLE}.bam
 	done
 	python ${BASEDIR}/../scripts/merge.py *.rna.illumina.pe.json.gz | gzip -c > rna.illumina.pe.ms.json.gz
 	rm *.rna.illumina.pe.json.gz
