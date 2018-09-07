@@ -13,7 +13,7 @@
   },
   {
     "filename": "rna.illumina.pe.ms.json.gz",
-    "title": "RNA-Seq, Stranded, Paired-end, Illumina"
+    "title": "RNA-Seq, Unstranded, Paired-end, Illumina"
   },
   {
     "filename": "hic.illumina.pe.ms.json.gz",
