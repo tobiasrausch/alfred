@@ -117,7 +117,6 @@ function mergeInputs(fileObjects) {
       samples: fileData
         .map(d => d.samples)
         .reduce((acc, cur) => acc.concat(cur))
-        .sort((s1, s2) => s1.id.localeCompare(s2.id))
     }
     consolidateSummaries(data)
   })
