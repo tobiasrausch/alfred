@@ -139,7 +139,7 @@ then
 		wget "https://www.ebi.ac.uk/arrayexpress/files/E-GEUV-1/${SAMPLE}.bam"
 		samtools index ${SAMPLE}.bam
 	    fi
-	    ${BASEDIR}/../src/alfred qc -r hg19.fa -f json -o ${SAMPLE}.rna.illumina.pe.json.gz ${SAMPLE}.bam
+	    ${BASEDIR}/../src/alfred qc -a ${SAMPLE} -r hg19.fa -f json -o ${SAMPLE}.rna.illumina.pe.json.gz ${SAMPLE}.bam
 	done
 	python ${BASEDIR}/../scripts/merge.py *.rna.illumina.pe.json.gz | gzip -c > rna.illumina.pe.ms.json.gz
 	rm *.rna.illumina.pe.json.gz

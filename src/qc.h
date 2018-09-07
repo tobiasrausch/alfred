@@ -73,13 +73,15 @@ int qc(int argc, char **argv) {
   c.isHaplotagged = false;
   c.isMitagged = false;
   c.minChrLen = 10000000;
-
+  std::string sampleName;
+  
   // Parameter
   boost::program_options::options_description generic("Generic options");
   generic.add_options()
     ("help,?", "show help message")
     ("reference,r", boost::program_options::value<boost::filesystem::path>(&c.genome), "reference fasta file (required)")
     ("bed,b", boost::program_options::value<boost::filesystem::path>(&c.regionFile), "bed file with target regions (optional)")
+    ("name,a", boost::program_options::value<std::string>(&sampleName), "sample name (optional, otherwise SM tag is used)")
     ("format,f", boost::program_options::value<std::string>(&c.format)->default_value("tsv"), "output format [tsv|json]")
     ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("qc.tsv.gz"), "gzipped output file")
     ("secondary,s", "evaluate secondary alignments")
@@ -183,11 +185,18 @@ int qc(int argc, char **argv) {
     }
   }
   fai_destroy(fai);
-  std::string sampleName;
-  if (!getSMTag(std::string(hdr->text), c.bamFile.stem().string(), sampleName)) {
-    std::cerr << "Only one sample (@RG:SM) is allowed per input BAM file " << c.bamFile.string() << std::endl;
-    return 1;
-  } else c.sampleName = sampleName;
+  if (!vm.count("name")) {
+    if (!getSMTag(std::string(hdr->text), c.bamFile.stem().string(), sampleName)) {
+      std::cerr << "Only one sample (@RG:SM) is allowed per input BAM file " << c.bamFile.string() << std::endl;
+      return 1;
+    } else c.sampleName = sampleName;
+  } else {
+    if (sampleName.size()) c.sampleName = sampleName;
+    else {
+      std::cerr << "Empty sample name is not allowed!" << std::endl;
+      return 1;
+    }
+  }
   bam_hdr_destroy(hdr);
   hts_idx_destroy(idx);
   sam_close(samfile);
