@@ -47,10 +47,11 @@
         <div class="alert alert-light mb-2" role="alert">
           <i class="fas fa-info-circle"></i>
           This is the web front end of
-          <a href="https://github.com/tobiasrausch/alfred/">Alfred</a>, an efficient and versatile BAM alignment quality control method. You can use the web application
-          to visualize and plot Alfred's statistic file. Please first QC your BAM file using
-          <a href="https://github.com/tobiasrausch/alfred/">Alfred</a> and then upload the JSON statistics file(s) below (
-          <code>.json.gz</code>).
+          <a href="https://github.com/tobiasrausch/alfred/">Alfred</a>, an efficient and versatile BAM alignment quality
+          control method. You can use the web application to visualize and plot Alfred's statistic file. Please first QC
+          your BAM file using
+          <a href="https://github.com/tobiasrausch/alfred/">Alfred</a> and then upload the JSON statistics file(s) below
+          (<code>.json.gz</code>).
         </div>
         <input type="file" class="form-control-file" id="inputFile" multiple />
 
@@ -59,24 +60,19 @@
           Launch Analysis
         </button>
 
-        <hr class="mt-5">
+        <hr class="mt-5 mb-4">
+        <h4>Reference data sets</h4>
 
         <div class="alert alert-light">
-          Or view one of Alfred's reference data sets:
+          <i class="fas fa-eye"></i>
+          You can also view one of Alfred's pre-computed reference data sets:
         </div>
-        <select class="form-control" id="select-examples">
-        
+        <select class="form-control" id="select-examples" onchange="handleExampleSelectChange()">
 
       </div>
 
       <div class="tab-pane" id="result-tab">
-        <i
-          class="fas fa-angle-double-up float-btn"
-          data-toggle="tooltip"
-          data-placement="left"
-          title="Scroll to top"
-          onclick="window.scrollTo(0, 0)"
-        ></i>
+        <i class="fas fa-angle-double-up float-btn" data-toggle="tooltip" data-placement="left" title="Scroll to top" onclick="window.scrollTo(0, 0)"></i>
         <div id="result-info" class="alert alert-info d-none" role="alert">
           <i class="fas fa-spinner spinner"></i>
           Analysis is running, please be patient.
@@ -95,21 +91,21 @@
           <div class="form-row my-3">
             <div class="col">
               <label for="">Sample</label>
-              <select id="select-sample" class="custom-select" onchange="handleSampleSelectChange()"></select>
+              <select id="select-sample" onchange="handleSampleSelectChange()"></select>
             </div>
             <div class="col">
               <label for="">Read group</label>
-              <select id="select-rg" class="custom-select" onchange="handleReadGroupSelectChange()"></select>
+              <select id="select-rg" onchange="handleReadGroupSelectChange()"></select>
             </div>
             <div class="col">
               <label for="">Jump to section</label>
-              <select id="select-toc" class="custom-select" onchange="handleTocChange()"></select>
+              <select id="select-toc" onchange="handleTocChange()"></select>
             </div>
           </div>
           <div id="charts-container"></div>
         </div>
       </div>
-      
+
       <div class="tab-pane" id="summary-tab">
       </div>
 

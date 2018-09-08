@@ -25,18 +25,6 @@ submitButton.addEventListener('click', function() {
   run()
 })
 
-const selectExamples = document.getElementById('select-examples')
-selectExamples.innerHTML = `<option placeholder>Please select a data set</option>
-  ${examples
-    .map(ex => `<option value="${ex.filename}">${ex.title}</option>`)
-    .join('')}
-`
-selectExamples.addEventListener('change', event => {
-  showExample(event.target.value)
-})
-
-Select(selectExamples)
-
 let data, exampleData, readGroups, summary
 
 const inputFile = document.getElementById('inputFile')
@@ -46,10 +34,21 @@ const resultInfo = document.getElementById('result-info')
 const resultError = document.getElementById('result-error')
 const selectSample = Select(document.getElementById('select-sample'))
 const selectReadGroup = Select(document.getElementById('select-rg'))
+const selectExamples = Select(document.getElementById('select-examples'))
 const selectToc = Select(document.getElementById('select-toc'))
 const summaryTab = document.getElementById('summary-tab')
 
 const fileUpload = FilePond.create(inputFile)
+
+selectExamples.setChoices(
+  examples.map(ex => ({
+    value: ex.filename,
+    label: ex.title
+  })),
+  'value',
+  'label',
+  true
+)
 
 function run() {
   const fileObjects = fileUpload.getFiles()
@@ -77,12 +76,18 @@ function run() {
   })
 }
 
-function Select(element) {
-  return new Choices(element, {
-    shouldSort: false,
-    searchResultLimit: 50,
-    searchFields: ['label']
-  })
+function Select(element, options = {}) {
+  return new Choices(
+    element,
+    Object.assign(
+      {
+        shouldSort: false,
+        searchResultLimit: 50,
+        searchFields: ['label']
+      },
+      options
+    )
+  )
 }
 
 function readFile(file) {
@@ -198,6 +203,12 @@ function handleSuccess(data) {
   summaryTable(summary, true)
   populateToc(samples[0], [...readGroups[samples[0]].values()][0])
   vis(data, samples[0], [...readGroups[samples[0]].values()][0])
+}
+
+window.handleExampleSelectChange = handleExampleSelectChange
+function handleExampleSelectChange() {
+  const example = selectExamples.getValue(true)
+  showExample(example)
 }
 
 window.handleReadGroupSelectChange = handleReadGroupSelectChange
