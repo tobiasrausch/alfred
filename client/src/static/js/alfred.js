@@ -1,10 +1,13 @@
 import axios from 'axios'
+import 'bootstrap'
 import Choices from 'choices.js'
 import * as FilePond from 'filepond'
 import { saveAs } from 'file-saver/FileSaver'
+import $ from 'jquery'
 import { countBy, uniq, zip } from 'lodash'
 import csv from 'papaparse'
 import pako from 'pako'
+import Plotly from 'plotly.js-dist'
 
 import examples from '../examples/examples.json'
 
