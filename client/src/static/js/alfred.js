@@ -149,10 +149,6 @@ function consolidateSummaries(data) {
 }
 
 function handleSuccess(data) {
-  hideElement(resultInfo)
-  hideElement(resultError)
-  showElement(resultContainer)
-
   chartsContainer.innerHTML = ''
 
   const samples = uniq(data.samples.map(sample => sample.id))
@@ -219,7 +215,10 @@ function handleReadGroupSelectChange() {
   const readGroup = selectReadGroup.getValue(true)
   chartsContainer.innerHTML = ''
   populateToc(sample, readGroup)
-  vis(data, sample, readGroup)
+  showElement(resultInfo)
+  setTimeout(() => {
+    vis(data, sample, readGroup)
+  })
 }
 
 window.handleSampleSelectChange = handleSampleSelectChange
@@ -239,7 +238,10 @@ function handleSampleSelectChange() {
   const readGroup = rgs[0]
   chartsContainer.innerHTML = ''
   populateToc(sample, readGroup)
-  vis(data, sample, readGroup)
+  showElement(resultInfo)
+  setTimeout(() => {
+    vis(data, sample, readGroup)
+  })
 }
 
 function populateToc(sample, readGroup) {
@@ -275,6 +277,10 @@ const chartDispatch = {
 }
 
 function vis(data, sample, readGroup) {
+  hideElement(resultInfo)
+  hideElement(resultError)
+  showElement(resultContainer)
+
   const dataRg = data.samples
     .filter(s => s.id === sample)
     .find(s => s.readGroups.find(rg => rg.id === readGroup))
