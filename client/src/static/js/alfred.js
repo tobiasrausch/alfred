@@ -163,7 +163,9 @@ function handleSuccess(data) {
       readGroups[sample.id] = new Set()
     }
     for (const rg of sample.readGroups) {
-      // FIXME verify it's unique
+      if (readGroups[sample.id].has(rg.id)) {
+        showError(`Error: read groups of sample '${sample.id}' are not unique.`)
+      }
       readGroups[sample.id].add(rg.id)
     }
   })
