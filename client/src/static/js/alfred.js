@@ -72,7 +72,9 @@ function run() {
   summaryTab.innerHTML = ''
 
   mergeInputs(fileObjects).then(() => {
-    handleSuccess(data)
+    if (data) {
+      handleSuccess(data)
+    }
   })
 }
 
@@ -100,14 +102,22 @@ function readFile(file) {
     fileReader.readAsText(file)
   }
 
-  return new Promise(resolve => {
+  return new Promise((resolve, reject) => {
     fileReader.onload = event => {
       let content = event.target.result
       if (isGzip) {
         content = pako.ungzip(content, { to: 'string' })
       }
-      data = JSON.parse(content)
-      resolve(data)
+      try {
+        data = JSON.parse(content)
+        // TODO better check
+        if (!data.samples) {
+          reject(`Error(${file.name}): wrong format, missing 'samples' key.`)
+        }
+        resolve(data)
+      } catch (error) {
+        reject(`Error(${file.name}): not a JSON file.`)
+      }
     }
   })
 }
@@ -117,14 +127,19 @@ function mergeInputs(fileObjects) {
   for (const fileObject of fileObjects) {
     fileReads.push(readFile(fileObject.file))
   }
-  return Promise.all(fileReads).then(fileData => {
-    data = {
-      samples: fileData
-        .map(d => d.samples)
-        .reduce((acc, cur) => acc.concat(cur))
-    }
-    consolidateSummaries(data)
-  })
+  return Promise.all(fileReads)
+    .then(fileData => {
+      data = {
+        samples: fileData
+          .map(d => d.samples)
+          .reduce((acc, cur) => acc.concat(cur))
+      }
+      consolidateSummaries(data)
+    })
+    .catch(error => {
+      data = undefined
+      showError(error)
+    })
 }
 
 function consolidateSummaries(data) {
