@@ -74,7 +74,9 @@ function run() {
   summaryTab.innerHTML = ''
 
   mergeInputs(fileObjects).then(() => {
-    handleSuccess(data)
+    if (data) {
+      handleSuccess(data)
+    }
   })
 }
 
@@ -102,14 +104,22 @@ function readFile(file) {
     fileReader.readAsText(file)
   }
 
-  return new Promise(resolve => {
+  return new Promise((resolve, reject) => {
     fileReader.onload = event => {
       let content = event.target.result
       if (isGzip) {
         content = pako.ungzip(content, { to: 'string' })
       }
-      data = JSON.parse(content)
-      resolve(data)
+      try {
+        data = JSON.parse(content)
+        // TODO better check
+        if (!data.samples) {
+          reject(`Error(${file.name}): wrong format, missing 'samples' key.`)
+        }
+        resolve(data)
+      } catch (error) {
+        reject(`Error(${file.name}): not a JSON file.`)
+      }
     }
   })
 }
@@ -119,14 +129,19 @@ function mergeInputs(fileObjects) {
   for (const fileObject of fileObjects) {
     fileReads.push(readFile(fileObject.file))
   }
-  return Promise.all(fileReads).then(fileData => {
-    data = {
-      samples: fileData
-        .map(d => d.samples)
-        .reduce((acc, cur) => acc.concat(cur))
-    }
-    consolidateSummaries(data)
-  })
+  return Promise.all(fileReads)
+    .then(fileData => {
+      data = {
+        samples: fileData
+          .map(d => d.samples)
+          .reduce((acc, cur) => acc.concat(cur))
+      }
+      consolidateSummaries(data)
+    })
+    .catch(error => {
+      data = undefined
+      showError(error)
+    })
 }
 
 function consolidateSummaries(data) {
@@ -151,10 +166,6 @@ function consolidateSummaries(data) {
 }
 
 function handleSuccess(data) {
-  hideElement(resultInfo)
-  hideElement(resultError)
-  showElement(resultContainer)
-
   chartsContainer.innerHTML = ''
 
   const samples = uniq(data.samples.map(sample => sample.id))
@@ -165,7 +176,9 @@ function handleSuccess(data) {
       readGroups[sample.id] = new Set()
     }
     for (const rg of sample.readGroups) {
-      // FIXME verify it's unique
+      if (readGroups[sample.id].has(rg.id)) {
+        showError(`Error: read groups of sample '${sample.id}' are not unique.`)
+      }
       readGroups[sample.id].add(rg.id)
     }
   })
@@ -219,7 +232,10 @@ function handleReadGroupSelectChange() {
   const readGroup = selectReadGroup.getValue(true)
   chartsContainer.innerHTML = ''
   populateToc(sample, readGroup)
-  vis(data, sample, readGroup)
+  showElement(resultInfo)
+  setTimeout(() => {
+    vis(data, sample, readGroup)
+  })
 }
 
 window.handleSampleSelectChange = handleSampleSelectChange
@@ -239,7 +255,10 @@ function handleSampleSelectChange() {
   const readGroup = rgs[0]
   chartsContainer.innerHTML = ''
   populateToc(sample, readGroup)
-  vis(data, sample, readGroup)
+  showElement(resultInfo)
+  setTimeout(() => {
+    vis(data, sample, readGroup)
+  })
 }
 
 function populateToc(sample, readGroup) {
@@ -275,6 +294,10 @@ const chartDispatch = {
 }
 
 function vis(data, sample, readGroup) {
+  hideElement(resultInfo)
+  hideElement(resultError)
+  showElement(resultContainer)
+
   const dataRg = data.samples
     .filter(s => s.id === sample)
     .find(s => s.readGroups.find(rg => rg.id === readGroup))
