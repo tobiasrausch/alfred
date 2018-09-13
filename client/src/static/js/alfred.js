@@ -511,8 +511,7 @@ function showExample(filename) {
       handleSuccess(data)
     })
     .catch(error => {
-      // FIXME proper error handling
-      console.error(error)
+      showError(`Error: cannot fetch file '${filename} (no network?)'`)
     })
 }
 
