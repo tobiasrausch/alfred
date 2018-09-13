@@ -4,16 +4,17 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "build": "rimraf dist && mkdir -p dist/examples && cp -r src/static/examples dist/ && parcel build src/index.html --no-cache --no-source-maps --public-url ./",
-    "dev": "mkdir -p dist/examples && cp -r src/static/examples dist/ && parcel src/index.html --no-cache --open"
+    "prebuild": "rimraf dist && mkdir -p dist/examples && cp -r src/static/examples dist/",
+    "build": "parcel build src/index.html --no-cache --no-source-maps --public-url ./ && workbox generateSW",
+    "serve": "mkdir -p dist/examples && cp -r src/static/examples dist/ && parcel src/index.html --no-cache --open"
   },
   "keywords": [],
   "author": "",
   "license": "",
   "devDependencies": {
     "parcel-bundler": "^1.9.7",
-    "parcel-plugin-sw-precache": "^1.0.1",
-    "rimraf": "^2.6.2"
+    "rimraf": "^2.6.2",
+    "workbox-cli": "^3.5.0"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^5.3.1",
@@ -26,7 +27,6 @@
     "lodash": "^4.17.10",
     "pako": "^1.0.6",
     "papaparse": "^4.6.0",
-    "plotly.js-dist": "^1.40.1",
     "popper.js": "^1.14.4"
   },
   "sw-precache": {

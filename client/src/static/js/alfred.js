@@ -7,7 +7,6 @@ import $ from 'jquery'
 import { countBy, uniq, zip } from 'lodash'
 import csv from 'papaparse'
 import pako from 'pako'
-import Plotly from 'plotly.js-dist'
 
 import examples from '../examples/examples.json'
 

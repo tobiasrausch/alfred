@@ -142,11 +142,14 @@
     </div>
   </footer>
 
+  <script src="https://cdn.plot.ly/plotly-1.39.4.min.js"></script>
   <script src="static/js/alfred.js"></script>
 
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('service-worker.js')
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+      })
     }
   </script>
 
