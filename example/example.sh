@@ -185,6 +185,31 @@ then
 	python ${BASEDIR}/../scripts/merge.py *.dna.wgs.pacbio.se.json.gz | gzip -c > dna.wgs.pacbio.se.ms.json.gz
 	rm *.dna.wgs.pacbio.se.json.gz
     fi
+elif [ ${1} == "runtime" ]
+then
+    # RNA benchmark
+    zcat ${BASEDIR}/../gtf/Homo_sapiens.GRCh37.75.gtf.gz | grep "^#" | gzip -c > Homo_sapiens.GRCh37.75.chr.gtf.gz
+    zcat ${BASEDIR}/../gtf/Homo_sapiens.GRCh37.75.gtf.gz  | grep -v "^#" | grep -P "^[0-9XY]*\t" | sed 's/^/chr/' | gzip -c >> Homo_sapiens.GRCh37.75.chr.gtf.gz
+    /usr/bin/time -v ${BASEDIR}/../src/alfred count_rna -g Homo_sapiens.GRCh37.75.chr.gtf.gz HG00104.1.M_111124_5.bam
+    gunzip Homo_sapiens.GRCh37.75.chr.gtf.gz
+    /usr/bin/time -v ./qualimap_v2.2.1/qualimap comp-counts -pe -id gene_id -type exon -out qualimap.count -gtf Homo_sapiens.GRCh37.75.chr.gtf -bam HG00104.1.M_111124_5.bam
+    /usr/bin/time -v htseq-count -s no -f bam -r pos HG00104.1.M_111124_5.bam Homo_sapiens.GRCh37.75.chr.gtf > htseq.count
+    rm Homo_sapiens.GRCh37.75.chr.gtf
+
+    # DNA benchmark
+    zcat ${BASEDIR}/../maps/exonic.hg19.bed.gz | sed 's/^chr//' | gzip -c > exonic.hg19.bed.gz
+    # QC
+    /usr/bin/time -v ${BASEDIR}/../src/alfred qc -f json -o qc.json.gz -b exonic.hg19.bed.gz -r 1kGP.fa HG00111.mapped.ILLUMINA.bwa.GBR.exome.20120522.bam
+    /usr/bin/time -v ./qualimap_v2.2.1/qualimap bamqc --java-mem-size=4G -nt 1 -bam HG00111.mapped.ILLUMINA.bwa.GBR.exome.20120522.bam -sd -gd "HUMAN - hg19" -outformat PDF:HTML
+    # Window counting
+    /usr/bin/time -v ${BASEDIR}/../src/alfred count_dna -i exonic.hg19.bed.gz -m 0 HG00111.mapped.ILLUMINA.bwa.GBR.exome.20120522.bam
+    /usr/bin/time -v bedtools multicov -p -bams HG00111.mapped.ILLUMINA.bwa.GBR.exome.20120522.bam -bed exonic.hg19.bed.gz  > bedtools.count
+    rm exonic.hg19.bed.gz
+
+    # Browser Tracks
+    /usr/bin/time -v ${BASEDIR}/../src/alfred tracks HG00111.mapped.ILLUMINA.bwa.GBR.exome.20120522.bam
+    /usr/bin/time -v makeTagDirectory tagdir -genome 1kGP.fa HG00111.mapped.ILLUMINA.bwa.GBR.exome.20120522.bam
+    /usr/bin/time -v makeUCSCfile tagdir -style dnase -fsize 5e7 -o homer.bedGraph
 else
     echo "Unknown mode ${1}"
 fi
