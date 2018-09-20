@@ -38,7 +38,7 @@ then
 	echo ""
 	exit
     fi
-    
+
     # Download and index reference
     if [ ! -f GRCh38_full_analysis_set_plus_decoy_hla.fa ]
     then
@@ -76,6 +76,7 @@ then
 
 elif [ ${1} == "benchmark" ]
 then
+
     ########
     # Requires a "full" run first to download required annotation and reference files
     ########
@@ -184,6 +185,28 @@ then
 	done
 	python ${BASEDIR}/../scripts/merge.py *.dna.wgs.pacbio.se.json.gz | gzip -c > dna.wgs.pacbio.se.ms.json.gz
 	rm *.dna.wgs.pacbio.se.json.gz
+    fi
+
+    # ATAC-Seq
+    if [ ! -f atac.illumina.pe.ms.json.gz ]
+    then
+	for SAMPLE in atac1 atac2
+	do
+	    ${BASEDIR}/../src/alfred qc -a ${SAMPLE} -r hs37d5.fa -f json -o ${SAMPLE}.atac.illumina.pe.json.gz ${SAMPLE}.bam
+	done
+	python ${BASEDIR}/../scripts/merge.py *.atac.illumina.pe.json.gz | gzip -c > atac.illumina.pe.ms.json.gz
+	rm *.atac.illumina.pe.json.gz
+    fi
+
+    # ChIP-Seq, Encode
+    if [ ! -f chip.illumina.se.ms.json.gz ]
+    then
+	for SAMPLE in H3K27ac  H3K27me3  H3K9ac
+	do
+	    ${BASEDIR}/../src/alfred qc -a GM12878_${SAMPLE} -r hs37d5.fa -f json -o ${SAMPLE}.chip.illumina.se.json.gz ${SAMPLE}.bam
+	done
+	python ${BASEDIR}/../scripts/merge.py *.chip.illumina.se.json.gz | gzip -c > chip.illumina.se.ms.json.gz
+	rm *.chip.illumina.se.json.gz
     fi
 elif [ ${1} == "runtime" ]
 then

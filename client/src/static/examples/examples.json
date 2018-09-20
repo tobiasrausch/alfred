@@ -20,6 +20,14 @@
     "title": "Hi-C, Paired-end, Illumina"
   },
   {
+    "filename": "chip.illumina.se.ms.json.gz",
+    "title": "ChIP-Seq, Single-end, Illumina"
+  },
+  {
+    "filename": "atac.illumina.pe.ms.json.gz",
+    "title": "ATAC-Seq, Paired-end, Illumina"
+  },
+  {
     "filename": "dna.wgs.ont.se.ms.json.gz",
     "title": "DNA-Seq, Whole-Genome, Single-end, Oxford Nanopore Technologies"
   },
