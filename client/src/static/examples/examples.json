@@ -34,5 +34,9 @@
   {
     "filename": "dna.wgs.pacbio.se.ms.json.gz",
     "title": "DNA-Seq, Whole-Genome, Single-end, Pacific Biosciences"
+  },
+  {
+    "filename": "tenX.illumina.pe.json.gz",
+    "title": "DNA-Seq, Whole-Genome, Paired-end, 10X Genomics"
   }
 ]
