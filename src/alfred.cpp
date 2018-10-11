@@ -57,6 +57,7 @@ Contact: Tobias Rausch (rausch@embl.de)
 #include "split.h"
 #include "ase.h"
 #include "qc.h"
+#include "consensus.h"
 
 using namespace bamstats;
 
@@ -85,6 +86,7 @@ displayUsage() {
   std::cout << "    tracks       create browser tracks" << std::endl;
   std::cout << "    annotate     annotate peaks" << std::endl;
   std::cout << "    split        split BAM into haplotypes" << std::endl;
+  std::cout << "    consensus    consensus computation for error-prone reads" << std::endl;
   std::cout << "    ase          allele-specific expression" << std::endl;
   std::cout << std::endl;
   std::cout << std::endl;
@@ -136,6 +138,9 @@ int main(int argc, char **argv) {
   }
   else if ((std::string(argv[1]) == "split")) {
     return split(argc-1,argv+1);
+  }
+  else if ((std::string(argv[1]) == "consensus")) {
+    return consensus(argc-1,argv+1);
   }
   else if ((std::string(argv[1]) == "ase")) {
     return ase(argc-1,argv+1);
