@@ -144,6 +144,26 @@ Motif annotation can also be done. For example:
 `./src/alfred annotate -r <hg19.fa> -m motif/jaspar.gz <peaks.bed>`
 
 
+BAM Consensus Computation
+-------------------------
+
+To compute a consensus sequence for a set of long reads at a given alignment position you can use for instance:
+
+`./src/alfred consensus -f bam -t ont -p chr1:218992200 <ont_pacbio.bam>`
+
+This is potentially most useful by first separating haplotypes
+
+`./src/alfred split -r <ref.fa> -s NA12878 -p <haplotype1.bam> -q <haplotype2.bam> -v <phased.snps.bcf> <input.bam>`
+
+and then computing consensus sequences independently for each haplotype.
+
+`./src/alfred consensus -c <hap1.fa.gz> -f bam -t ont -p chr1:chr4:500500 <haplotype1.bam>`
+
+`./src/alfred consensus -c <hap2.fa.gz> -f bam -t ont -p chr1:chr4:500500 <haplotype2.bam>`
+
+You can then compare the two locally assembled haplotypes using our online dotplot method [Maze](https://gear.embl.de/maze).
+
+
 Example E. coli data set
 ------------------------
 
