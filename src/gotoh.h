@@ -71,30 +71,19 @@ namespace bamstats
 	  s[0] = 0;
 	  v[0] = -sc.inf;
 	  newhoz = -sc.inf;
-	  bit1[0 * mf + 0] = true;
-	  bit2[0 * mf + 0] = true;
-	  bit3[0 * mf + 0] = false;
-	  bit4[0 * mf + 0] = false;
-	  //tracept[0][0] = 'a';
+	  bit1[0] = true;
+	  bit2[0] = true;
 	} else if (row == 0) {
 	  v[col] = -sc.inf;
 	  s[col] = _horizontalGap(ac, 0, m, sc.go + col * sc.ge);
 	  newhoz = _horizontalGap(ac, 0, m, sc.go + col * sc.ge);
-	  bit1[0 * mf + col] = false;
-	  bit2[0 * mf + col] = false;
-	  bit3[0 * mf + col] = true;
-	  bit4[0 * mf + col] = false;
-	  //tracept[0][col] = 'h';
+	  bit3[col] = true;
 	} else if (col == 0) {
 	  newhoz = -sc.inf;
 	  s[0] = _verticalGap(ac, 0, n, sc.go + row * sc.ge);
 	  prevsub = s[0];
 	  v[0] = _verticalGap(ac, 0, n, sc.go + row * sc.ge);
-	  bit1[row * mf + 0] = false;
-	  bit2[row * mf + 0] = false;
-	  bit3[row * mf + 0] = false;
-	  bit4[row * mf + 0] = true;
-	  //tracept[row][0] = 'l';
+	  bit4[row * mf] = true;
 	} else {
 	  // Recursion
 	  TScoreValue prevhoz = newhoz;
@@ -106,104 +95,10 @@ namespace bamstats
 	  s[col] = std::max(std::max(prevprevsub + _score(a1, a2, p1, p2, row-1, col-1, sc), newhoz), v[col]);
 
 	  // Trace
-	  char subval = 's';
-	  char hozval = 'h';
-	  char verval = 'v'; 
-	  if (s[col] == newhoz) subval = 'h';
-	  else if (s[col] == v[col]) subval = 'v';
-	  if (newhoz != prevhoz + _horizontalGap(ac, row, m, sc.ge)) hozval = 's';
-	  if (v[col] != prevver + _verticalGap(ac, col, n, sc.ge)) verval = 's';
-	  if (subval == 's') {
-	    if (hozval == 's') {
-	      if (verval == 's') {
-		bit1[row * mf + col] = true;
-		bit2[row * mf + col] = true;
-		bit3[row * mf + col] = false;
-		bit4[row * mf + col] = false;
-		//tracept[row][col] = 'a';
-	      } else {
-		bit1[row * mf + col] = true;
-		bit2[row * mf + col] = false;
-		bit3[row * mf + col] = false;
-		bit4[row * mf + col] = false;
-		//tracept[row][col] = 'b';
-	      }
-	    } else {
-	      if (verval == 's') {
-		bit1[row * mf + col] = false;
-		bit2[row * mf + col] = true;
-		bit3[row * mf + col] = false;
-		bit4[row * mf + col] = false;
-		//tracept[row][col] = 'c';
-	      } else {
-		bit1[row * mf + col] = false;
-		bit2[row * mf + col] = false;
-		bit3[row * mf + col] = false;
-		bit4[row * mf + col] = false;
-		//tracept[row][col] = 'd';
-	      }
-	    }
-	  } else if (subval == 'h') {
-	    if (hozval == 's') {
-	      if (verval == 's') {
-		bit1[row * mf + col] = true;
-		bit2[row * mf + col] = true;
-		bit3[row * mf + col] = true;
-		bit4[row * mf + col] = false;
-		//tracept[row][col] = 'e';
-	      } else {
-		bit1[row * mf + col] = true;
-		bit2[row * mf + col] = false;
-		bit3[row * mf + col] = true;
-		bit4[row * mf + col] = false;
-		//tracept[row][col] = 'f';
-	      }
-	    } else {
-	      if (verval == 's') {
-		bit1[row * mf + col] = false;
-		bit2[row * mf + col] = true;
-		bit3[row * mf + col] = true;
-		bit4[row * mf + col] = false;
-		//tracept[row][col] = 'g';
-	      } else {
-		bit1[row * mf + col] = false;
-		bit2[row * mf + col] = false;
-		bit3[row * mf + col] = true;
-		bit4[row * mf + col] = false;
-		//tracept[row][col] = 'h';
-	      }
-	    }
-	  } else {
-	    if (hozval == 's') {
-	      if (verval == 's') {
-		bit1[row * mf + col] = true;
-		bit2[row * mf + col] = true;
-		bit3[row * mf + col] = false;
-		bit4[row * mf + col] = true;
-		//tracept[row][col] = 'i';
-	      } else {
-		bit1[row * mf + col] = true;
-		bit2[row * mf + col] = false;
-		bit3[row * mf + col] = false;
-		bit4[row * mf + col] = true;
-		//tracept[row][col] = 'j';
-	      }
-	    } else {
-	      if (verval == 's') {
-		bit1[row * mf + col] = false;
-		bit2[row * mf + col] = true;
-		bit3[row * mf + col] = false;
-		bit4[row * mf + col] = true;
-		//tracept[row][col] = 'k';
-	    } else {
-		bit1[row * mf + col] = false;
-		bit2[row * mf + col] = false;
-		bit3[row * mf + col] = false;
-		bit4[row * mf + col] = true;
-		//tracept[row][col] = 'l';
-	      }
-	    }
-	  }
+	  if (s[col] == newhoz) bit3[row * mf + col] = true;
+	  else if (s[col] == v[col]) bit4[row * mf + col] = true;
+	  if (newhoz != prevhoz + _horizontalGap(ac, row, m, sc.ge)) bit1[row * mf + col] = true;
+	  if (v[col] != prevver + _verticalGap(ac, col, n, sc.ge)) bit2[row * mf + col] = true;
 	}
       }
     }
@@ -219,8 +114,6 @@ namespace bamstats
       if (lastMatrix == 's') {
 	if (bit3[row * mf + col]) lastMatrix = 'h';
 	else if (bit4[row * mf + col]) lastMatrix = 'v';
-	//if ((tracept[row][col] == 'e') || (tracept[row][col] == 'f') || (tracept[row][col] == 'g') || (tracept[row][col] == 'h')) lastMatrix = 'h';
-	//else if ((tracept[row][col] == 'i') || (tracept[row][col] == 'j') || (tracept[row][col] == 'k') || (tracept[row][col] == 'l')) lastMatrix = 'v';
 	else {
 	  --row;
 	  --col;
@@ -228,12 +121,10 @@ namespace bamstats
 	}
       } else if (lastMatrix == 'h') {
 	if (bit1[row * mf + col]) lastMatrix = 's';
-	//if ((tracept[row][col] == 'a') || (tracept[row][col] == 'b') || (tracept[row][col] == 'e') || (tracept[row][col] == 'f') || (tracept[row][col] == 'i') || (tracept[row][col] == 'j')) lastMatrix = 's';
 	--col;
 	btr.push_back('h');
       } else if (lastMatrix == 'v') {
 	if (bit2[row * mf + col]) lastMatrix = 's';
-	//if ((tracept[row][col] == 'a') || (tracept[row][col] == 'c') || (tracept[row][col] == 'e') || (tracept[row][col] == 'g') || (tracept[row][col] == 'i') || (tracept[row][col] == 'k')) lastMatrix = 's';
 	--row;
 	btr.push_back('v');
       }
