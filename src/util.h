@@ -438,6 +438,47 @@ namespace bamstats
     return std::sqrt((double) sd / (double) tc);
   }
 
+  inline bool
+  loadSingleFasta(std::string const& filename, std::string& faname, std::string& seq) {
+    faname = "";
+    std::string tmpfasta = "";
+    std::ifstream fafile(filename.c_str());
+    if (fafile.good()) {
+      std::string line;
+      while(std::getline(fafile, line)) {
+	if (!line.empty()) {
+	  if (line[0] == '>') {
+	    if (!faname.empty()) {
+	      std::cerr << "Only single-chromosome FASTA files are supported." << std::endl;
+	      return false;
+	    }
+	    if (line.at(line.length() - 1) == '\r' ){
+	      faname = line.substr(1, line.length() - 2);
+	    } else {
+	      faname = line.substr(1);
+	    }
+	  } else {
+	    if (line.at(line.length() - 1) == '\r' ){
+	      tmpfasta += boost::to_upper_copy(line.substr(0, line.length() - 1));
+	    } else {
+	      tmpfasta += boost::to_upper_copy(line);
+	    }
+	  }
+	}
+      }
+      fafile.close();
+    }
+    // Check FASTA
+    for(uint32_t k = 0; k < tmpfasta.size(); ++k)
+      if ((tmpfasta[k] == 'A') || (tmpfasta[k] == 'C') || (tmpfasta[k] == 'G') || (tmpfasta[k] == 'T') || (tmpfasta[k] == 'N')) seq += tmpfasta[k];
+    if (seq.size() != tmpfasta.size()) {
+      std::cerr << "FASTA file contains nucleotides != [ACGTN]." << std::endl;
+      return false;
+    }
+
+    return true;
+  }
+    
 
 }
 
