@@ -59,6 +59,7 @@ namespace bamstats
     boost::filesystem::path gtfFile;
     boost::filesystem::path bedFile;
     boost::filesystem::path infile;
+    boost::filesystem::path outgene;
     boost::filesystem::path outfile;
   };
 
@@ -79,6 +80,14 @@ namespace bamstats
     // Open output file
     std::ofstream ofile(c.outfile.string().c_str());
     ofile << "chrom\tstart\tend\tid\tfeature\tdistance" << std::endl;
+
+    // Peak count and names
+    std::vector<std::string> peakNames;
+
+    // Gene-level summary
+    typedef std::pair<int32_t, int32_t> TDistPeak;
+    typedef std::vector<TDistPeak> TPeaksPerGene;
+    std::vector<TPeaksPerGene> geneView(geneIds.size(), TPeaksPerGene());
     
     // Iterate chromosomese
     for(int32_t refIndex=0; refIndex < (int32_t) c.nchr.size(); ++refIndex) {
@@ -108,8 +117,11 @@ namespace bamstats
 	    if (c.nchr.find(chrName)->second != refIndex) continue;
 	    int32_t start = boost::lexical_cast<int32_t>(*tokIter++);
 	    int32_t end = boost::lexical_cast<int32_t>(*tokIter++);
-	    std::string name = "NA";
-	    if (tokIter != tokens.end()) name = *tokIter++;
+	    {
+	      std::string name = "Peak" + boost::lexical_cast<std::string>(peakNames.size());
+	      if (tokIter != tokens.end()) name = *tokIter++;
+	      peakNames.push_back(name);
+	    }
 	    if (start >= end) continue;  // Bed has right-open intervals
 	    typedef std::vector<int32_t> TFeaturePos;
 	    TFeaturePos featurepos;
@@ -143,7 +155,8 @@ namespace bamstats
 	    }
 
 	    // Output overlapping features
-	    ofile << chrName << "\t" << start << "\t" << end << "\t" << name << "\t";
+	    int32_t peakId = peakNames.size() - 1;
+	    ofile << chrName << "\t" << start << "\t" << end << "\t" << peakNames[peakId] << "\t";
 	    // Feature names
 	    if (featureid.empty()) {
 	      ofile << "NA";
@@ -153,6 +166,7 @@ namespace bamstats
 		if (!firstF) ofile << ',';
 		else firstF = false;
 		ofile << geneIds[*itF];
+		geneView[*itF].push_back(std::make_pair(dist[*itF], peakId));
 	      }
 	    }
 	    ofile << "\t";
@@ -174,7 +188,33 @@ namespace bamstats
       }
     }
     ofile.close();
-    
+
+    // Output gene-level view
+    std::ofstream gfile(c.outgene.string().c_str());
+    gfile << "gene\tpeak\tdistance" << std::endl;
+    for(uint32_t i = 0; i < geneIds.size(); ++i) {
+      if (!geneView[i].empty()) {
+	gfile << geneIds[i] << "\t";
+	std::sort(geneView[i].begin(), geneView[i].end());
+	bool firstF = true;
+	for(typename TPeaksPerGene::const_iterator itDP = geneView[i].begin(); itDP != geneView[i].end(); ++itDP) {
+	  if (!firstF) gfile << ',';
+	  else firstF = false;
+	  gfile << peakNames[itDP->second];
+	}
+	gfile << "\t";
+	firstF = true;
+	for(typename TPeaksPerGene::const_iterator itDP = geneView[i].begin(); itDP != geneView[i].end(); ++itDP) {
+	  if (!firstF) gfile << ',';
+	  else firstF = false;
+	  gfile << itDP->first;
+	}
+	gfile << std::endl;
+      }
+    }
+    gfile.close();
+
+    // Done
     return 0;
   }
 
@@ -233,7 +273,8 @@ namespace bamstats
     generic.add_options()
       ("help,?", "show help message")
       ("distance,d", boost::program_options::value<int32_t>(&c.maxDistance)->default_value(0), "max. distance (0: overlapping features only)")
-      ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("anno.bed"), "output file")
+      ("outgene,u", boost::program_options::value<boost::filesystem::path>(&c.outgene)->default_value("gene.bed"), "gene-level output")
+      ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("anno.bed"), "annotated peaks output")
       ;
 
     boost::program_options::options_description gtfopt("GTF/GFF3 annotation file options");
