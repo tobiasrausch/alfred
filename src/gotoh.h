@@ -81,7 +81,8 @@ namespace bamstats
 	} else if (col == 0) {
 	  newhoz = -sc.inf;
 	  s[0] = _verticalGap(ac, 0, n, sc.go + row * sc.ge);
-	  prevsub = s[0];
+	  if (row - 1 == 0) prevsub = 0;
+	  else prevsub = _verticalGap(ac, 0, n, sc.go + (row - 1) * sc.ge);
 	  v[0] = _verticalGap(ac, 0, n, sc.go + row * sc.ge);
 	  bit4[row * mf] = true;
 	} else {
@@ -102,7 +103,6 @@ namespace bamstats
 	}
       }
     }
-
 
     // Trace-back using pointers
     std::size_t row = m;
