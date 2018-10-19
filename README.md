@@ -137,7 +137,7 @@ Alfred can also be used to annotate peaks from ChIP-Seq or ATAC-Seq experiments.
 
 `./src/alfred annotate -d 10000 -g gtf/Homo_sapiens.GRCh37.75.gtf.gz <peaks.bed>`
 
-Motif annotation can also be done. For example:
+The two output files summarize nearby genes by peak and vice versa. Motif annotation can also be done. For example:
 
 `cd motif/ && ./downloadMotifs.sh`
 
