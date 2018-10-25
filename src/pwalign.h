@@ -42,7 +42,8 @@ Contact: Tobias Rausch (rausch@embl.de)
 
 #include "util.h"
 #include "align.h"
-#include "msa.h"
+#include "needle.h"
+#include "gotoh.h"
 
 
 namespace bamstats {
