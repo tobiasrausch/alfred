@@ -58,16 +58,20 @@ namespace bamstats {
     return onecol[n];
   }
 
-  template<typename TSplitReadSet, typename TDistArray>
+  template<typename TConfig, typename TSplitReadSet, typename TDistArray>
   inline void
-  distanceMatrix(TSplitReadSet const& sps, TDistArray& d) {
+  distanceMatrix(TConfig const& c, TSplitReadSet const& sps, TDistArray& d) {
     typedef typename TDistArray::index TDIndex;
     typename TSplitReadSet::const_iterator sIt1 = sps.begin();
     for (TDIndex i = 0; sIt1 != sps.end(); ++sIt1, ++i) {
       typename TSplitReadSet::const_iterator sIt2 = sIt1;
       ++sIt2;
       for (TDIndex j = i+1; sIt2 != sps.end(); ++sIt2, ++j) {
-	d[i][j] = (lcs(*sIt1, *sIt2) * 100) / std::min(sIt1->size(), sIt2->size());
+	// LCS
+	//d[i][j] = (lcs(*sIt1, *sIt2) * 100) / std::min(sIt1->size(), sIt2->size());
+	// DP
+	AlignConfig<true, true> alignconf;
+	d[i][j] = gotohScore(*sIt1, *sIt2, alignconf, c.aliscore);
       }
     }
   }
@@ -264,7 +268,7 @@ namespace bamstats {
     for (TDIndex i = 0; i<(2*num+1); ++i) 
       for (TDIndex j = i+1; j<(2*num+1); ++j) 
 	d[i][j]=-1;
-    distanceMatrix(sps, d);
+    distanceMatrix(c, sps, d);
 
     // UPGMA
     typedef boost::multi_array<int, 2> TPhylogeny;
