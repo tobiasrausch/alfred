@@ -82,8 +82,8 @@ int pwalign(int argc, char **argv) {
 
   boost::program_options::options_description otp("Output options");
   otp.add_options()
-    ("format,f", boost::program_options::value<std::string>(&c.format)->default_value("v"), "output format [v|h]")
-    ("alignment,a", boost::program_options::value<boost::filesystem::path>(&c.alignment)->default_value("al.fa.gz"), "vertical alignment")
+    ("format,f", boost::program_options::value<std::string>(&c.format)->default_value("h"), "output format [v|h]")
+    ("alignment,a", boost::program_options::value<boost::filesystem::path>(&c.alignment)->default_value("al.fa.gz"), "vertical/horizontal alignment")
     ;
   
   boost::program_options::options_description hidden("Hidden options");
