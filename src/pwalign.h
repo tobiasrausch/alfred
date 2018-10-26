@@ -45,6 +45,7 @@ Contact: Tobias Rausch (rausch@embl.de)
 #include "needle.h"
 #include "gotoh.h"
 #include "swneedle.h"
+#include "swgotoh.h"
 
 namespace bamstats {
 
@@ -52,6 +53,7 @@ namespace bamstats {
 struct PWAlignConsensus {
   bool seq1endsfree;
   bool seq2endsfree;
+  bool localAlignment;
   int32_t gapopen;
   int32_t gapext;
   int32_t match;
@@ -75,6 +77,7 @@ int pwalign(int argc, char **argv) {
     ("mismatch,n", boost::program_options::value<int32_t>(&c.mismatch)->default_value(-4), "mismatch")
     ("endsfree1,p", "leading/trailing gaps free for seq1")
     ("endsfree2,q", "leading/trailing gaps free for seq2")
+    ("local,l", "local alignment")
     ;
 
   boost::program_options::options_description otp("Output options");
@@ -111,6 +114,8 @@ int pwalign(int argc, char **argv) {
   else c.seq1endsfree = false;
   if (vm.count("endsfree2")) c.seq2endsfree = true;
   else c.seq2endsfree = false;
+  if (vm.count("local")) c.localAlignment = true;
+  else c.localAlignment = false;
   
   // Check input files
   for(unsigned int file_c = 0; file_c < c.inputfiles.size(); ++file_c) {
@@ -142,21 +147,26 @@ int pwalign(int argc, char **argv) {
   TAlign align;
   DnaScore<int> sc(c.match, c.mismatch, c.gapopen, c.gapext);
   int32_t alScore = 0;
-  if (c.seq1endsfree) {
-    if (c.seq2endsfree) {
-      AlignConfig<true, true> alignconf;
-      alScore = gotoh(seq1, seq2, align, alignconf, sc);
-    } else {
-      AlignConfig<true, false> alignconf;
-      alScore = gotoh(seq1, seq2, align, alignconf, sc);
-    }
+  if (c.localAlignment) {
+    AlignConfig<false, false> alignconf;
+    alScore = swGotoh(seq1, seq2, align, alignconf, sc);
   } else {
-    if (c.seq2endsfree) {
-      AlignConfig<false, true> alignconf;
-      alScore = gotoh(seq1, seq2, align, alignconf, sc);
+    if (c.seq1endsfree) {
+      if (c.seq2endsfree) {
+	AlignConfig<true, true> alignconf;
+	alScore = gotoh(seq1, seq2, align, alignconf, sc);
+      } else {
+	AlignConfig<true, false> alignconf;
+	alScore = gotoh(seq1, seq2, align, alignconf, sc);
+      }
     } else {
-      AlignConfig<false, false> alignconf;
-      alScore = gotoh(seq1, seq2, align, alignconf, sc);
+      if (c.seq2endsfree) {
+	AlignConfig<false, true> alignconf;
+	alScore = gotoh(seq1, seq2, align, alignconf, sc);
+      } else {
+	AlignConfig<false, false> alignconf;
+	alScore = gotoh(seq1, seq2, align, alignconf, sc);
+      }
     }
   }
   std::cout << "Alignment score: " << alScore << std::endl;
