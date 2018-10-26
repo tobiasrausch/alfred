@@ -182,14 +182,13 @@ namespace bamstats
     }
   }
 
-
   template<typename TTrace, typename TAlign>
   inline void
-  _createAlignment(TTrace const& trace, std::string const& s1, std::string const& s2, TAlign& align)
+  _createLocalAlignment(TTrace const& trace, std::string const& s1, std::string const& s2, TAlign& align, int32_t const maxRow, int32_t const maxCol)
   {
     align.resize(boost::extents[2][trace.size()]);
-    std::size_t row = 0;
-    std::size_t col = 0;
+    std::size_t row = maxRow;
+    std::size_t col = maxCol;
     std::size_t ai = 0;
     for(typename TTrace::const_reverse_iterator itT = trace.rbegin(); itT != trace.rend(); ++itT, ++ai) {
       if (*itT == 's') {
@@ -205,6 +204,12 @@ namespace bamstats
     }
   }
 
+  template<typename TTrace, typename TAlign>
+  inline void
+  _createAlignment(TTrace const& trace, std::string const& s1, std::string const& s2, TAlign& align)
+  {
+    _createLocalAlignment(trace, s1, s2, align, 0, 0);
+  }
 
   template<typename TTrace, typename TChar, typename TAlign>
   inline void
