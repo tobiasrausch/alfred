@@ -56,6 +56,7 @@ struct ConfigConsensus {
   int32_t gapext;
   int32_t match;
   int32_t mismatch;
+  float fractionCalled;
   std::string position;
   std::string format;
   std::string seqtype;
@@ -228,6 +229,7 @@ int consensus(int argc, char **argv) {
   generic.add_options()
     ("help,?", "show help message")
     ("format,f", boost::program_options::value<std::string>(&c.format)->default_value("bam"), "input format [bam|fasta]")
+    ("called,d", boost::program_options::value<float>(&c.fractionCalled)->default_value(0.5), "fraction of reads required for consensus")
     ("seqtype,t", boost::program_options::value<std::string>(&c.seqtype)->default_value("ill"), "seq. type [ill|ont|pacbio|custom]")
     ;
 

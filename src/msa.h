@@ -187,16 +187,16 @@ namespace bamstats {
   }
 
 
-  template<typename TAlign>
+  template<typename TConfig, typename TAlign>
   inline void
-  consensus(TAlign const& align, std::string& cs) {
+  consensus(TConfig const& c, TAlign const& align, std::string& gapped, std::string& cs) {
     typedef typename TAlign::index TAIndex;
 
     // Calculate coverage
     typedef boost::multi_array<bool, 2> TFlag;
     TFlag fl;
     fl.resize(boost::extents[align.shape()[0]][align.shape()[1]]);
-    typedef std::vector<int> TCoverage;
+    typedef std::vector<int32_t> TCoverage;
     TCoverage cov;
     cov.resize(align.shape()[1], 0);
     for(TAIndex i = 0; i < (TAIndex) align.shape()[0]; ++i) {
@@ -212,50 +212,55 @@ namespace bamstats {
 	fl[i][j] = true;
       }
     }
-    
-    int covThreshold = 3;
+
+    // Minimum number of aligned sequences
+    int32_t covThreshold = (int32_t) (c.fractionCalled * align.shape()[0]);
     TAIndex j = 0;
-    std::vector<char> cons;
+    std::vector<char> cons(align.shape()[1], '-');
     for(typename TCoverage::const_iterator itCov = cov.begin(); itCov != cov.end(); ++itCov, ++j) {
+      int32_t maxIdx = 4;  // Leading/trailing gaps until min. coverage is reached
       if (*itCov >= covThreshold) {
 	// Get consensus letter
-	int countA = 0;
-	int countC = 0;
-	int countG = 0;
-	int countT = 0;
+	std::vector<int32_t> count(5, 0); // ACGT-
 	for(TAIndex i = 0; i < (TAIndex) align.shape()[0]; ++i) {
 	  if (fl[i][j]) {
-	    if ((align[i][j] == 'A') || (align[i][j] == 'a')) ++countA;
-	    else if ((align[i][j] == 'C') || (align[i][j] == 'c')) ++countC;
-	    else if ((align[i][j] == 'G') || (align[i][j] == 'g')) ++countG;
-	    else if ((align[i][j] == 'T') || (align[i][j] == 't')) ++countT;
+	    if ((align[i][j] == 'A') || (align[i][j] == 'a')) ++count[0];
+	    else if ((align[i][j] == 'C') || (align[i][j] == 'c')) ++count[1];
+	    else if ((align[i][j] == 'G') || (align[i][j] == 'g')) ++count[2];
+	    else if ((align[i][j] == 'T') || (align[i][j] == 't')) ++count[3];
+	    else ++count[4];
 	  }
 	}
-	int countAligned = countA + countC + countG + countT;
-	if (countAligned > (*itCov / 2)) {
-	  if (countA > countC) {
-	    if (countA > countG) {
-	      if (countA > countT) cons.push_back('A');
-	      else cons.push_back('T');
-	    } else {
-	      if (countG > countT) cons.push_back('G');
-	      else cons.push_back('T');
-	    }
-	  } else {
-	    if (countC > countG) {
-	      if (countC > countT) cons.push_back('C');
-	      else cons.push_back('T');
-	    } else {
-	      if (countG > countT) cons.push_back('G');
-	      else cons.push_back('T');
-	    }
+	maxIdx = 0;
+	int32_t maxCount = count[0];
+	for(uint32_t i = 1; i<5; ++i) {
+	  if (count[i] > maxCount) {
+	    maxCount = count[i];
+	    maxIdx = i;
 	  }
 	}
       }
+      switch (maxIdx) {
+      case 0: cons[j] = 'A'; break;
+      case 1: cons[j] = 'C'; break;
+      case 2: cons[j] = 'G'; break;
+      case 3: cons[j] = 'T'; break;
+      default: break;
+      }
     }
-    cs = std::string(cons.begin(), cons.end());
+    gapped = std::string(cons.begin(), cons.end());
+    for(uint32_t i = 0; i<cons.size(); ++i) {
+      if (cons[i] != '-') cs.push_back(cons[i]);
+    }
   }
 
+
+  template<typename TConfig, typename TAlign>
+  inline void
+  consensus(TConfig const& c, TAlign const& align, std::string& cs) {
+    std::string gapped;
+    consensus(c, align, gapped, cs);
+  }
 
   template<typename TConfig, typename TSplitReadSet>
   inline int
@@ -298,6 +303,10 @@ namespace bamstats {
     // Sequence to profile re-alignment
     //sprealign(c, align);
 
+    // Consensus calling
+    std::string gapped;
+    consensus(c, align, gapped, cs);
+    
     // Output vertical alignment
     boost::iostreams::filtering_ostream rcfile;
     rcfile.push(boost::iostreams::gzip_compressor());
@@ -307,12 +316,11 @@ namespace bamstats {
       for(TAIndex i = 0; i < (TAIndex) align.shape()[0]; ++i) {
 	rcfile << align[i][j];
       }
-      rcfile << std::endl;
+      rcfile << '|' << gapped[j] << std::endl;
     }
     rcfile.pop();
     
-    // Consensus calling
-    consensus(align, cs);
+
     //std::cerr << cs << std::endl;
     //std::cerr << std::endl;
     
