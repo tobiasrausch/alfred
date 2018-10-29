@@ -50,6 +50,7 @@ namespace bamstats {
 
 struct ConfigConsensus {
   bool secondary;
+  bool trimreads;
   uint16_t minMapQual;
   uint32_t window;
   int32_t gapopen;
@@ -84,6 +85,54 @@ _loadFastaReads(TConfig const& c, std::vector<std::string>& rs) {
   fai_destroy(fai);
 }
 
+inline bool
+findReadTrim(bam1_t const* rec, int32_t const start, int32_t const end, int32_t& leftPos, int32_t& rightPos) {
+  int32_t rp = rec->core.pos; // reference pointer
+  int32_t sp = 0; // sequence pointer
+  leftPos = -1;
+  rightPos = -1;
+
+  // Parse the CIGAR
+  if (start < end) {
+    uint32_t* cigar = bam_get_cigar(rec);
+    for (std::size_t i = 0; i < rec->core.n_cigar; ++i) {
+      if ((bam_cigar_op(cigar[i]) == BAM_CMATCH) || (bam_cigar_op(cigar[i]) == BAM_CEQUAL) || (bam_cigar_op(cigar[i]) == BAM_CDIFF)) {
+	// match or mismatch
+	for(std::size_t k = 0; k<bam_cigar_oplen(cigar[i]);++k) {
+	  ++sp;
+	  ++rp;
+	  if ((leftPos == -1) && (rp >= start)) leftPos = sp;
+	  if ((rightPos == -1) && (rp >= end)) {
+	    rightPos = sp;
+	    return true;
+	  }
+	}
+      } else {
+	if (bam_cigar_op(cigar[i]) == BAM_CDEL) {
+	  rp += bam_cigar_oplen(cigar[i]);
+	} else if (bam_cigar_op(cigar[i]) == BAM_CINS) {
+	  sp += bam_cigar_oplen(cigar[i]);
+	} else if (bam_cigar_op(cigar[i]) == BAM_CSOFT_CLIP) {
+	  sp += bam_cigar_oplen(cigar[i]);
+	} else if(bam_cigar_op(cigar[i]) == BAM_CHARD_CLIP) {
+	  // Nothing
+	} else if (bam_cigar_op(cigar[i]) == BAM_CREF_SKIP) {
+	  rp += bam_cigar_oplen(cigar[i]);
+	} else {
+	  std::cerr << "Unknown Cigar options" << std::endl;
+	  return 1;
+	}
+	if ((leftPos == -1) && (rp >= start)) leftPos = sp;
+	if ((rightPos == -1) && (rp >= end)) {
+	  rightPos = sp;
+	  return true;
+	}
+      }
+    }
+  }
+  return false;
+}
+ 
 template<typename TConfig>
 inline bool
 _loadBamReads(TConfig const& c, std::vector<std::string>& rs) {
@@ -160,7 +209,12 @@ _loadBamReads(TConfig const& c, std::vector<std::string>& rs) {
 		uint8_t* seqptr = bam_get_seq(rec);
 		for (int i = 0; i < rec->core.l_qseq; ++i) sequence[i] = "=ACMGRSVTWYHKDBN"[bam_seqi(seqptr, i)];
 		std::cout << "Read name: " << bam_get_qname(rec) << ", Length: " << rec->core.l_qseq << std::endl;
-		rs.push_back(sequence);
+		if (c.trimreads) {
+		  int32_t leftPos = -1;
+		  int32_t rightPos = -1;
+		  bool success = findReadTrim(rec, pos - c.window, pos+c.window, leftPos, rightPos);
+		  if (success) rs.push_back(sequence.substr(leftPos, rightPos - leftPos));
+		} else rs.push_back(sequence);
 		read_set.insert(seed);
 	      } else {
 		missing_reads[seed] = (rec->core.flag & BAM_FREVERSE);
@@ -198,10 +252,19 @@ _loadBamReads(TConfig const& c, std::vector<std::string>& rs) {
 
 	    // Check alignment direction
 	    if ( (rec->core.flag & BAM_FREVERSE) == (missing_reads[seed]) ) {
-	      rs.push_back(sequence);
+	      if (c.trimreads) {
+		int32_t leftPos = -1;
+		int32_t rightPos = -1;
+		bool success = findReadTrim(rec, pos - c.window, pos+c.window, leftPos, rightPos);
+		if (success) rs.push_back(sequence.substr(leftPos, rightPos - leftPos));
+	      } else rs.push_back(sequence);
 	    } else {
-	      reverseComplement(sequence);
-	      rs.push_back(sequence);
+	      if (c.trimreads) {
+		// Tricky, todo
+	      } else {
+		reverseComplement(sequence);
+		rs.push_back(sequence);
+	      }
 	    }
 	    read_set.insert(seed);
 	  }
@@ -239,6 +302,7 @@ int consensus(int argc, char **argv) {
     ("position,p", boost::program_options::value<std::string>(&c.position)->default_value("chr4:500500"), "position to generate consensus")
     ("window,w", boost::program_options::value<uint32_t>(&c.window)->default_value(5), "window around position to fetch reads")
     ("secondary,s", "consider secondary alignments")
+    ("trimreads,r", "trim reads to window")
     ;
   
   boost::program_options::options_description alignment("Alignment scoring options for 'custom' sequencing type");
@@ -281,6 +345,10 @@ int consensus(int argc, char **argv) {
   // Secondary alignments
   if (vm.count("secondary")) c.secondary = true;
   else c.secondary = false;
+
+  // Trim reads?
+  if (vm.count("trimreads")) c.trimreads = true;
+  else c.trimreads = false;
 
   // Set alignment score
   if (c.seqtype == "ill") {
