@@ -1,0 +1,12 @@
+{
+  "name": "alfred-docs",
+  "version": "1.0.0",
+  "description": "Alfred documentation",
+  "scripts": {
+    "dev": "vuepress dev",
+    "build": "vuepress build"
+  },
+  "devDependencies": {
+    "vuepress": "^1.0.0-alpha.19"
+  }
+}
