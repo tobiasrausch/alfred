@@ -3,6 +3,7 @@ module.exports = {
   description:
     "Documentation of Alfred, an app for BAM alignment statistics, feature counting and annotation",
   themeConfig: {
+    repo: "tobiasrausch/alfred",
     nav: [
       { text: "Home", link: "/" },
       { text: "Installation", link: "/installation/" },
