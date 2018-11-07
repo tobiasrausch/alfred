@@ -7,8 +7,9 @@ module.exports = {
       { text: "Home", link: "/" },
       { text: "Installation", link: "/installation/" },
       { text: "Usage", link: "/cli/" },
-      { text: "Web App", link: "/webapp/" }
+      { text: "Web App", link: "/webapp/" },
+      { text: "FAQ", link: "/faq/" }
     ],
-    sidebar: ["/installation/", "/cli/", "/webapp/"]
+    sidebar: ["/installation/", "/cli/", "/webapp/", "/faq/"]
   }
 };
