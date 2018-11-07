@@ -1,6 +1,19 @@
 # Web application
 
-Alfred's quality control json files can be interactively browsed with the companion [web application](https://gear.embl.de/alfred). All charts support panning and zooming. Charts can be downloaded as png. Tables of quality control metrics can be downloaded as csv. An overview of all available charts and a most important alignment statistics is below.
+Alfred's quality control json files can be interactively browsed with the companion [web application](https://gear.embl.de/alfred). All charts support panning and zooming. Charts can be downloaded as png. Tables of quality control metrics can be downloaded as csv. To generate a quality control file in json format:
+
+```bash
+alfred qc -r <ref.fa> -f json -o qc.json.gz <align.bam>
+```
+
+`qc.json.gz` can then be uploaded at [https://gear.embl.de/alfred](https://gear.embl.de/alfred).
+
+
+
+## Features
+
+An overview of all available charts and the most important alignment statistics provided by Alfred is below.
+
 
 | Alignment Metric               | DNA-Seq (WGS)  | DNA-Seq (Capture)  | RNA-Seq  |  ChIP-Seq/ATAC-Seq | Chart Type |
 |--------------------------------|----------------|--------------------|----------|--------------------|------------|
@@ -21,7 +34,9 @@ Alfred's quality control json files can be interactively browsed with the compan
 | DNA pitch / Nucleosome pattern |     |      |     | Yes  | Grouped Line Chart|
 
 
-The web application further hosts example data sets spanning a wide range of sequencing assays and sequencing technologies.
+## Example Data Sets
+
+The [web application](https://gear.embl.de/alfred) hosts example data sets for a number of sequencing assays and sequencing technologies.
 
 | Sequencing Assay   | Sequencing Technology |
 |--------------------|-----------------------|
