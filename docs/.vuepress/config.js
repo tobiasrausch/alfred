@@ -12,5 +12,8 @@ module.exports = {
       { text: "FAQ", link: "/faq/" }
     ],
     sidebar: ["/installation/", "/cli/", "/webapp/", "/faq/"]
+  },
+  plugins: {
+    "@vuepress/back-to-top": true
   }
 };
