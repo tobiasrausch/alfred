@@ -6,7 +6,6 @@ Alfred is available as a [Bioconda package](https://anaconda.org/bioconda/alfred
 
 To build Alfred from source you need some build essentials and the Boost libraries, i.e. for Ubuntu:
 
-
 ```bash
 apt install \
     build-essential g++ \
@@ -33,8 +32,6 @@ make install
 ./bin/alfred -h
 ```
 
-## Non-default boost installation directory
+## Non-default Boost installation directory
 
-You can set a non-default boost installation directory using
-
-
+You can specify a non-default Boost installation directory using
