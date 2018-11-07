@@ -1,6 +1,6 @@
 # Usage
 
-Alfred uses subcommands for [quality control](#alignment-quality-control) ([qc](#alignment-quality-control)), [feature counting](#bam-feature-counting) ([count_dna](#bam-read-counting-for-dna-seq), [count_rna](#bam-read-counting-for-rna-seq), [count_jct](#bam-read-counting-for-rna-seq)), [feature annotation](#bam-feature-annotation) ([annotate](#chip-seq-or-atac-seq-peak-annotation), tracks), alignment (pwalign, consensus) and haplotype-resolved analysis (split, ase). The subcommands are explained below.
+Alfred uses subcommands for [quality control](#alignment-quality-control) ([qc](#alignment-quality-control)), [feature counting](#bam-feature-counting) ([count_dna](#bam-read-counting-for-dna-seq), [count_rna](#bam-read-counting-for-rna-seq), [count_jct](#bam-read-counting-for-rna-seq)), [feature annotation](#bam-feature-annotation) ([annotate](#chip-seq-or-atac-seq-peak-annotation), [tracks](#browser-tracks)), [alignment](#pairwise-sequence-alignment) ([pwalign](#pairwise-sequence-alignment), [consensus](#bam-consensus-computation)) and [haplotype-resolved analysis](#haplotype-specific-bam-files) ([split](#haplotype-specific-bam-files), [ase](#allele-specific-expression)). The subcommands are explained below.
 
 ## Alignment Quality Control
 
@@ -136,3 +136,60 @@ The two output files summarize nearby genes by peak and vice versa (peaks by gen
 cd motif/ && ./downloadMotifs.sh
 alfred annotate -r <hg19.fa> -m motif/jaspar.gz <peaks.bed>
 ```
+
+### Browser Tracks
+
+Normalized and file size optimized browser tracks are essential to compare peak profiles across samples and upload them quickly in online genome browsers such as the [UCSC Genome Browser](https://genome.ucsc.edu/). Alfred generates browser tracks in [UCSC bedgraph format](https://genome.ucsc.edu/goldenpath/help/bedgraph.html) with configurable resolution. Lower resolution values leed to coarse-grained windows at reduced file size. Contrarily, high resolution values leed to fine-grained windows at greater file size.
+
+```bash
+alfred tracks -r 0.2 -o track.bedGraph.gz <aligned.bam>
+```
+
+[IGV tools](https://software.broadinstitute.org/software/igv/igvtools) can be used to convert bedgraph files to IGV's proprietory tdf format.
+
+```bash
+igvtools totdf track.bedGraph.gz track.tdf hg19
+```
+
+This conversion enables comparing dozens of ATAC-Seq or ChIP-Seq samples at greatly improved speed in IGV compared to using the raw BAM files.
+
+## Pairwise Sequence Alignment
+
+Alfred supports global and local pairwise sequence alignments with configurable match scores and gap/mismatch penalties. Overlap and nested alignments can be achieved using penalty-free leading/trailing gaps. Affine gap penalties with separate gap open and gap extension penalties are supported.
+
+```bash
+alfred pwalign -a align.fa.gz <seq1.fasta> <seq2.fasta>
+```
+
+All computed pairwise alignments are "linear" alignments that is the order of sequence nucleotides is preserved. For more complex pairwise alignments involving inversions or duplications you can use [Maze](https://gear.embl.de/maze/).
+
+## BAM Consensus Computation
+
+Alfred supports consensus computation of error-prone long reads using multiple sequence alignment principles. To compute a consensus sequence for a set of long reads at a given alignment position:
+
+```bash
+alfred consensus -f bam -t ont -p chr1:218992200 <ont_pacbio.bam>
+```
+
+This is potentially most useful by first separating haplotypes (Alfred's [split](#haplotype-specific-bam-files) subcommand) and then computing consensus sequences independently for each haplotype.
+
+```bash
+alfred split -r <ref.fa> -s NA12878 -p <haplotype1.bam> -q <haplotype2.bam> -v <phased.snps.bcf> <input.bam>
+alfred consensus -c <hap1.fa.gz> -f bam -t ont -p chr1:chr4:500500 <haplotype1.bam>
+alfred consensus -c <hap2.fa.gz> -f bam -t ont -p chr1:chr4:500500 <haplotype2.bam>
+```
+
+To identify variants, you can then compare the two locally assembled haplotypes using our online dotplot method [Maze](https://gear.embl.de/maze) or align them pairwise against each other using the subcommand [pwalign](#pairwise-sequence-alignment).
+
+
+## Haplotype-specific BAM files
+
+Long reads, Hi-C or novel single-cell sequencing technologies such as Strand-Seq enable (local) haplotyping or phasing of variants. Once such a phased SNP scaffold has been obtained one can split a BAM file into the corresponding haplotypes.
+
+```bash
+alfred split -r <ref.fa> -s NA12878 -p <haplotype1.bam> -q <haplotype2.bam> -v <phased.snps.bcf> <input.bam>
+```
+
+## Allele-specific expression
+
+ToDo
