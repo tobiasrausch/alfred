@@ -1,6 +1,6 @@
 # Usage
 
-Alfred uses subcommands for [quality control](#alignment-quality-control) ([qc](#alignment-quality-control)), [feature counting](#bam-feature-counting) ([count_dna](#bam-read-counting-for-dna-seq), count_rna, count_jct), feature annotation (annotate, tracks), alignment (pwalign, consensus) and haplotype-resolved analysis (split, ase). The subcommands are explained below.
+Alfred uses subcommands for [quality control](#alignment-quality-control) ([qc](#alignment-quality-control)), [feature counting](#bam-feature-counting) ([count_dna](#bam-read-counting-for-dna-seq), [count_rna](#bam-read-counting-for-rna-seq), [count_jct](#bam-read-counting-for-rna-seq)), [feature annotation](#bam-feature-annotation) ([annotate](#chip-seq-or-atac-seq-peak-annotation), tracks), alignment (pwalign, consensus) and haplotype-resolved analysis (split, ase). The subcommands are explained below.
 
 ## Alignment Quality Control
 
@@ -101,4 +101,38 @@ To plot the whole-chromosome coverage profile for chr1-22 and chrX.
 
 ```bash
 Rscript scripts/rd.R <cov.gz>
+```
+
+### BAM Read Counting for RNA-Seq
+
+Alfred can also assign reads to gene annotation features from a GTF file such as counting reads by gene or transcript identifier.
+
+```bash
+cd gtf/ && ./downloadGTF.sh
+alfred count_rna -g gtf/Homo_sapiens.GRCh37.75.gtf.gz <align.GRCh37.bam>
+```
+
+An experimental feature of Alfred is to count splice junction supporting reads. This method generates exon-exon junction counts for intra-gene exon-exon junctions, inter-gene exon-exon junctions and completely novel (not annotated) intra-chromosomal junctions.
+
+```bash
+alfred count_jct -g gtf/Homo_sapiens.GRCh37.75.gtf.gz <align.GRCh37.bam>
+```
+
+## BAM Feature Annotation
+
+Alfred supports annotation of ChIP-Seq and ATAC-Seq peaks for neighboring genes or transcription factor binding sites (based on motif alignments). Additionally, browser tracks in UCSC bedgraph format can be computed with configurable resolution.
+
+### ChIP-Seq or ATAC-Seq peak annotation
+
+To annotate overlapping/neighboring genes up to a distance of 10,000bp:
+
+```bash
+alfred annotate -d 10000 -g gtf/Homo_sapiens.GRCh37.75.gtf.gz <peaks.bed>
+```
+
+The two output files summarize nearby genes by peak and vice versa (peaks by gene). Motif annotation based on alignment scores of motif-specific position weight matrices can also be obtained.
+
+```bash
+cd motif/ && ./downloadMotifs.sh
+alfred annotate -r <hg19.fa> -m motif/jaspar.gz <peaks.bed>
 ```
