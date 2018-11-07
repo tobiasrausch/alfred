@@ -1,6 +1,6 @@
 # Usage
 
-Alfred uses subcommands for [quality control](./#alignment-quality-control) ([qc](./#alignment-quality-control)), [feature counting](./#bam-feature-counting) ([count_dna](./#bam-read-counting-for-dna-seq), count_rna, count_jct), feature annotation (annotate, tracks), alignment (pwalign, consensus) and haplotype-resolved analysis (split, ase). The subcommands are explained below.
+Alfred uses subcommands for [quality control](#alignment-quality-control) ([qc](#alignment-quality-control)), [feature counting](#bam-feature-counting) ([count_dna](#bam-read-counting-for-dna-seq), count_rna, count_jct), feature annotation (annotate, tracks), alignment (pwalign, consensus) and haplotype-resolved analysis (split, ase). The subcommands are explained below.
 
 ## Alignment Quality Control
 
