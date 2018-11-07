@@ -6,7 +6,7 @@ module.exports = {
     nav: [
       { text: "Home", link: "/" },
       { text: "Installation", link: "/installation/" },
-      { text: "CLI", link: "/cli/" },
+      { text: "Usage", link: "/cli/" },
       { text: "Web App", link: "/webapp/" }
     ],
     sidebar: ["/installation/", "/cli/", "/webapp/"]
