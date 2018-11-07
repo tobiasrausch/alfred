@@ -1,6 +1,6 @@
 # Usage
 
-Alfred uses subcommands for quality control ([qc](./#alignment-quality-control)), feature counting (count_dna, count_rna, count_jct), feature annotation (annotate, tracks), alignment (pwalign, consensus) and haplotype-resolved analysis (split, ase). The subcommands are explained below.
+Alfred uses subcommands for [quality control](./#alignment-quality-control) ([qc](./#alignment-quality-control)), [feature counting](./#bam-feature-counting) ([count_dna](./#bam-read-counting-for-dna-seq), count_rna, count_jct), feature annotation (annotate, tracks), alignment (pwalign, consensus) and haplotype-resolved analysis (split, ase). The subcommands are explained below.
 
 ## Alignment Quality Control
 
@@ -83,3 +83,22 @@ Alternatively, one can use the [interactive GUI](https://gear.embl.de/alfred) an
 alfred qc -r <hg19.fa> -b maps/hg19.promoter.bed.gz -f json -o qc.json.gz <atac.bam>
 ```
 
+## BAM Feature Counting
+
+Alfred supports counting reads in overlapping or non-overlapping windows, at predefined intervals in BED format,
+or as gene and transcript counting for RNA-Seq in stranded or unstranded mode using a gtf or gff3 gene annotation
+file. Expression values can be normalized as raw counts, FPKM, or FPKM-UQ values.
+
+### BAM Read Counting for DNA-Seq
+
+For DNA sequencing, Alfred can be used to calculate the coverage in overlapping or non-overlapping windows or in given set of intervals.
+
+```bash
+alfred count_dna -o <cov.gz> <align.GRCh37.bam>
+```
+
+To plot the whole-chromosome coverage profile for chr1-22 and chrX.
+
+```bash
+Rscript scripts/rd.R <cov.gz>
+```
