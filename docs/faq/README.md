@@ -4,10 +4,7 @@
 For questions, help or feature requests please contact gear_genomics@embl.de
 :::
 
-- [Does Alfred support the CRAM format?](#does-alfred-support-the-cram-format)
-- [Is there an example data set to test my Alfred installation?](#is-there-an-example-data-set-to-test-my-alfred-installation)
-- [Is the feature counting paired-end aware?](#is-the-feature-counting-paired-end-aware)
-- [Why are hard clipping statistics always zero?](#why-are-hard-clipping-statistics-always-zero)
+[[toc]]
 
 ## Does Alfred support the CRAM format?
 
