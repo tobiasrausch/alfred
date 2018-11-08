@@ -32,7 +32,7 @@ make install
 ./bin/alfred -h
 ```
 
-## Non-default Boost installation directory
+## Custom Boost installation directory
 
 Alfred requires Boost and you can install Boost locally using
 
@@ -45,12 +45,14 @@ cd boost/
 cd ..
 ```
 
-You can then specify a non-default Boost installation directory (i.e., /opt/boost below) using
+You can then specify the custom Boost installation directory (i.e., `/opt/boost` below) using
 
 ```bash
+# modify the following line accordingly
+BOOSTROOT=/opt/boost
 git clone --recursive https://github.com/tobiasrausch/alfred.git
 cd alfred/
-make CMDCXXFLAGS='-isystem /opt/boost' CMDLDFLAGS='-L/opt/boost/stage/lib -Wl,-rpath,/opt/boost/stage/lib' all
+make CMDCXXFLAGS="-isystem $BOOSTROOT" CMDLDFLAGS="-L$BOOSTROOT/stage/lib -Wl,-rpath,$BOOSTROOT/stage/lib" all
 make install
 ./bin/alfred -h
 ```
