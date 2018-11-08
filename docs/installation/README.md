@@ -50,7 +50,7 @@ You can then specify a non-default Boost installation directory (i.e., /opt/boos
 ```bash
 git clone --recursive https://github.com/tobiasrausch/alfred.git
 cd alfred/
-make CMDCXXFLAGS='-isystem /opt/boost' CMDLDFLAGS='-L/opt/boost/stage/lib' all
+make CMDCXXFLAGS='-isystem /opt/boost' CMDLDFLAGS='-L/opt/boost/stage/lib -Wl,-rpath,/opt/boost/stage/lib' all
 make install
 ./bin/alfred -h
 ```
