@@ -2,6 +2,7 @@ module.exports = {
   title: "Alfred documentation",
   description:
     "Documentation of Alfred, an app for BAM alignment statistics, feature counting and annotation",
+  base: "/docs/alfred/",
   themeConfig: {
     repo: "tobiasrausch/alfred",
     nav: [
