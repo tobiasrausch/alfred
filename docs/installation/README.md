@@ -42,12 +42,17 @@ cd boost/
 ./bootstrap.sh --prefix=`pwd` --without-icu --with-libraries=iostreams,filesystem,system,program_options,date_time
 ./b2
 ./b2 headers
+cd ..
 ```
 
 You can then specify a non-default Boost installation directory (i.e., /opt/boost below) using
 
 ```bash
+git clone --recursive https://github.com/tobiasrausch/alfred.git
+cd alfred/
 make CMDCXXFLAGS='-isystem /opt/boost' CMDLDFLAGS='-L/opt/boost/stage/lib' all
+make install
+./bin/alfred -h
 ```
 
 To clean the local Boost installation
