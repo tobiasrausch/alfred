@@ -1,6 +1,6 @@
 # Installation
 
-Alfred is available as a [Bioconda package](https://anaconda.org/bioconda/alfred), a pre-compiled statically linked binary from the [Alfred github release page](https://github.com/tobiasrausch/alfred/releases/) or as a minimal [Docker container](https://hub.docker.com/r/trausch/alfred/). All code is open-source and hosted on [Alfred's GitHub page](https://github.com/tobiasrausch/alfred).
+Alfred is available as a [Bioconda package](https://anaconda.org/bioconda/alfred), as a pre-compiled statically linked binary from [Alfred's github release page](https://github.com/tobiasrausch/alfred/releases/) or as a minimal [Docker container](https://hub.docker.com/r/trausch/alfred/). All code is open-source and hosted on [Alfred's GitHub page](https://github.com/tobiasrausch/alfred).
 
 ## Installation from Source
 
