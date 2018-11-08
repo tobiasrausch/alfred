@@ -47,7 +47,7 @@ cd boost/
 You can then specify a non-default Boost installation directory (i.e., /opt/boost below) using
 
 ```bash
-make CXXFLAGS=-I/opt/boost LDFLAGS=-L/opt/boost/stage/lib all 
+make CMDCXXFLAGS='-isystem /opt/boost' CMDLDFLAGS='-L/opt/boost/stage/lib' all
 ```
 
 To clean the local Boost installation
