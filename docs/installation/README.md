@@ -34,4 +34,24 @@ make install
 
 ## Non-default Boost installation directory
 
-You can specify a non-default Boost installation directory using
+Delly requires Boost and you can install Boost locally using
+
+```bash
+git clone --recursive https://github.com/boostorg/boost.git
+cd boost/
+./bootstrap.sh --prefix=`pwd` --without-icu --with-libraries=iostreams,filesystem,system,program_options,date_time
+./b2
+./b2 headers
+```
+
+You can then specify a non-default Boost installation directory (i.e., /opt/boost below) using
+
+```bash
+make CMDCXXFLAGS='-isystem /opt/boost' CMDLDFLAGS='-L/opt/boost/stage/lib' all
+```
+
+To clean the local Boost installation
+
+```bash
+./b2 --clean-all
+```
