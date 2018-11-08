@@ -54,9 +54,3 @@ make CMDCXXFLAGS='-isystem /opt/boost' CMDLDFLAGS='-L/opt/boost/stage/lib -Wl,-r
 make install
 ./bin/alfred -h
 ```
-
-To clean the local Boost installation
-
-```bash
-./b2 --clean-all
-```
