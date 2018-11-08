@@ -34,7 +34,7 @@ make install
 
 ## Non-default Boost installation directory
 
-Delly requires Boost and you can install Boost locally using
+Alfred requires Boost and you can install Boost locally using
 
 ```bash
 git clone --recursive https://github.com/boostorg/boost.git
