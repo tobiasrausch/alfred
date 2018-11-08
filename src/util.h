@@ -241,24 +241,16 @@ namespace bamstats
     
   
   inline bool is_gz(boost::filesystem::path const& f) {
-    std::ifstream in(f.string().c_str());
-    if (!in) return false;
-    in.close();
-    
-    boost::iostreams::filtering_istream gzin;
-    gzin.push(boost::iostreams::gzip_decompressor());
-    gzin.push(boost::iostreams::file_source(f.string().c_str()), std::ios_base::in | std::ios_base::binary);
-    try {
-      char c;
-      gzin >> c;
-    } catch (boost::iostreams::gzip_error& e) {
-      gzin.pop();
-      return false;
-    }
-    gzin.pop();
-    return true;
+    std::ifstream bfile(f.string().c_str(), std::ios_base::binary | std::ios::ate);
+    bfile.seekg(0, std::ios::beg);
+    char byte1;
+    bfile.read(&byte1, 1);
+    char byte2;
+    bfile.read(&byte2, 1);
+    bfile.close();
+    if ((byte1 == '\x1F') && (byte2 == '\x8B')) return true;
+    else return false;
   }
-      
     
 
   // F+ 0
