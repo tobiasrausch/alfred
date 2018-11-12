@@ -331,7 +331,8 @@ namespace bamstats
 	  if (i > 0) rfile << ",";
 	  rfile << itRg->second.qc.qcount[i];
 	}
-	rfile << "]}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"line\"}";
+	rfile << "]}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"bar\", \"options\": {\"layout\": \"group\"}}";
+	//rfile << "]}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"bar\"}";
       }
 
       // Coverage Histogram
@@ -347,7 +348,7 @@ namespace bamstats
 	  if (i > 0) rfile << ",";
 	  rfile << i;
 	}
-	rfile << "]}], \"axis\": {\"title\": \"Coverage\", \"range\": [0,60]}},";
+	rfile << "]}], \"axis\": {\"title\": \"Coverage\", \"range\": [1,60]}},";
 	rfile << "\"y\": {\"data\": [{\"values\": [";
 	for(uint32_t i = 0; i <= lastValidCO; ++i) {
 	  if (i > 0) rfile << ",";
