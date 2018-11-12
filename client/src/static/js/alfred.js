@@ -342,8 +342,11 @@ function chart(metricData, parent) {
     }
   }
 
-  if (metricData.type === 'bar') {
-    layout.barmode = metricData.options.layout
+  if (metricData.type === 'bar' && metricData.y.data.length > 1) {
+    layout.barmode = 'group' // default
+    if (metricData.options && metricData.options.layout) {
+      layout.barmode = metricData.options.layout
+    }
   }
 
   if (metricData.x.axis.range) {
