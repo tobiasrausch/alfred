@@ -20,21 +20,21 @@ An overview of all available charts and the most important alignment statistics 
 
 | Alignment Metric               | DNA-Seq (WGS) | DNA-Seq (Capture) | RNA-Seq | ChIP-Seq/ATAC-Seq | Chart Type         |
 | ------------------------------ | ------------- | ----------------- | ------- | ----------------- | ------------------ |
-| Mapping Statistics             | Yes           | Yes               | Yes     | Yes               | Table              |
-| Duplicate Statistics           | Yes           | Yes               | Yes     | Yes               | Table              |
-| Sequencing Error Rates         | Yes           | Yes               | Yes     | Yes               | Table              |
-| Base Content Distribution      | Yes           | Yes               | Yes     | Yes               | Grouped Line Chart |
-| Read Length Distribution       | Yes           | Yes               | Yes     | Yes               | Line Chart         |
-| Base Quality Distribution      | Yes           | Yes               | Yes     | Yes               | Line Chart         |
-| Coverage Histogram             | Yes           | Yes               | Yes     | Yes               | Line Chart         |
-| Insert Size Distribution       | Yes           | Yes               | Yes     | Yes               | Grouped Line Chart |
-| InDel Size Distribution        | Yes           | Yes               | Yes     | Yes               | Grouped Line Chart |
-| InDel Context                  | Yes           | Yes               | Yes     | Yes               | Bar Chart          |
-| GC Content                     | Yes           | Yes               | Yes     | Yes               | Grouped Line Chart |
-| On-Target Rate                 |               | Yes               |         |                   | Line Chart         |
-| Target Coverage Distribution   |               | Yes               |         |                   | Line Chart         |
-| TSS Enrichment                 |               |                   |         | Yes               | Table              |
-| DNA pitch / Nucleosome pattern |               |                   |         | Yes               | Grouped Line Chart |
+| Mapping Statistics             | ✔             | ✔                 | ✔       | ✔                 | Table              |
+| Duplicate Statistics           | ✔             | ✔                 | ✔       | ✔                 | Table              |
+| Sequencing Error Rates         | ✔             | ✔                 | ✔       | ✔                 | Table              |
+| Base Content Distribution      | ✔             | ✔                 | ✔       | ✔                 | Grouped Line Chart |
+| Read Length Distribution       | ✔             | ✔                 | ✔       | ✔                 | Line Chart         |
+| Base Quality Distribution      | ✔             | ✔                 | ✔       | ✔                 | Line Chart         |
+| Coverage Histogram             | ✔             | ✔                 | ✔       | ✔                 | Line Chart         |
+| Insert Size Distribution       | ✔             | ✔                 | ✔       | ✔                 | Grouped Line Chart |
+| InDel Size Distribution        | ✔             | ✔                 | ✔       | ✔                 | Grouped Line Chart |
+| InDel Context                  | ✔             | ✔                 | ✔       | ✔                 | Bar Chart          |
+| GC Content                     | ✔             | ✔                 | ✔       | ✔                 | Grouped Line Chart |
+| On-Target Rate                 |               | ✔                 |         |                   | Line Chart         |
+| Target Coverage Distribution   |               | ✔                 |         |                   | Line Chart         |
+| TSS Enrichment                 |               |                   |         | ✔                 | Table              |
+| DNA pitch / Nucleosome pattern |               |                   |         | ✔                 | Grouped Line Chart |
 
 ## Base content distribution
 
