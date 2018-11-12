@@ -50,6 +50,8 @@ namespace bamstats
 
 struct ConfigQC {
   bool hasRegionFile;
+  bool hasJsonOut;
+  bool hasTsvOut;
   bool ignoreRG;
   bool singleRG;
   bool isHaplotagged;
@@ -60,7 +62,7 @@ struct ConfigQC {
   uint32_t minChrLen;
   std::string rgname;
   std::string sampleName;
-  std::string format;
+  boost::filesystem::path jsonout;
   boost::filesystem::path outfile;
   boost::filesystem::path genome;
   boost::filesystem::path regionFile;
@@ -82,8 +84,8 @@ int qc(int argc, char **argv) {
     ("reference,r", boost::program_options::value<boost::filesystem::path>(&c.genome), "reference fasta file (required)")
     ("bed,b", boost::program_options::value<boost::filesystem::path>(&c.regionFile), "bed file with target regions (optional)")
     ("name,a", boost::program_options::value<std::string>(&sampleName), "sample name (optional, otherwise SM tag is used)")
-    ("format,f", boost::program_options::value<std::string>(&c.format)->default_value("tsv"), "output format [tsv|json]")
-    ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("qc.tsv.gz"), "gzipped output file")
+    ("jsonout,j", boost::program_options::value<boost::filesystem::path>(&c.jsonout), "gzipped json output file")
+    ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile), "gzipped tsv output file")
     ("secondary,s", "evaluate secondary alignments")
     ("supplementary,u", "evaluate supplementary alignments") 
     ;
@@ -114,12 +116,20 @@ int qc(int argc, char **argv) {
   boost::program_options::notify(vm);
 
   // Check command line arguments
-  if ((vm.count("help")) || (!vm.count("input-file")) || (!vm.count("reference"))) {
+  if ((vm.count("help")) || ((!vm.count("outfile")) && (!vm.count("jsonout"))) || (!vm.count("input-file")) || (!vm.count("reference"))) {
     std::cout << std::endl;
-    std::cout << "Usage: alfred " << argv[0] << " [OPTIONS] -r <ref.fa> <aligned.bam>" << std::endl;
+    std::cout << "Usage: alfred " << argv[0] << " [OPTIONS] -r <ref.fa> -j <qc.json.gz> <aligned.bam>" << std::endl;
     std::cout << visible_options << "\n";
     return 1;
   }
+
+  // Tsv output file
+  if (vm.count("outfile")) c.hasTsvOut = true;
+  else c.hasTsvOut = false;
+
+  // Json output file
+  if (vm.count("jsonout")) c.hasJsonOut = true;
+  else c.hasJsonOut = false;
 
   // Secondary alignments
   if (vm.count("secondary")) c.secondary = true;

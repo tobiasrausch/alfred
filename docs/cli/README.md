@@ -151,7 +151,7 @@ alfred tracks -r 0.2 -o track.bedGraph.gz <aligned.bam>
 igvtools totdf track.bedGraph.gz track.tdf hg19
 ```
 
-This conversion enables comparing dozens of ATAC-Seq or ChIP-Seq samples at greatly improved speed in IGV compared to using the raw BAM files.
+This conversion enables comparing dozens of ATAC-Seq or ChIP-Seq samples at greatly improved speed in IGV compared to using the raw BAM files. By default the Alfred tracks command normalizes all input files to 30 million reads so peak heights are directly comparable across samples.
 
 ## Pairwise Sequence Alignment
 
