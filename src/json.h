@@ -292,7 +292,7 @@ namespace bamstats
 	  if (i > 0) rfile << ",";
 	  rfile << itRg->second.rc.lRc[i];
 	}
-	rfile << "]}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"line\"}";
+	rfile << "]}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"bar\", \"options\": {\"layout\": \"group\"}}";
       }
       
       // Mean Base Quality
@@ -475,7 +475,7 @@ namespace bamstats
 	  if (i < itRg->second.bc.insSize.size()) rfile << itRg->second.bc.insSize[i];
 	  else rfile << '0';
 	}
-	rfile << "], \"title\": \"Insertion\"}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"line\"}";
+	rfile << "], \"title\": \"Insertion\"}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"bar\", \"options\": {\"layout\": \"group\"}}";
       }
 
 
