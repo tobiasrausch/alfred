@@ -34,6 +34,53 @@ An overview of all available charts and the most important alignment statistics 
 | DNA pitch / Nucleosome pattern |     |      |     | Yes  | Grouped Line Chart|
 
 
+## Base content distribution
+
+The base content distribution shows any base calling bias along the read. For an ideal library the lines for A, C, G, and T should run in parallel. For a whole-genome assay the GC-content of that genome should be reflected in the relative amounts of each base. Some libraries are expected to show a biased leading base distribution such as many RNA-Seq libraries because of random hexamer priming or restriction based assays.
+
+## Read length distribution
+
+Illumina sequencers produce reads of fixed read length but long read technologies usually have a median read length >1000bp and a long tail of reads with read lengths >30,000bp. This plot is also insightful to understand adpater trimming results or the removal of low quality bases at the start or end of a read.
+
+## Mean base quality distribution
+
+This plot shows the mean base quality along the read. A typical illumina profile shows base qualities >Q30 before base 30 and then a gradual loss of base quality accuracy towards the end of the read.
+
+## Mapping quality distribution
+
+This plot shows the mapping quality distribution for all mapped reads. The reported quality scores are aligner dependent.
+
+## Coverage histogram
+
+The coverage histogram shows how many bases of the sequenced genome are at a given coverage. Please note that for targeted assays (capture assays) this plot is expected to show a large portion of the genome at coverage=0. For targeted assays, we therefore recommend checking the on-target rate and the targets above coverage level plots.
+
+## On-target rate and targets above a given coverage level
+
+For targeted assays, the two major concerns are capturing efficiency (on-target rate) and how many of the targets are ready for downstream analysis (targets above a pre-defined coverage threshold). A standard whole-exome sequencing assay yields at least 70% of reads on-target (+/-200bp target extension) and at least 70% of targets >20x coverage.
+
+## Insert size histogram
+
+The insert size plot shows the outer insert size distribution for all read pairs stratified by read pair orientation. There are different nomenclatures around for defining the different paired-end layouts. The default illumina paired-end layout is R+ (or forward-reverse, FR), the default illumina mate-pair layout is R- (or reverse-forward, RF).
+
+## InDel size distribution
+
+ToDo
+
+## GC content
+
+ToDo
+
+## InDel Homopolymer Context
+
+ToDo
+
+
+## GC-Content and Mapping Statistics by Chromosome
+
+ToDo
+
+
+
 ## Example Data Sets
 
 The [web application](https://gear.embl.de/alfred) hosts example data sets for a number of sequencing assays and sequencing technologies.
