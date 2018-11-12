@@ -40,12 +40,9 @@ namespace bamstats
   template<typename TConfig, typename TRGMap>
   inline void
   qcJsonOut(TConfig const& c, bam_hdr_t const* hdr, TRGMap const& rgMap, BedCounts const& be, ReferenceFeatures const& rf) {
-    std::string filename = c.outfile.string();
-    if (c.format == "both") filename += ".json.gz";
-    
     boost::iostreams::filtering_ostream rfile;
     rfile.push(boost::iostreams::gzip_compressor());
-    rfile.push(boost::iostreams::file_sink(filename.c_str(), std::ios_base::out | std::ios_base::binary));
+    rfile.push(boost::iostreams::file_sink(c.jsonout.string().c_str(), std::ios_base::out | std::ios_base::binary));
 
     // Sample information
     rfile << "{\"samples\": [{";

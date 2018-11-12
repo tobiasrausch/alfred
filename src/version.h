@@ -39,7 +39,8 @@ namespace bamstats
       std::cout << "This program comes with ABSOLUTELY NO WARRANTY; for details use '-w'." << std::endl;
       std::cout <<  std::endl;
       std::cout <<  title << " (Version: " << alfredVersionNumber << ")" << std::endl;
-      std::cout << "Contact: Tobias Rausch (rausch@embl.de)" << std::endl;
+      std::cout << "Contact: Gear Genomics Team (gear_genomics@embl.de)" << std::endl;
+      std::cout << "Documentation: https://gear.embl.de/docs/alfred/" << std::endl;
       std::cout << "**********************************************************************" << std::endl;
       std::cout << std::endl;
     }

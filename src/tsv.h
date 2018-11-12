@@ -184,13 +184,10 @@ namespace bamstats
   template<typename TConfig, typename TRGMap>
   inline void
   qcTsvOut(TConfig const& c, bam_hdr_t const* hdr, TRGMap const& rgMap, BedCounts const& be, ReferenceFeatures const& rf) {
-    std::string filename = c.outfile.string();
-    if (c.format == "both") filename += ".tsv.gz";
-    
     // Outfile
     boost::iostreams::filtering_ostream rcfile;
     rcfile.push(boost::iostreams::gzip_compressor());
-    rcfile.push(boost::iostreams::file_sink(filename.c_str(), std::ios_base::out | std::ios_base::binary));
+    rcfile.push(boost::iostreams::file_sink(c.outfile.string().c_str(), std::ios_base::out | std::ios_base::binary));
 
     // Output header
     rcfile << "# This file was produced by alfred v" << alfredVersionNumber << "." << std::endl;
