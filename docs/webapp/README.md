@@ -1,38 +1,37 @@
 # Web application
 
-Alfred's quality control json files can be interactively browsed with the companion [web application](https://gear.embl.de/alfred). All charts support panning and zooming. Charts can be downloaded as png. Tables of quality control metrics can be downloaded as csv. To generate a quality control file in json format:
+Alfred's quality control JSON files can be interactively browsed with the [companion web application](https://gear.embl.de/alfred). All charts support panning and zooming and can be downloaded as PNG images.
+The summary QC table can be downloaded as a CSV file.
+To generate a quality control file in JSON format run
+[Alfred's command-line tool](/cli/) as follows:
 
 ```bash
 alfred qc -r <ref.fa> -f json -o qc.json.gz <align.bam>
 ```
 
-`qc.json.gz` can then be uploaded at [https://gear.embl.de/alfred](https://gear.embl.de/alfred).
-
-
+`qc.json.gz` can then be uploaded at [https://gear.embl.de/alfred/](https://gear.embl.de/alfred/).
 
 ## Features
 
 An overview of all available charts and the most important alignment statistics provided by Alfred is below.
 
-
-| Alignment Metric               | DNA-Seq (WGS)  | DNA-Seq (Capture)  | RNA-Seq  |  ChIP-Seq/ATAC-Seq | Chart Type |
-|--------------------------------|----------------|--------------------|----------|--------------------|------------|
-| Mapping Statistics             | Yes | Yes  | Yes | Yes  | Table|
-| Duplicate Statistics           | Yes | Yes  | Yes | Yes  | Table|
-| Sequencing Error Rates         | Yes | Yes  | Yes | Yes  | Table|
-| Base Content Distribution      | Yes | Yes  | Yes | Yes  | Grouped Line Chart|
-| Read Length Distribution       | Yes | Yes  | Yes | Yes  | Line Chart|
-| Base Quality Distribution      | Yes | Yes  | Yes | Yes  | Line Chart|
-| Coverage Histogram             | Yes | Yes  | Yes | Yes  | Line Chart|
-| Insert Size Distribution       | Yes | Yes  | Yes | Yes  | Grouped Line Chart|
-| InDel Size Distribution        | Yes | Yes  | Yes | Yes  | Grouped Line Chart|
-| InDel Context                  | Yes | Yes  | Yes | Yes  | Bar Chart|
-| GC Content                     | Yes | Yes  | Yes | Yes  | Grouped Line Chart|
-| On-Target Rate                 |     | Yes  |     |      | Line Chart|
-| Target Coverage Distribution   |     | Yes  |     |      | Line Chart|
-| TSS Enrichment                 |     |      |     | Yes  | Table|
-| DNA pitch / Nucleosome pattern |     |      |     | Yes  | Grouped Line Chart|
-
+| Alignment Metric               | DNA-Seq (WGS) | DNA-Seq (Capture) | RNA-Seq | ChIP-Seq/ATAC-Seq | Chart Type         |
+| ------------------------------ | ------------- | ----------------- | ------- | ----------------- | ------------------ |
+| Mapping Statistics             | Yes           | Yes               | Yes     | Yes               | Table              |
+| Duplicate Statistics           | Yes           | Yes               | Yes     | Yes               | Table              |
+| Sequencing Error Rates         | Yes           | Yes               | Yes     | Yes               | Table              |
+| Base Content Distribution      | Yes           | Yes               | Yes     | Yes               | Grouped Line Chart |
+| Read Length Distribution       | Yes           | Yes               | Yes     | Yes               | Line Chart         |
+| Base Quality Distribution      | Yes           | Yes               | Yes     | Yes               | Line Chart         |
+| Coverage Histogram             | Yes           | Yes               | Yes     | Yes               | Line Chart         |
+| Insert Size Distribution       | Yes           | Yes               | Yes     | Yes               | Grouped Line Chart |
+| InDel Size Distribution        | Yes           | Yes               | Yes     | Yes               | Grouped Line Chart |
+| InDel Context                  | Yes           | Yes               | Yes     | Yes               | Bar Chart          |
+| GC Content                     | Yes           | Yes               | Yes     | Yes               | Grouped Line Chart |
+| On-Target Rate                 |               | Yes               |         |                   | Line Chart         |
+| Target Coverage Distribution   |               | Yes               |         |                   | Line Chart         |
+| TSS Enrichment                 |               |                   |         | Yes               | Table              |
+| DNA pitch / Nucleosome pattern |               |                   |         | Yes               | Grouped Line Chart |
 
 ## Base content distribution
 
@@ -72,8 +71,7 @@ The homopolymer plot shows for all InDels (Cigar I and D operations) if the prec
 
 ## GC content
 
-To estimate a GC bias curve even for low-coverage single-cell data, Alfred computes for each mapped read the local GC-content and then compares the estimated sample GC content to the expected, genome-wide GC content. If a targeted assay is analyzed, Alfred in addition computes the GC content of all target regions. 
-
+To estimate a GC bias curve even for low-coverage single-cell data, Alfred computes for each mapped read the local GC-content and then compares the estimated sample GC content to the expected, genome-wide GC content. If a targeted assay is analyzed, Alfred in addition computes the GC content of all target regions.
 
 ## GC-Content and Mapping Statistics by Chromosome
 
@@ -87,10 +85,10 @@ The summary tab aggregates quality control data in a simple table that can be do
 
 The [web application](https://gear.embl.de/alfred) hosts example data sets for a number of sequencing assays and sequencing technologies.
 
-| Sequencing Assay   | Sequencing Technology |
-|--------------------|-----------------------|
-| DNA-Seq (WGS)      | Illumina, PacBio, ONT |
-| DNA-Seq (Capture)  | Illumina              |
-| RNA-Seq            | Illumina              |
-| ATAC-Seq           | Illumina              |
-| ChIP-Seq           | Illumina              |
+| Sequencing Assay  | Sequencing Technology |
+| ----------------- | --------------------- |
+| DNA-Seq (WGS)     | Illumina, PacBio, ONT |
+| DNA-Seq (Capture) | Illumina              |
+| RNA-Seq           | Illumina              |
+| ATAC-Seq          | Illumina              |
+| ChIP-Seq          | Illumina              |
