@@ -60,26 +60,28 @@ For targeted assays, the two major concerns are capturing efficiency (on-target 
 
 ## Insert size histogram
 
-The insert size plot shows the outer insert size distribution for all read pairs stratified by read pair orientation. There are different nomenclatures around for defining the different paired-end layouts. The default illumina paired-end layout is R+ (or forward-reverse, FR), the default illumina mate-pair layout is R- (or reverse-forward, RF).
+The insert size plot shows the outer insert size distribution for all read pairs stratified by read pair orientation. There are different nomenclatures around for defining the different paired-end layouts. The default illumina paired-end layout is R+ (or forward-reverse, FR), the default illumina mate-pair layout is R- (or reverse-forward, RF). For specific sequencing assays, the insert size distribution can serve as a key quality control metric. For instance, ATAC-Seq libraries should show the characteristic nucleosome pattern and DNA pitch.
 
 ## InDel size distribution
 
-ToDo
-
-## GC content
-
-ToDo
+Histogram of indel sizes collected from all mapped reads. This plot aggregates the length of all Cigar I and D operations.
 
 ## InDel Homopolymer Context
 
-ToDo
+The homopolymer plot shows for all InDels (Cigar I and D operations) if the preceeding 3 bases are all A, all C, all G, or all T. If at least 2 different nucleotides are observed the reported homopolymer context is "None". For illumina reads, almost 50% of all reported InDels occur in a homopolymer context with greater counts for A and T compared to G and C.
+
+## GC content
+
+To estimate a GC bias curve even for low-coverage single-cell data, Alfred computes for each mapped read the local GC-content and then compares the estimated sample GC content to the expected, genome-wide GC content. If a targeted assay is analyzed, Alfred in addition computes the GC content of all target regions. 
 
 
 ## GC-Content and Mapping Statistics by Chromosome
 
-ToDo
+This table lists the size, the number of Ns, the GC-content, and the number of mapped reads for each chromosome as well as the observed to expected ratio of mapped reads.
 
+## Summary statistics
 
+The summary tab aggregates quality control data in a simple table that can be downloaded in csv format. This table is ideal to compare QC metrics across samples and/or sequencing assays. Among many other statistics, the table lists for instance the number of duplicate reads, the number of unmapped reads, the number of secondary and supplementary alignments, base-pair exact error rates stratified by mismatch, insertion and deletion errors, and the median coverage and insert size of the sequenced sample. The table provides more detailed statistics for specialized assays, i.e. for 10X Genomics it lists the number of MI tagged reads, the total number of UMIs, the fraction of haplotype tagged reads and the N50 phased block length. For ATAC-Seq data, users can provide a BED file of promoter regions and then the EnrichmentOverBed column corresponds to TSS enrichment whereas for WES data, the enrichment quantifies the capturing efficiency if the BED file contains all target regions.
 
 ## Example Data Sets
 
