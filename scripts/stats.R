@@ -55,7 +55,7 @@ for(sid in unique(all$Sample)) {
 	       infoMax = paste0("Read Length > ", upBound, " (", round(100 * gr / tc, digits=2), "%)")
 	       rl=rl[rl$Readlength <= upBound,]
 	       p1=ggplot(data=rl, aes(x=Readlength, y=Fraction))
-	       p1=p1 + geom_line(aes(color=Read, group=Read))
+	       p1=p1 + geom_bar(aes(fill=Read, group=Read), stat="identity")
 	       p1=p1 + xlab("Read length") + ylab("Fraction of reads")
 	       p1=p1 + scale_y_continuous(labels=comma)
 	       if (gr) { p1=p1 + ggtitle(paste0("Read Length Distribution", "\n", infoMax, "\n", "Sample: ", sid, "\n", "RG: ", rg)); }
@@ -74,7 +74,7 @@ for(sid in unique(all$Sample)) {
 	for(rg in unique(all[all$Sample == sid,]$Library)) {
 	       mq = all[all$Sample == sid & all$Library == rg,]
 	       p1=ggplot(data=mq, aes(x=MappingQuality, y=Fraction))
-	       p1=p1 + geom_line()
+	       p1=p1 + geom_bar(fill="darkblue", stat="identity")
 	       p1=p1 + xlab("Mapping Quality") + ylab("Fraction of reads")
 	       p1=p1 + scale_y_continuous(labels=comma)
 	       p1=p1 + ggtitle(paste0("Mapping Quality Distribution", "\n", "Sample: ", sid, "\n", "RG: ", rg))
