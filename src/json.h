@@ -154,7 +154,8 @@ namespace bamstats
 	double pbc1 = (double) itRg->second.bc.n1 / (double) itRg->second.bc.nd;
 	double pbc2 = (double) itRg->second.bc.n1 / (double) itRg->second.bc.n2;
 
-	rfile << medianFromHistogram(itRg->second.rc.lRc) << ",";
+	if (itRg->second.pc.paired) rfile << "\"" << medianFromHistogram(itRg->second.rc.lRc[0]) << ":" << medianFromHistogram(itRg->second.rc.lRc[1]) << "\",";
+	else rfile << medianFromHistogram(itRg->second.rc.lRc[0]) << ",";
 	rfile << "\"" << _defLayoutToString(deflayout) << "\"" << ",";
 	rfile << medISize << ",";
 	rfile <<  medianFromHistogram(itRg->second.bc.bpWithCoverage) << ",";
@@ -210,12 +211,12 @@ namespace bamstats
       rfile << "\"id\": \"" << itRg->first << "\",";
       rfile << "\"metrics\": [";
 
-      // Base content
+      // Base content read1
       {
-	rfile << "{\"id\": \"baseContent\",";
-	rfile << "\"title\": \"Base content distribution\",";
+	rfile << "{\"id\": \"baseContentRead1\",";
+	rfile << "\"title\": \"Base content distribution read1\",";
 	rfile << "\"x\": {\"data\": [{\"values\": [";
-	uint32_t lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc);
+	uint32_t lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc, 0);
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
 	  if (i > 0) rfile << ",";
 	  rfile << i;
@@ -224,61 +225,130 @@ namespace bamstats
 	rfile << "\"y\": {\"data\": [";
 	rfile << "{\"values\": [";
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	  uint64_t bcount = itRg->second.rc.aCount[i] + itRg->second.rc.cCount[i] + itRg->second.rc.gCount[i] + itRg->second.rc.tCount[i] + itRg->second.rc.nCount[i];
+	  uint64_t bcount = itRg->second.rc.aCount[0][i] + itRg->second.rc.cCount[0][i] + itRg->second.rc.gCount[0][i] + itRg->second.rc.tCount[0][i] + itRg->second.rc.nCount[0][i];
 	  if (bcount > 0) {
 	    if (i > 0) rfile << ",";
-	    rfile << (double) itRg->second.rc.aCount[i] / (double) bcount;
+	    rfile << (double) itRg->second.rc.aCount[0][i] / (double) bcount;
 	  }
 	}
 	rfile << "], \"title\": \"A\"},";
 	rfile << "{\"values\": [";
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	  uint64_t bcount = itRg->second.rc.aCount[i] + itRg->second.rc.cCount[i] + itRg->second.rc.gCount[i] + itRg->second.rc.tCount[i] + itRg->second.rc.nCount[i];
+	  uint64_t bcount = itRg->second.rc.aCount[0][i] + itRg->second.rc.cCount[0][i] + itRg->second.rc.gCount[0][i] + itRg->second.rc.tCount[0][i] + itRg->second.rc.nCount[0][i];
 	  if (bcount > 0) {
 	    if (i > 0) rfile << ",";
-	    rfile << (double) itRg->second.rc.cCount[i] / (double) bcount;
+	    rfile << (double) itRg->second.rc.cCount[0][i] / (double) bcount;
 	  }
 	}
 	rfile << "], \"title\": \"C\"},";
 	rfile << "{\"values\": [";
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	  uint64_t bcount = itRg->second.rc.aCount[i] + itRg->second.rc.cCount[i] + itRg->second.rc.gCount[i] + itRg->second.rc.tCount[i] + itRg->second.rc.nCount[i];
+	  uint64_t bcount = itRg->second.rc.aCount[0][i] + itRg->second.rc.cCount[0][i] + itRg->second.rc.gCount[0][i] + itRg->second.rc.tCount[0][i] + itRg->second.rc.nCount[0][i];
 	  if (bcount > 0) {
 	    if (i > 0) rfile << ",";
-	    rfile << (double) itRg->second.rc.gCount[i] / (double) bcount;
+	    rfile << (double) itRg->second.rc.gCount[0][i] / (double) bcount;
 	  }
 	}
 	rfile << "], \"title\": \"G\"},";
 	rfile << "{\"values\": [";
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	  uint64_t bcount = itRg->second.rc.aCount[i] + itRg->second.rc.cCount[i] + itRg->second.rc.gCount[i] + itRg->second.rc.tCount[i] + itRg->second.rc.nCount[i];
+	  uint64_t bcount = itRg->second.rc.aCount[0][i] + itRg->second.rc.cCount[0][i] + itRg->second.rc.gCount[0][i] + itRg->second.rc.tCount[0][i] + itRg->second.rc.nCount[0][i];
 	  if (bcount > 0) {
 	    if (i > 0) rfile << ",";
-	    rfile << (double) itRg->second.rc.tCount[i] / (double) bcount;
+	    rfile << (double) itRg->second.rc.tCount[0][i] / (double) bcount;
 	  }
 	}
 	rfile << "], \"title\": \"T\"},";
 	rfile << "{\"values\": [";
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	  uint64_t bcount = itRg->second.rc.aCount[i] + itRg->second.rc.cCount[i] + itRg->second.rc.gCount[i] + itRg->second.rc.tCount[i] + itRg->second.rc.nCount[i];
+	  uint64_t bcount = itRg->second.rc.aCount[0][i] + itRg->second.rc.cCount[0][i] + itRg->second.rc.gCount[0][i] + itRg->second.rc.tCount[0][i] + itRg->second.rc.nCount[0][i];
 	  if (bcount > 0) {
 	    if (i > 0) rfile << ",";
-	    rfile << (double) itRg->second.rc.nCount[i] / (double) bcount;
+	    rfile << (double) itRg->second.rc.nCount[0][i] / (double) bcount;
 	  }
 	}
 	rfile << "], \"title\": \"N\"}], \"axis\": {\"title\": \"Base Fraction\"}}, \"type\": \"line\"}";
       }
+
+      // Paired-end?
+      if (itRg->second.pc.paired) {
+	// Base content read2
+	{
+	  rfile << ",{\"id\": \"baseContentRead2\",";
+	  rfile << "\"title\": \"Base content distribution read2\",";
+	  rfile << "\"x\": {\"data\": [{\"values\": [";
+	  uint32_t lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc, 1);
+	  for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
+	    if (i > 0) rfile << ",";
+	    rfile << i;
+	  }
+	  rfile << "]}], \"axis\": {\"title\": \"Position in read\"}},";
+	  rfile << "\"y\": {\"data\": [";
+	  rfile << "{\"values\": [";
+	  for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
+	    uint64_t bcount = itRg->second.rc.aCount[1][i] + itRg->second.rc.cCount[1][i] + itRg->second.rc.gCount[1][i] + itRg->second.rc.tCount[1][i] + itRg->second.rc.nCount[1][i];
+	    if (bcount > 0) {
+	      if (i > 0) rfile << ",";
+	      rfile << (double) itRg->second.rc.aCount[1][i] / (double) bcount;
+	    }
+	  }
+	  rfile << "], \"title\": \"A\"},";
+	  rfile << "{\"values\": [";
+	  for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
+	    uint64_t bcount = itRg->second.rc.aCount[1][i] + itRg->second.rc.cCount[1][i] + itRg->second.rc.gCount[1][i] + itRg->second.rc.tCount[1][i] + itRg->second.rc.nCount[1][i];
+	    if (bcount > 0) {
+	      if (i > 0) rfile << ",";
+	      rfile << (double) itRg->second.rc.cCount[1][i] / (double) bcount;
+	    }
+	  }
+	  rfile << "], \"title\": \"C\"},";
+	  rfile << "{\"values\": [";
+	  for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
+	    uint64_t bcount = itRg->second.rc.aCount[1][i] + itRg->second.rc.cCount[1][i] + itRg->second.rc.gCount[1][i] + itRg->second.rc.tCount[1][i] + itRg->second.rc.nCount[1][i];
+	    if (bcount > 0) {
+	      if (i > 0) rfile << ",";
+	      rfile << (double) itRg->second.rc.gCount[1][i] / (double) bcount;
+	    }
+	  }
+	  rfile << "], \"title\": \"G\"},";
+	  rfile << "{\"values\": [";
+	  for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
+	    uint64_t bcount = itRg->second.rc.aCount[1][i] + itRg->second.rc.cCount[1][i] + itRg->second.rc.gCount[1][i] + itRg->second.rc.tCount[1][i] + itRg->second.rc.nCount[1][i];
+	    if (bcount > 0) {
+	      if (i > 0) rfile << ",";
+	      rfile << (double) itRg->second.rc.tCount[1][i] / (double) bcount;
+	    }
+	  }
+	  rfile << "], \"title\": \"T\"},";
+	  rfile << "{\"values\": [";
+	  for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
+	    uint64_t bcount = itRg->second.rc.aCount[1][i] + itRg->second.rc.cCount[1][i] + itRg->second.rc.gCount[1][i] + itRg->second.rc.tCount[1][i] + itRg->second.rc.nCount[1][i];
+	    if (bcount > 0) {
+	      if (i > 0) rfile << ",";
+	      rfile << (double) itRg->second.rc.nCount[1][i] / (double) bcount;
+	    }
+	  }
+	  rfile << "], \"title\": \"N\"}], \"axis\": {\"title\": \"Base Fraction\"}}, \"type\": \"line\"}";
+	}
+      }
 	
       // Read-length
       {
-	uint32_t lastValidRL = _lastNonZeroIdx(itRg->second.rc.lRc, itRg->second.rc.maxReadLength);
-	float lastFrac = _lastPercentage(itRg->second.rc.lRc, itRg->second.rc.maxReadLength);
+	float lastFrac1 = _lastPercentage(itRg->second.rc.lRc[0], itRg->second.rc.maxReadLength);
+	float lastFrac2 = _lastPercentage(itRg->second.rc.lRc[1], itRg->second.rc.maxReadLength);
 	rfile << ",{\"id\": \"readLength\",";
 	rfile << "\"title\": \"Read length distribution\",";
-	if (lastFrac > 0) {
-	  rfile << "\"subtitle\": \"" << lastFrac << "% of all reads >= " << itRg->second.rc.maxReadLength << "bp\",";
+	if (itRg->second.pc.paired) {
+	  if ((lastFrac1 > 0) || (lastFrac2 > 0)) {
+	    rfile << "\"subtitle\": \"" << lastFrac1 << "%," << lastFrac2 <<"% of all reads >= " << itRg->second.rc.maxReadLength << "bp\",";
+	  }
+	} else {
+	  if (lastFrac1 > 0) {
+	    rfile << "\"subtitle\": \"" << lastFrac1 << "% of all reads >= " << itRg->second.rc.maxReadLength << "bp\",";
+	  }
 	}
 	rfile << "\"x\": {\"data\": [{\"values\": [";
+	uint32_t lastValidRL = std::max(_lastNonZeroIdx(itRg->second.rc.lRc[0], itRg->second.rc.maxReadLength), _lastNonZeroIdx(itRg->second.rc.lRc[1], itRg->second.rc.maxReadLength));
 	for(uint32_t i = 0; i <= lastValidRL; ++i) {
 	  if (i > 0) rfile << ",";
 	  rfile << i;
@@ -287,9 +357,20 @@ namespace bamstats
 	rfile << "\"y\": {\"data\": [{\"values\": [";
 	for(uint32_t i = 0; i <= lastValidRL; ++i) {
 	  if (i > 0) rfile << ",";
-	  rfile << itRg->second.rc.lRc[i];
+	  rfile << itRg->second.rc.lRc[0][i];
 	}
-	rfile << "]}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"bar\", \"options\": {\"layout\": \"group\"}}";
+	// Paired-end?
+	if (itRg->second.pc.paired) {
+	  rfile << "], \"title\": \"Read1\"},";
+	  rfile << "{\"values\": [";
+	  for(uint32_t i = 0; i <= lastValidRL; ++i) {
+	    if (i > 0) rfile << ",";
+	    rfile << itRg->second.rc.lRc[1][i];
+	  }
+	  rfile << "], \"title\": \"Read2\"}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"bar\", \"options\": {\"layout\": \"group\"}}";
+	} else {
+	  rfile << "]}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"bar\", \"options\": {\"layout\": \"group\"}}";
+	}
       }
       
       // Mean Base Quality
@@ -297,7 +378,7 @@ namespace bamstats
 	rfile << ",{\"id\": \"baseQuality\",";	
 	rfile << "\"title\": \"Mean base quality distribution\",";
 	rfile << "\"x\": {\"data\": [{\"values\": [";
-	uint32_t lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc);
+	uint32_t lastValidBQIdx = std::max(_lastNonZeroIdxACGTN(itRg->second.rc, 0), _lastNonZeroIdxACGTN(itRg->second.rc, 1));
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
 	  if (i > 0) rfile << ",";
 	  rfile << i;
@@ -306,11 +387,24 @@ namespace bamstats
 	rfile << "\"y\": {\"data\": [{\"values\": [";
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
 	  if (i > 0) rfile << ",";
-	  uint64_t bcount = itRg->second.rc.aCount[i] + itRg->second.rc.cCount[i] + itRg->second.rc.gCount[i] + itRg->second.rc.tCount[i] + itRg->second.rc.nCount[i];
-	  if (bcount > 0) rfile << (double) (itRg->second.rc.bqCount[i]) / (double) (bcount);
+	  uint64_t bcount = itRg->second.rc.aCount[0][i] + itRg->second.rc.cCount[0][i] + itRg->second.rc.gCount[0][i] + itRg->second.rc.tCount[0][i] + itRg->second.rc.nCount[0][i];
+	  if (bcount > 0) rfile << (double) (itRg->second.rc.bqCount[0][i]) / (double) (bcount);
 	  else rfile << 0;
 	}
-	rfile << "]}], \"axis\": {\"title\": \"Average base quality\"}}, \"type\": \"line\"}";
+	// Paired-end?
+	if (itRg->second.pc.paired) {
+	  rfile << "], \"title\": \"Read1\"},";
+	  rfile << "{\"values\": [";
+	  for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
+	    if (i > 0) rfile << ",";
+	    uint64_t bcount = itRg->second.rc.aCount[1][i] + itRg->second.rc.cCount[1][i] + itRg->second.rc.gCount[1][i] + itRg->second.rc.tCount[1][i] + itRg->second.rc.nCount[1][i];
+	    if (bcount > 0) rfile << (double) (itRg->second.rc.bqCount[1][i]) / (double) (bcount);
+	    else rfile << 0;
+	  }
+	  rfile << "], \"title\": \"Read2\"}], \"axis\": {\"title\": \"Average base quality\"}}, \"type\": \"line\"}";
+	} else {
+	  rfile << "]}], \"axis\": {\"title\": \"Average base quality\"}}, \"type\": \"line\"}";
+	}
       }
 
       // Mapping quality histogram

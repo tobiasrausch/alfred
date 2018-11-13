@@ -110,7 +110,9 @@ namespace bamstats
     typedef uint16_t TMaxReadLength;
     typedef uint32_t TCountType;
     typedef std::vector<TCountType> TLengthReadCount;
+    typedef std::vector<TLengthReadCount> TLenRead12;
     typedef std::vector<uint64_t> TBaseQualitySum;
+    typedef std::vector<TBaseQualitySum> TBQRead12;
     typedef ReferenceFeatures::TGCContent TGCContent;
     typedef boost::dynamic_bitset<> TBitSet;
     typedef std::pair<int32_t, int32_t> TStartEndPair;
@@ -133,26 +135,35 @@ namespace bamstats
     int64_t haplotagged;
     int64_t mitagged;
     TMappedChr mappedchr;
-    TLengthReadCount lRc;
-    TLengthReadCount nCount;
-    TLengthReadCount aCount;
-    TLengthReadCount cCount;
-    TLengthReadCount gCount;
-    TLengthReadCount tCount;
-    TBaseQualitySum bqCount;
+    TLenRead12 lRc;
+    TLenRead12 nCount;
+    TLenRead12 aCount;
+    TLenRead12 cCount;
+    TLenRead12 gCount;
+    TLenRead12 tCount;
+    TBQRead12 bqCount;
     TGCContent gcContent;
     TBitSet umi;
     TGenomicBlockRange brange;
 
-    ReadCounts(uint32_t const n_targets) : maxReadLength(std::numeric_limits<TMaxReadLength>::max()), maxUMI(10000000), secondary(0), qcfail(0), dup(0), supplementary(0), unmap(0), forward(0), reverse(0), spliced(0), mapped1(0), mapped2(0), haplotagged(0), mitagged(0) {
+    explicit ReadCounts(uint32_t const n_targets) : maxReadLength(std::numeric_limits<TMaxReadLength>::max()), maxUMI(10000000), secondary(0), qcfail(0), dup(0), supplementary(0), unmap(0), forward(0), reverse(0), spliced(0), mapped1(0), mapped2(0), haplotagged(0), mitagged(0) {
       mappedchr.resize(n_targets, 0);
-      lRc.resize(maxReadLength + 1, 0);
-      aCount.resize(maxReadLength + 1, 0);
-      cCount.resize(maxReadLength + 1, 0);
-      gCount.resize(maxReadLength + 1, 0);
-      tCount.resize(maxReadLength + 1, 0);
-      nCount.resize(maxReadLength + 1, 0);
-      bqCount.resize(maxReadLength + 1, 0);
+      lRc.resize(2, TLengthReadCount());
+      bqCount.resize(2, TBaseQualitySum());
+      aCount.resize(2, TLengthReadCount());
+      cCount.resize(2, TLengthReadCount());
+      gCount.resize(2, TLengthReadCount());
+      tCount.resize(2, TLengthReadCount());
+      nCount.resize(2, TLengthReadCount());
+      for(uint32_t k = 0; k<2; ++k) {
+	lRc[k].resize(maxReadLength + 1, 0);
+	bqCount[k].resize(maxReadLength + 1, 0);
+	aCount[k].resize(maxReadLength + 1, 0);
+	cCount[k].resize(maxReadLength + 1, 0);
+	gCount[k].resize(maxReadLength + 1, 0);
+	tCount[k].resize(maxReadLength + 1, 0);
+	nCount[k].resize(maxReadLength + 1, 0);
+      }
       gcContent.resize(102, 0);
     }
   };

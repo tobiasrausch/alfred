@@ -400,12 +400,12 @@ namespace bamstats
       if (rec->core.flag & BAM_FREVERSE) ++itRg->second.rc.reverse;
       else ++itRg->second.rc.forward;
       if (rec->core.l_qseq) {
-	if (rec->core.l_qseq < itRg->second.rc.maxReadLength) ++itRg->second.rc.lRc[rec->core.l_qseq];
-	else ++itRg->second.rc.lRc[itRg->second.rc.maxReadLength];
+	if (rec->core.l_qseq < itRg->second.rc.maxReadLength) ++itRg->second.rc.lRc[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][rec->core.l_qseq];
+	else ++itRg->second.rc.lRc[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][itRg->second.rc.maxReadLength];
       } else {
 	int32_t slen = sequenceLength(rec);
-	if (slen < itRg->second.rc.maxReadLength) ++itRg->second.rc.lRc[slen];
-	else ++itRg->second.rc.lRc[itRg->second.rc.maxReadLength];
+	if (slen < itRg->second.rc.maxReadLength) ++itRg->second.rc.lRc[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][slen];
+	else ++itRg->second.rc.lRc[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][itRg->second.rc.maxReadLength];
       }
 
       // Fetch molecule identifier
@@ -456,35 +456,35 @@ namespace bamstats
 	if (rec->core.flag & BAM_FREVERSE) {
 	  relpos = rec->core.l_qseq - i - 1;
 	  if (relpos < itRg->second.rc.maxReadLength) {
-	    itRg->second.rc.bqCount[relpos] += (uint64_t) quality[i];
-	    if ((sequence[i] == 'N') || (sequence[i] == 'n')) ++itRg->second.rc.nCount[relpos];
-	    else if ((sequence[i] == 'A') || (sequence[i] == 'a')) ++itRg->second.rc.tCount[relpos];
-	    else if ((sequence[i] == 'C') || (sequence[i] == 'c')) ++itRg->second.rc.gCount[relpos];
-	    else if ((sequence[i] == 'G') || (sequence[i] == 'g')) ++itRg->second.rc.cCount[relpos];
-	    else if ((sequence[i] == 'T') || (sequence[i] == 't')) ++itRg->second.rc.aCount[relpos];
+	    itRg->second.rc.bqCount[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][relpos] += (uint64_t) quality[i];
+	    if ((sequence[i] == 'N') || (sequence[i] == 'n')) ++itRg->second.rc.nCount[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][relpos];
+	    else if ((sequence[i] == 'A') || (sequence[i] == 'a')) ++itRg->second.rc.tCount[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][relpos];
+	    else if ((sequence[i] == 'C') || (sequence[i] == 'c')) ++itRg->second.rc.gCount[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][relpos];
+	    else if ((sequence[i] == 'G') || (sequence[i] == 'g')) ++itRg->second.rc.cCount[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][relpos];
+	    else if ((sequence[i] == 'T') || (sequence[i] == 't')) ++itRg->second.rc.aCount[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][relpos];
 	  } else {
-	    itRg->second.rc.bqCount[itRg->second.rc.maxReadLength] += (uint64_t) quality[i];
-	    if ((sequence[i] == 'N') || (sequence[i] == 'n')) ++itRg->second.rc.nCount[itRg->second.rc.maxReadLength];
-	    else if ((sequence[i] == 'A') || (sequence[i] == 'a')) ++itRg->second.rc.tCount[itRg->second.rc.maxReadLength];
-	    else if ((sequence[i] == 'C') || (sequence[i] == 'c')) ++itRg->second.rc.gCount[itRg->second.rc.maxReadLength];
-	    else if ((sequence[i] == 'G') || (sequence[i] == 'g')) ++itRg->second.rc.cCount[itRg->second.rc.maxReadLength];
-	    else if ((sequence[i] == 'T') || (sequence[i] == 't')) ++itRg->second.rc.aCount[itRg->second.rc.maxReadLength];
+	    itRg->second.rc.bqCount[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][itRg->second.rc.maxReadLength] += (uint64_t) quality[i];
+	    if ((sequence[i] == 'N') || (sequence[i] == 'n')) ++itRg->second.rc.nCount[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][itRg->second.rc.maxReadLength];
+	    else if ((sequence[i] == 'A') || (sequence[i] == 'a')) ++itRg->second.rc.tCount[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][itRg->second.rc.maxReadLength];
+	    else if ((sequence[i] == 'C') || (sequence[i] == 'c')) ++itRg->second.rc.gCount[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][itRg->second.rc.maxReadLength];
+	    else if ((sequence[i] == 'G') || (sequence[i] == 'g')) ++itRg->second.rc.cCount[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][itRg->second.rc.maxReadLength];
+	    else if ((sequence[i] == 'T') || (sequence[i] == 't')) ++itRg->second.rc.aCount[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][itRg->second.rc.maxReadLength];
 	  }
 	} else {
 	  if (relpos < itRg->second.rc.maxReadLength) {
-	    itRg->second.rc.bqCount[relpos] += (uint64_t) quality[i];
-	    if ((sequence[i] == 'N') || (sequence[i] == 'n')) ++itRg->second.rc.nCount[relpos];
-	    else if ((sequence[i] == 'A') || (sequence[i] == 'a')) ++itRg->second.rc.aCount[relpos];
-	    else if ((sequence[i] == 'C') || (sequence[i] == 'c')) ++itRg->second.rc.cCount[relpos];
-	    else if ((sequence[i] == 'G') || (sequence[i] == 'g')) ++itRg->second.rc.gCount[relpos];
-	    else if ((sequence[i] == 'T') || (sequence[i] == 't')) ++itRg->second.rc.tCount[relpos];
+	    itRg->second.rc.bqCount[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][relpos] += (uint64_t) quality[i];
+	    if ((sequence[i] == 'N') || (sequence[i] == 'n')) ++itRg->second.rc.nCount[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][relpos];
+	    else if ((sequence[i] == 'A') || (sequence[i] == 'a')) ++itRg->second.rc.aCount[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][relpos];
+	    else if ((sequence[i] == 'C') || (sequence[i] == 'c')) ++itRg->second.rc.cCount[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][relpos];
+	    else if ((sequence[i] == 'G') || (sequence[i] == 'g')) ++itRg->second.rc.gCount[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][relpos];
+	    else if ((sequence[i] == 'T') || (sequence[i] == 't')) ++itRg->second.rc.tCount[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][relpos];
 	  } else {
-	    itRg->second.rc.bqCount[itRg->second.rc.maxReadLength] += (uint64_t) quality[i];
-	    if ((sequence[i] == 'N') || (sequence[i] == 'n')) ++itRg->second.rc.nCount[itRg->second.rc.maxReadLength];
-	    else if ((sequence[i] == 'A') || (sequence[i] == 'a')) ++itRg->second.rc.aCount[itRg->second.rc.maxReadLength];
-	    else if ((sequence[i] == 'C') || (sequence[i] == 'c')) ++itRg->second.rc.cCount[itRg->second.rc.maxReadLength];
-	    else if ((sequence[i] == 'G') || (sequence[i] == 'g')) ++itRg->second.rc.gCount[itRg->second.rc.maxReadLength];
-	    else if ((sequence[i] == 'T') || (sequence[i] == 't')) ++itRg->second.rc.tCount[itRg->second.rc.maxReadLength];
+	    itRg->second.rc.bqCount[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][itRg->second.rc.maxReadLength] += (uint64_t) quality[i];
+	    if ((sequence[i] == 'N') || (sequence[i] == 'n')) ++itRg->second.rc.nCount[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][itRg->second.rc.maxReadLength];
+	    else if ((sequence[i] == 'A') || (sequence[i] == 'a')) ++itRg->second.rc.aCount[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][itRg->second.rc.maxReadLength];
+	    else if ((sequence[i] == 'C') || (sequence[i] == 'c')) ++itRg->second.rc.cCount[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][itRg->second.rc.maxReadLength];
+	    else if ((sequence[i] == 'G') || (sequence[i] == 'g')) ++itRg->second.rc.gCount[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][itRg->second.rc.maxReadLength];
+	    else if ((sequence[i] == 'T') || (sequence[i] == 't')) ++itRg->second.rc.tCount[(uint32_t) ((rec->core.flag & BAM_FREAD2) != 0)][itRg->second.rc.maxReadLength];
 	  }
 	}
       }
