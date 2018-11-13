@@ -40,6 +40,7 @@ namespace bamstats
       std::cout <<  std::endl;
       std::cout <<  title << " (Version: " << alfredVersionNumber << ")" << std::endl;
       std::cout << "Contact: Gear Genomics Team (gear_genomics@embl.de)" << std::endl;
+      std::cout << "Web Application: https://gear.embl.de/alfred/" << std::endl;
       std::cout << "Documentation: https://gear.embl.de/docs/alfred/" << std::endl;
       std::cout << "**********************************************************************" << std::endl;
       std::cout << std::endl;
