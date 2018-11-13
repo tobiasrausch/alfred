@@ -242,7 +242,9 @@ namespace bamstats
       double pbc1 = (double) itRg->second.bc.n1 / (double) itRg->second.bc.nd;
       double pbc2 = (double) itRg->second.bc.n1 / (double) itRg->second.bc.n2;
 
-      rcfile << medianFromHistogram(itRg->second.rc.lRc[0]) << "\t" << deflayout << "\t" << medISize << "\t" << medianFromHistogram(itRg->second.bc.bpWithCoverage) << "\t" << ssdcov << "\t" << itRg->second.bc.nd << "\t" << fraccovbp << "\t" << pbc1 << "\t" << pbc2 << "\t" << medianFromHistogram(itRg->second.qc.qcount);
+      if (itRg->second.pc.paired) rcfile << medianFromHistogram(itRg->second.rc.lRc[0]) << ":" << medianFromHistogram(itRg->second.rc.lRc[1]);
+      else rcfile << medianFromHistogram(itRg->second.rc.lRc[0]);
+      rcfile << "\t" << deflayout << "\t" << medISize << "\t" << medianFromHistogram(itRg->second.bc.bpWithCoverage) << "\t" << ssdcov << "\t" << itRg->second.bc.nd << "\t" << fraccovbp << "\t" << pbc1 << "\t" << pbc2 << "\t" << medianFromHistogram(itRg->second.qc.qcount);
       
       // Bed metrics
       if (c.hasRegionFile) {
@@ -266,15 +268,24 @@ namespace bamstats
     // Output read length histogram
     rcfile << "# Read length distribution (RL)." << std::endl;
     rcfile << "# Use `zgrep ^RL <outfile> | cut -f 2-` to extract this part." << std::endl;
-    rcfile << "RL\tSample\tReadlength\tCount\tFraction\tLibrary" << std::endl;
+    rcfile << "RL\tSample\tReadlength\tCount\tFraction\tLibrary\tRead" << std::endl;
     for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
-      uint32_t lastValidRL = _lastNonZeroIdx(itRg->second.rc.lRc[0]);
+      uint32_t lastValidRL = std::max(_lastNonZeroIdx(itRg->second.rc.lRc[0]), _lastNonZeroIdx(itRg->second.rc.lRc[1]));
       double total = 0;
       for(uint32_t i = 0; i <= lastValidRL; ++i) total += itRg->second.rc.lRc[0][i];
       for(uint32_t i = 0; i <= lastValidRL; ++i) {
 	double frac = 0;
 	if (total > 0) frac = (double) itRg->second.rc.lRc[0][i] / total;
-	rcfile << "RL\t" << c.sampleName << "\t" << i << "\t" << itRg->second.rc.lRc[0][i] << "\t" << frac << "\t" << itRg->first << std::endl;
+	rcfile << "RL\t" << c.sampleName << "\t" << i << "\t" << itRg->second.rc.lRc[0][i] << "\t" << frac << "\t" << itRg->first << "\tRead1" << std::endl;
+      }
+      if (itRg->second.pc.paired) {
+	total = 0;
+	for(uint32_t i = 0; i <= lastValidRL; ++i) total += itRg->second.rc.lRc[1][i];
+	for(uint32_t i = 0; i <= lastValidRL; ++i) {
+	  double frac = 0;
+	  if (total > 0) frac = (double) itRg->second.rc.lRc[1][i] / total;
+	  rcfile << "RL\t" << c.sampleName << "\t" << i << "\t" << itRg->second.rc.lRc[1][i] << "\t" << frac << "\t" << itRg->first << "\tRead2" << std::endl;
+	}
       }
     }
 
@@ -283,40 +294,59 @@ namespace bamstats
     rcfile << "# Use `zgrep ^BQ <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "BQ\tSample\tPosition\tBaseQual\tLibrary\tRead" << std::endl;
     for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
-      uint32_t lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc, 0);
+      uint32_t lastValidBQIdx = std::max(_lastNonZeroIdxACGTN(itRg->second.rc, 0), _lastNonZeroIdxACGTN(itRg->second.rc, 1));
       for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
 	uint64_t bcount = itRg->second.rc.aCount[0][i] + itRg->second.rc.cCount[0][i] + itRg->second.rc.gCount[0][i] + itRg->second.rc.tCount[0][i] + itRg->second.rc.nCount[0][i];
 	if (bcount > 0) rcfile << "BQ\t" << c.sampleName << "\t" << i << "\t" << (double) (itRg->second.rc.bqCount[0][i]) / (double) (bcount) << "\t" << itRg->first << "\tRead1" << std::endl;
 	else rcfile << "BQ\t" << c.sampleName << "\t" << i << "\tNA\t" << itRg->first << "\tRead1" << std::endl;
       }
-      lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc, 1);
-      for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	uint64_t bcount = itRg->second.rc.aCount[1][i] + itRg->second.rc.cCount[1][i] + itRg->second.rc.gCount[1][i] + itRg->second.rc.tCount[1][i] + itRg->second.rc.nCount[1][i];
-	if (bcount > 0) rcfile << "BQ\t" << c.sampleName << "\t" << i << "\t" << (double) (itRg->second.rc.bqCount[1][i]) / (double) (bcount) << "\t" << itRg->first << "\tRead2" << std::endl;
-	else rcfile << "BQ\t" << c.sampleName << "\t" << i << "\tNA\t" << itRg->first << "\tRead1" << std::endl;
+      if (itRg->second.pc.paired) {
+	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
+	  uint64_t bcount = itRg->second.rc.aCount[1][i] + itRg->second.rc.cCount[1][i] + itRg->second.rc.gCount[1][i] + itRg->second.rc.tCount[1][i] + itRg->second.rc.nCount[1][i];
+	  if (bcount > 0) rcfile << "BQ\t" << c.sampleName << "\t" << i << "\t" << (double) (itRg->second.rc.bqCount[1][i]) / (double) (bcount) << "\t" << itRg->first << "\tRead2" << std::endl;
+	  else rcfile << "BQ\t" << c.sampleName << "\t" << i << "\tNA\t" << itRg->first << "\tRead2" << std::endl;
+	}
       }
     }
 
     // Output per base ACGTN content
     rcfile << "# Base content (BC)." << std::endl;
     rcfile << "# Use `zgrep ^BC <outfile> | cut -f 2-` to extract this part." << std::endl;
-    rcfile << "BC\tSample\tPosition\tBase\tCount\tFraction\tLibrary" << std::endl;
+    rcfile << "BC\tSample\tPosition\tBase\tCount\tFraction\tLibrary\tRead" << std::endl;
     for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
-      uint32_t lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc, 0);
+      uint32_t lastValidBQIdx = std::max(_lastNonZeroIdxACGTN(itRg->second.rc, 0), _lastNonZeroIdxACGTN(itRg->second.rc, 1));
       for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
 	uint64_t bcount = itRg->second.rc.aCount[0][i] + itRg->second.rc.cCount[0][i] + itRg->second.rc.gCount[0][i] + itRg->second.rc.tCount[0][i] + itRg->second.rc.nCount[0][i];
 	if (bcount > 0) {
-	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tA\t" << itRg->second.rc.aCount[0][i] << "\t" << (double) itRg->second.rc.aCount[0][i] / (double) bcount << "\t" << itRg->first << std::endl;
-	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tC\t" << itRg->second.rc.cCount[0][i] << "\t" << (double) itRg->second.rc.cCount[0][i] / (double) bcount << "\t" << itRg->first << std::endl;
-	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tG\t" << itRg->second.rc.gCount[0][i] << "\t" << (double) itRg->second.rc.gCount[0][i] / (double) bcount << "\t" << itRg->first << std::endl;
-	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tT\t" << itRg->second.rc.tCount[0][i] << "\t" << (double) itRg->second.rc.tCount[0][i] / (double) bcount << "\t" << itRg->first << std::endl;
-	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tN\t" << itRg->second.rc.nCount[0][i] << "\t" << (double) itRg->second.rc.nCount[0][i] / (double) bcount << "\t" << itRg->first << std::endl;
+	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tA\t" << itRg->second.rc.aCount[0][i] << "\t" << (double) itRg->second.rc.aCount[0][i] / (double) bcount << "\t" << itRg->first << "\tRead1" << std::endl;
+	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tC\t" << itRg->second.rc.cCount[0][i] << "\t" << (double) itRg->second.rc.cCount[0][i] / (double) bcount << "\t" << itRg->first << "\tRead1" << std::endl;
+	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tG\t" << itRg->second.rc.gCount[0][i] << "\t" << (double) itRg->second.rc.gCount[0][i] / (double) bcount << "\t" << itRg->first << "\tRead1" << std::endl;
+	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tT\t" << itRg->second.rc.tCount[0][i] << "\t" << (double) itRg->second.rc.tCount[0][i] / (double) bcount << "\t" << itRg->first << "\tRead1" << std::endl;
+	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tN\t" << itRg->second.rc.nCount[0][i] << "\t" << (double) itRg->second.rc.nCount[0][i] / (double) bcount << "\t" << itRg->first << "\tRead1" << std::endl;
 	} else {
-	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tA\t" << itRg->second.rc.aCount[0][i] << "\tNA\t" << itRg->first << std::endl;
-	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tC\t" << itRg->second.rc.cCount[0][i] << "\tNA\t" << itRg->first << std::endl;
-	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tG\t" << itRg->second.rc.gCount[0][i] << "\tNA\t" << itRg->first << std::endl;
-	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tT\t" << itRg->second.rc.tCount[0][i] << "\tNA\t" << itRg->first << std::endl;
-	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tN\t" << itRg->second.rc.nCount[0][i] << "\tNA\t" << itRg->first << std::endl;
+	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tA\t" << itRg->second.rc.aCount[0][i] << "\tNA\t" << itRg->first << "\tRead1" << std::endl;
+	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tC\t" << itRg->second.rc.cCount[0][i] << "\tNA\t" << itRg->first << "\tRead1" << std::endl;
+	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tG\t" << itRg->second.rc.gCount[0][i] << "\tNA\t" << itRg->first << "\tRead1" << std::endl;
+	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tT\t" << itRg->second.rc.tCount[0][i] << "\tNA\t" << itRg->first << "\tRead1" << std::endl;
+	  rcfile << "BC\t" << c.sampleName << "\t" << i << "\tN\t" << itRg->second.rc.nCount[0][i] << "\tNA\t" << itRg->first << "\tRead1" << std::endl;
+	}
+      }
+      if (itRg->second.pc.paired) {
+	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
+	  uint64_t bcount = itRg->second.rc.aCount[1][i] + itRg->second.rc.cCount[1][i] + itRg->second.rc.gCount[1][i] + itRg->second.rc.tCount[1][i] + itRg->second.rc.nCount[1][i];
+	  if (bcount > 0) {
+	    rcfile << "BC\t" << c.sampleName << "\t" << i << "\tA\t" << itRg->second.rc.aCount[1][i] << "\t" << (double) itRg->second.rc.aCount[1][i] / (double) bcount << "\t" << itRg->first << "\tRead2" << std::endl;
+	    rcfile << "BC\t" << c.sampleName << "\t" << i << "\tC\t" << itRg->second.rc.cCount[1][i] << "\t" << (double) itRg->second.rc.cCount[1][i] / (double) bcount << "\t" << itRg->first << "\tRead2" << std::endl;
+	    rcfile << "BC\t" << c.sampleName << "\t" << i << "\tG\t" << itRg->second.rc.gCount[1][i] << "\t" << (double) itRg->second.rc.gCount[1][i] / (double) bcount << "\t" << itRg->first << "\tRead2" << std::endl;
+	    rcfile << "BC\t" << c.sampleName << "\t" << i << "\tT\t" << itRg->second.rc.tCount[1][i] << "\t" << (double) itRg->second.rc.tCount[1][i] / (double) bcount << "\t" << itRg->first << "\tRead2" << std::endl;
+	    rcfile << "BC\t" << c.sampleName << "\t" << i << "\tN\t" << itRg->second.rc.nCount[1][i] << "\t" << (double) itRg->second.rc.nCount[1][i] / (double) bcount << "\t" << itRg->first << "\tRead2" << std::endl;
+	  } else {
+	    rcfile << "BC\t" << c.sampleName << "\t" << i << "\tA\t" << itRg->second.rc.aCount[1][i] << "\tNA\t" << itRg->first << "\tRead2" << std::endl;
+	    rcfile << "BC\t" << c.sampleName << "\t" << i << "\tC\t" << itRg->second.rc.cCount[1][i] << "\tNA\t" << itRg->first << "\tRead2" << std::endl;
+	    rcfile << "BC\t" << c.sampleName << "\t" << i << "\tG\t" << itRg->second.rc.gCount[1][i] << "\tNA\t" << itRg->first << "\tRead2" << std::endl;
+	    rcfile << "BC\t" << c.sampleName << "\t" << i << "\tT\t" << itRg->second.rc.tCount[1][i] << "\tNA\t" << itRg->first << "\tRead2" << std::endl;
+	    rcfile << "BC\t" << c.sampleName << "\t" << i << "\tN\t" << itRg->second.rc.nCount[1][i] << "\tNA\t" << itRg->first << "\tRead2" << std::endl;
+	  }
 	}
       }
     }

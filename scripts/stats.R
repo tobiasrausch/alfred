@@ -18,6 +18,7 @@ for(sid in unique(all$Sample)) {
 	       p1=p1 + scale_y_continuous(labels=comma, limits=c(0, max(base$Fraction)))
 	       p1=p1 + ggtitle(paste0("Base Content Distribution", "\n", "Sample: ", sid, "\n", "RG: ", rg))
 	       p1=p1 + scale_x_continuous(labels=comma)
+	       p1=p1 + facet_wrap(~ Read)
 	       p1=p1 + theme(legend.position="bottom", legend.direction='horizontal')
                print(p1)
 	}
@@ -31,7 +32,7 @@ for(sid in unique(all$Sample)) {
 	for(rg in unique(all[all$Sample == sid,]$Library)) {	
 	       bq = all[all$Sample == sid & all$Library == rg,]
 	       p1=ggplot(data=bq, aes(x=Position, y=BaseQual))
-       	       p1=p1 + geom_line()
+       	       p1=p1 + geom_line(aes(color=Read, group=Read))
        	       p1=p1 + xlab("Position in read") + ylab("Mean Base Quality")
        	       p1=p1 + scale_y_continuous(labels=comma, limits=c(0, max(bq$BaseQual)))
 	       p1=p1 + ggtitle(paste0("Base Quality Distribution", "\n", "Sample: ", sid, "\n", "RG: ", rg))
@@ -54,7 +55,7 @@ for(sid in unique(all$Sample)) {
 	       infoMax = paste0("Read Length > ", upBound, " (", round(100 * gr / tc, digits=2), "%)")
 	       rl=rl[rl$Readlength <= upBound,]
 	       p1=ggplot(data=rl, aes(x=Readlength, y=Fraction))
-	       p1=p1 + geom_line()
+	       p1=p1 + geom_line(aes(color=Read, group=Read))
 	       p1=p1 + xlab("Read length") + ylab("Fraction of reads")
 	       p1=p1 + scale_y_continuous(labels=comma)
 	       if (gr) { p1=p1 + ggtitle(paste0("Read Length Distribution", "\n", infoMax, "\n", "Sample: ", sid, "\n", "RG: ", rg)); }
