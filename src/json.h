@@ -348,13 +348,25 @@ namespace bamstats
 	  }
 	}
 	rfile << "\"x\": {\"data\": [{\"values\": [";
-	uint32_t lastValidRL = std::max(_lastNonZeroIdx(itRg->second.rc.lRc[0], itRg->second.rc.maxReadLength), _lastNonZeroIdx(itRg->second.rc.lRc[1], itRg->second.rc.maxReadLength));
+	uint32_t lastValidRL = _lastNonZeroIdx(itRg->second.rc.lRc[0], itRg->second.rc.maxReadLength);
 	for(uint32_t i = 0; i <= lastValidRL; ++i) {
 	  if (i > 0) rfile << ",";
 	  rfile << i;
 	}
+	// Paired-end?
+	if (itRg->second.pc.paired) {
+	  // Multiple x-axis
+	  rfile << "]},";
+	  lastValidRL = _lastNonZeroIdx(itRg->second.rc.lRc[1], itRg->second.rc.maxReadLength);
+	  rfile << "{\"values\": [";
+	  for(uint32_t i = 0; i <= lastValidRL; ++i) {
+	    if (i > 0) rfile << ",";
+	    rfile << i;
+	  }
+	}
 	rfile << "]}], \"axis\": {\"title\": \"Read length\"}},";
 	rfile << "\"y\": {\"data\": [{\"values\": [";
+	lastValidRL = _lastNonZeroIdx(itRg->second.rc.lRc[0], itRg->second.rc.maxReadLength);
 	for(uint32_t i = 0; i <= lastValidRL; ++i) {
 	  if (i > 0) rfile << ",";
 	  rfile << itRg->second.rc.lRc[0][i];
@@ -363,6 +375,7 @@ namespace bamstats
 	if (itRg->second.pc.paired) {
 	  rfile << "], \"title\": \"Read1\"},";
 	  rfile << "{\"values\": [";
+	  lastValidRL = _lastNonZeroIdx(itRg->second.rc.lRc[1], itRg->second.rc.maxReadLength);
 	  for(uint32_t i = 0; i <= lastValidRL; ++i) {
 	    if (i > 0) rfile << ",";
 	    rfile << itRg->second.rc.lRc[1][i];
@@ -378,13 +391,25 @@ namespace bamstats
 	rfile << ",{\"id\": \"baseQuality\",";	
 	rfile << "\"title\": \"Mean base quality distribution\",";
 	rfile << "\"x\": {\"data\": [{\"values\": [";
-	uint32_t lastValidBQIdx = std::max(_lastNonZeroIdxACGTN(itRg->second.rc, 0), _lastNonZeroIdxACGTN(itRg->second.rc, 1));
+	uint32_t lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc, 0);
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
 	  if (i > 0) rfile << ",";
 	  rfile << i;
 	}
+	// Paired-end?
+	if (itRg->second.pc.paired) {
+	  // Multiple x-axis (for different read length)
+	  rfile << "]},";
+	  rfile << "{\"values\": [";
+	  lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc, 1);
+	  for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
+	    if (i > 0) rfile << ",";
+	    rfile << i;
+	  }
+	}
 	rfile << "]}], \"axis\": {\"title\": \"Read position\"}},";
 	rfile << "\"y\": {\"data\": [{\"values\": [";
+	lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc, 0);
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
 	  if (i > 0) rfile << ",";
 	  uint64_t bcount = itRg->second.rc.aCount[0][i] + itRg->second.rc.cCount[0][i] + itRg->second.rc.gCount[0][i] + itRg->second.rc.tCount[0][i] + itRg->second.rc.nCount[0][i];
@@ -395,6 +420,7 @@ namespace bamstats
 	if (itRg->second.pc.paired) {
 	  rfile << "], \"title\": \"Read1\"},";
 	  rfile << "{\"values\": [";
+	  lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc, 1);
 	  for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
 	    if (i > 0) rfile << ",";
 	    uint64_t bcount = itRg->second.rc.aCount[1][i] + itRg->second.rc.cCount[1][i] + itRg->second.rc.gCount[1][i] + itRg->second.rc.tCount[1][i] + itRg->second.rc.nCount[1][i];

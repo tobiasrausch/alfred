@@ -270,7 +270,7 @@ namespace bamstats
     rcfile << "# Use `zgrep ^RL <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "RL\tSample\tReadlength\tCount\tFraction\tLibrary\tRead" << std::endl;
     for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
-      uint32_t lastValidRL = std::max(_lastNonZeroIdx(itRg->second.rc.lRc[0]), _lastNonZeroIdx(itRg->second.rc.lRc[1]));
+      uint32_t lastValidRL = _lastNonZeroIdx(itRg->second.rc.lRc[0]);
       double total = 0;
       for(uint32_t i = 0; i <= lastValidRL; ++i) total += itRg->second.rc.lRc[0][i];
       for(uint32_t i = 0; i <= lastValidRL; ++i) {
@@ -280,6 +280,7 @@ namespace bamstats
       }
       if (itRg->second.pc.paired) {
 	total = 0;
+	lastValidRL = _lastNonZeroIdx(itRg->second.rc.lRc[1]);
 	for(uint32_t i = 0; i <= lastValidRL; ++i) total += itRg->second.rc.lRc[1][i];
 	for(uint32_t i = 0; i <= lastValidRL; ++i) {
 	  double frac = 0;
@@ -294,13 +295,14 @@ namespace bamstats
     rcfile << "# Use `zgrep ^BQ <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "BQ\tSample\tPosition\tBaseQual\tLibrary\tRead" << std::endl;
     for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
-      uint32_t lastValidBQIdx = std::max(_lastNonZeroIdxACGTN(itRg->second.rc, 0), _lastNonZeroIdxACGTN(itRg->second.rc, 1));
+      uint32_t lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc, 0);
       for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
 	uint64_t bcount = itRg->second.rc.aCount[0][i] + itRg->second.rc.cCount[0][i] + itRg->second.rc.gCount[0][i] + itRg->second.rc.tCount[0][i] + itRg->second.rc.nCount[0][i];
 	if (bcount > 0) rcfile << "BQ\t" << c.sampleName << "\t" << i << "\t" << (double) (itRg->second.rc.bqCount[0][i]) / (double) (bcount) << "\t" << itRg->first << "\tRead1" << std::endl;
 	else rcfile << "BQ\t" << c.sampleName << "\t" << i << "\tNA\t" << itRg->first << "\tRead1" << std::endl;
       }
       if (itRg->second.pc.paired) {
+	lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc, 1);
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
 	  uint64_t bcount = itRg->second.rc.aCount[1][i] + itRg->second.rc.cCount[1][i] + itRg->second.rc.gCount[1][i] + itRg->second.rc.tCount[1][i] + itRg->second.rc.nCount[1][i];
 	  if (bcount > 0) rcfile << "BQ\t" << c.sampleName << "\t" << i << "\t" << (double) (itRg->second.rc.bqCount[1][i]) / (double) (bcount) << "\t" << itRg->first << "\tRead2" << std::endl;
@@ -314,7 +316,7 @@ namespace bamstats
     rcfile << "# Use `zgrep ^BC <outfile> | cut -f 2-` to extract this part." << std::endl;
     rcfile << "BC\tSample\tPosition\tBase\tCount\tFraction\tLibrary\tRead" << std::endl;
     for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
-      uint32_t lastValidBQIdx = std::max(_lastNonZeroIdxACGTN(itRg->second.rc, 0), _lastNonZeroIdxACGTN(itRg->second.rc, 1));
+      uint32_t lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc, 0);
       for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
 	uint64_t bcount = itRg->second.rc.aCount[0][i] + itRg->second.rc.cCount[0][i] + itRg->second.rc.gCount[0][i] + itRg->second.rc.tCount[0][i] + itRg->second.rc.nCount[0][i];
 	if (bcount > 0) {
@@ -332,6 +334,7 @@ namespace bamstats
 	}
       }
       if (itRg->second.pc.paired) {
+	lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc, 1);
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
 	  uint64_t bcount = itRg->second.rc.aCount[1][i] + itRg->second.rc.cCount[1][i] + itRg->second.rc.gCount[1][i] + itRg->second.rc.tCount[1][i] + itRg->second.rc.nCount[1][i];
 	  if (bcount > 0) {
