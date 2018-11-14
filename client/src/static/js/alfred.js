@@ -311,13 +311,16 @@ function chart(metricData, parent) {
   container.id = metricData.id
   parent.appendChild(container)
 
-  const xData = metricData.x.data[0].values
   const chartData = []
-  for (const y of metricData.y.data) {
+  for (let i = 0; i < metricData.y.data.length; i += 1) {
+    const xData =
+      metricData.x.data.length === metricData.y.data.length
+        ? metricData.x.data[i].values
+        : metricData.x.data[0].values
     const trace = {
       x: xData,
-      y: y.values,
-      name: y.title || ''
+      y: metricData.y.data[i].values,
+      name: metricData.y.data[i].title || ''
     }
     if (metricData.type === 'bar') {
       trace.type = 'bar'
