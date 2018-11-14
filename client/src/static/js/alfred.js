@@ -354,6 +354,32 @@ function chart(metricData, parent) {
 
   if (metricData.x.axis.range) {
     layout.xaxis.range = metricData.x.axis.range
+    // TODO is there really no built-in way for this?
+    if (!metricData.y.axis.range) {
+      let yAxisRange = [0, 0]
+      for (let i = 0; i < metricData.y.data.length; i += 1) {
+        const yData = metricData.y.data[i].values
+        const xData =
+          metricData.x.data.length === metricData.y.data.length
+            ? metricData.x.data[i].values
+            : metricData.x.data[0].values
+        for (const [x, y] of zip(xData, yData)) {
+          if (
+            x < metricData.x.axis.range[0] ||
+            x > metricData.x.axis.range[1]
+          ) {
+            continue
+          }
+          if (y < yAxisRange[0]) {
+            yAxisRange[0] = y
+          }
+          if (y > yAxisRange[1]) {
+            yAxisRange[1] = y
+          }
+        }
+      }
+      layout.yaxis.range = yAxisRange
+    }
   }
 
   if (metricData.y.axis.range) {
