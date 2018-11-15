@@ -213,8 +213,14 @@ namespace bamstats
 
       // Base content read1
       {
-	rfile << "{\"id\": \"baseContentRead1\",";
-	rfile << "\"title\": \"Base content distribution read1\",";
+	// Paired-end?
+	if (itRg->second.pc.paired) {
+	  rfile << "{\"id\": \"baseContentRead1\",";
+	  rfile << "\"title\": \"Base content distribution read1\",";
+	} else {
+	  rfile << "{\"id\": \"baseContent\",";
+	  rfile << "\"title\": \"Base content distribution\",";
+	}
 	rfile << "\"x\": {\"data\": [{\"values\": [";
 	uint32_t lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc, 0);
 	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
