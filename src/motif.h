@@ -323,6 +323,14 @@ namespace bamstats
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Motif search" << std::endl;
     boost::progress_display show_progress(c.nchr.size());
 
+    // Output motif positions
+    boost::iostreams::filtering_ostream dataOut;
+    if (c.motifPosOut) {
+      dataOut.push(boost::iostreams::gzip_compressor());
+      dataOut.push(boost::iostreams::file_sink(c.outpos.string().c_str(), std::ios_base::out | std::ios_base::binary));
+      dataOut << "chr\tstart\tend\tid" << std::endl;
+    }
+    
     // Iterate chromosomes
     faidx_t* fai = fai_load(c.genome.string().c_str());
     char* seq = NULL;
@@ -384,6 +392,7 @@ namespace bamstats
 	  int32_t motiflen = pwms[i].matrix.shape()[1];
 	  for(uint32_t hit = 0; hit < mh.size(); ++hit) {
 	    _insertInterval(overlappingRegions[refIndex], mh[hit], mh[hit] + motiflen, '*', i, 0);
+	    if (c.motifPosOut) dataOut << tname << "\t" << (mh[hit] + 1) << "\t" << mh[hit] + motiflen << "\t" << pwms[i].symbol << std::endl;
 	  }
 	}
 
@@ -391,7 +400,9 @@ namespace bamstats
 	if (seq != NULL) free(seq);
       }
     }
-
+    // Close gzipped motif positions
+    if (c.motifPosOut) dataOut.pop();
+    
     // Assign Motif Ids
     for(uint32_t i = 0; i<pwms.size(); ++i) motifIds.push_back(pwms[i].symbol);
 

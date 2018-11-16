@@ -48,6 +48,7 @@ namespace bamstats
 
   struct AnnotateConfig {
     typedef std::map<std::string, int32_t> TChrMap;
+    bool motifPosOut;
     uint8_t inputFileFormat;   // 0 = gtf, 1 = bed, 2 = gff3, 3 = motif file
     int32_t maxDistance;
     float motifScoreQuantile;
@@ -59,6 +60,7 @@ namespace bamstats
     boost::filesystem::path gtfFile;
     boost::filesystem::path bedFile;
     boost::filesystem::path infile;
+    boost::filesystem::path outpos;
     boost::filesystem::path outgene;
     boost::filesystem::path outfile;
   };
@@ -273,7 +275,7 @@ namespace bamstats
     generic.add_options()
       ("help,?", "show help message")
       ("distance,d", boost::program_options::value<int32_t>(&c.maxDistance)->default_value(0), "max. distance (0: overlapping features only)")
-      ("outgene,u", boost::program_options::value<boost::filesystem::path>(&c.outgene)->default_value("gene.bed"), "gene-level output")
+      ("outgene,u", boost::program_options::value<boost::filesystem::path>(&c.outgene)->default_value("gene.bed"), "gene/motif-level output")
       ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("anno.bed"), "annotated peaks output")
       ;
 
@@ -289,6 +291,7 @@ namespace bamstats
       ("motif,m", boost::program_options::value<boost::filesystem::path>(&c.motifFile), "motif file in jaspar or raw format")
       ("reference,r", boost::program_options::value<boost::filesystem::path>(&c.genome), "reference file")
       ("quantile,q", boost::program_options::value<float>(&c.motifScoreQuantile)->default_value(0.95), "motif quantile score [0,1]")
+      ("position,p", boost::program_options::value<boost::filesystem::path>(&c.outpos), "gzipped output file of motif hits")
       ;
     
     
@@ -325,6 +328,10 @@ namespace bamstats
       return 1;
     }
 
+    // Motif position
+    if (vm.count("position")) c.motifPosOut = true;
+    else c.motifPosOut = false;
+    
     // Input BED file
     if (!(boost::filesystem::exists(c.infile) && boost::filesystem::is_regular_file(c.infile) && boost::filesystem::file_size(c.infile))) {
       std::cerr << "Input BED file is missing." << std::endl;
