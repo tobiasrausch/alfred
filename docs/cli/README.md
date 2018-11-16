@@ -183,7 +183,9 @@ Alfred supports consensus computation of error-prone long reads using multiple s
 alfred consensus -f bam -t ont -p chr1:218992200 <ont_pacbio.bam>
 ```
 
-This is potentially most useful by first separating haplotypes (Alfred's [split](#haplotype-specific-bam-files) subcommand) and then computing consensus sequences independently for each haplotype.
+The consensus method generates two output files. A simple fasta file with the consensus sequence and a FASTA align file that shows the multiple sequence alignment used for consensus generation in either horizontal or vertical format. The horizontal format is the classical FASTA align format. The vertical format transposes the horizontal alignment and in addition shows the consensus nucleotide for each alignment column after the vertical bar.
+
+The consensus command is probably most useful by first separating haplotypes (Alfred's [split](#haplotype-specific-bam-files) subcommand) and then computing consensus sequences independently for each haplotype.
 
 ```bash
 alfred split -r <ref.fa> -s NA12878 -p <haplotype1.bam> -q <haplotype2.bam> -v <phased.snps.bcf> <input.bam>
