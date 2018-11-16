@@ -6,7 +6,7 @@ Alfred uses subcommands for [quality control](#alignment-quality-control) ([qc](
 
 Alfred supports a command-line interface to run alignment quality control and a [web application](https://gear.embl.de) can be used to render all QC metrics.
 
-### Command-line Interfact for BAM Quality Control
+## Command-line Interfact for BAM Quality Control
 
 Alfred computes various alignment metrics and summary statistics by read group
 
@@ -26,7 +26,7 @@ To convert all the alignment metrics from column format to row format for readab
 zgrep ^ME qc.tsv.gz | cut -f 2- | datamash transpose | column -t
 ```
 
-### Interactive Quality Control Browser
+## Interactive Quality Control Browser
 
 Quality control metrics can be browsed interactively using the [web front end of Alfred](https://gear.embl.de/alfred).
 
@@ -37,7 +37,7 @@ alfred qc -r <ref.fa> -f json -o qc.json.gz <align.bam>
 Then just upload the qc.json.gz file to the Alfred GUI [https://gear.embl.de/alfred](https://gear.embl.de/alfred). A convenient feature of the web-front end is that multiple samples can be uploaded and compared.
 
 
-### BAM Alignment Quality Control for Targeted Sequencing
+## BAM Alignment Quality Control for Targeted Sequencing
 
 If target regions are provided, Alfred computes the average coverage for each target and the on-target rate.
 
@@ -60,7 +60,7 @@ alfred qc -r <hg19.fa> -b maps/exonic.hg19.bed.gz -f json -o qc.json.gz <exome.b
 ```
 
 
-### BAM Alignment Quality Control for ATAC-Seq
+## BAM Alignment Quality Control for ATAC-Seq
 
 For ATAC-Seq data, the insert size distribution should reveal the DNA pitch and a clear nucleosome pattern with a peak for single nucleosomes and dimers. The transcription start site (TSS) enrichment should be >5 for a good ATAC-Seq library and ideally the duplicate rate is <20%, the alignment rate >70% and the standardized SD in coverage >0.3.
 
@@ -89,7 +89,7 @@ Alfred supports counting reads in overlapping or non-overlapping windows, at pre
 or as gene and transcript counting for RNA-Seq in stranded or unstranded mode using a gtf or gff3 gene annotation
 file. Expression values can be normalized as raw counts, FPKM, or FPKM-UQ values.
 
-### BAM Read Counting for DNA-Seq
+## BAM Read Counting for DNA-Seq
 
 For DNA sequencing, Alfred can be used to calculate the coverage in overlapping or non-overlapping windows or in given set of intervals.
 
@@ -103,7 +103,7 @@ To plot the whole-chromosome coverage profile for chr1-22 and chrX.
 Rscript scripts/rd.R <cov.gz>
 ```
 
-### BAM Read Counting for RNA-Seq
+## BAM Read Counting for RNA-Seq
 
 Alfred can also assign reads to gene annotation features from a GTF file such as counting reads by gene or transcript identifier.
 
@@ -122,7 +122,7 @@ alfred count_jct -g gtf/Homo_sapiens.GRCh37.75.gtf.gz <align.GRCh37.bam>
 
 Alfred supports annotation of ChIP-Seq and ATAC-Seq peaks for neighboring genes or transcription factor binding sites (based on motif alignments). Additionally, browser tracks in UCSC bedgraph format can be computed with configurable resolution.
 
-### ChIP-Seq or ATAC-Seq peak annotation
+## ChIP-Seq or ATAC-Seq peak annotation
 
 To annotate overlapping/neighboring genes up to a distance of 10,000bp:
 
@@ -130,14 +130,26 @@ To annotate overlapping/neighboring genes up to a distance of 10,000bp:
 alfred annotate -d 10000 -g gtf/Homo_sapiens.GRCh37.75.gtf.gz <peaks.bed>
 ```
 
-The two output files summarize nearby genes by peak and vice versa (peaks by gene). Motif annotation based on alignment scores of motif-specific position weight matrices can also be obtained.
+The two output files summarize nearby genes by peak and vice versa (peaks by gene).
+
+
+## Motif annotation
+
+Motif annotation of peaks based on alignment scores of motif-specific position weight matrices can also be obtained. 
 
 ```bash
 cd motif/ && ./downloadMotifs.sh
 alfred annotate -r <hg19.fa> -m motif/jaspar.gz <peaks.bed>
 ```
 
-### Browser Tracks
+Alfred further implements functionality to output the exact motif hits in each peak to perform for instance transcription factor footprinting.
+
+```bash
+alfred annotate -p hits.gz -r <hg19.fa> -m motif/jaspar.gz <peaks.bed>
+```
+
+
+## Browser Tracks
 
 Normalized and file size optimized browser tracks are essential to compare peak profiles across samples and upload them quickly in online genome browsers such as the [UCSC Genome Browser](https://genome.ucsc.edu/). Alfred generates browser tracks in [UCSC bedgraph format](https://genome.ucsc.edu/goldenpath/help/bedgraph.html) with configurable resolution. Lower resolution values leed to coarse-grained windows at reduced file size. Contrarily, high resolution values leed to fine-grained windows at greater file size.
 
@@ -192,4 +204,8 @@ alfred split -r <ref.fa> -s NA12878 -p <haplotype1.bam> -q <haplotype2.bam> -v <
 
 ## Allele-specific expression
 
-ToDo
+Alfred implements methods to generate allele-specific expression tables. If the input SNPs are phased Alfred annotates the allele-specific expression haplotype-aware.
+
+```bash
+alfred ase -r <ref.fa> -s NA12878 -v <snps.bcf> -a <ase.tsv> <input.bam>
+```
