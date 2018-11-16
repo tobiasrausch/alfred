@@ -61,6 +61,7 @@ struct ConfigConsensus {
   std::string position;
   std::string format;
   std::string seqtype;
+  std::string outformat;
   DnaScore<int32_t> aliscore;
   boost::filesystem::path alignment;
   boost::filesystem::path consensus;
@@ -315,7 +316,8 @@ int consensus(int argc, char **argv) {
 
   boost::program_options::options_description otp("Output options");
   otp.add_options()
-    ("alignment,a", boost::program_options::value<boost::filesystem::path>(&c.alignment)->default_value("al.fa.gz"), "vertical alignment")
+    ("outformat,u", boost::program_options::value<std::string>(&c.outformat)->default_value("v"), "output format [v|h]")
+    ("alignment,a", boost::program_options::value<boost::filesystem::path>(&c.alignment)->default_value("al.fa.gz"), "vertical/horizontal alignment")
     ("consensus,c", boost::program_options::value<boost::filesystem::path>(&c.consensus)->default_value("cs.fa.gz"), "consensus")
     ;
   

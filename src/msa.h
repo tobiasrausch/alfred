@@ -307,19 +307,34 @@ namespace bamstats {
     std::string gapped;
     consensus(c, align, gapped, cs);
     
-    // Output vertical alignment
-    boost::iostreams::filtering_ostream rcfile;
-    rcfile.push(boost::iostreams::gzip_compressor());
-    rcfile.push(boost::iostreams::file_sink(c.alignment.c_str(), std::ios_base::out | std::ios_base::binary));
-    typedef typename TAlign::index TAIndex;
-    for(TAIndex j = 0; j < (TAIndex) align.shape()[1]; ++j) {
+    // Output vertical/horizontal alignment
+    if (c.outformat == "h") {
+      boost::iostreams::filtering_ostream rcfile;
+      rcfile.push(boost::iostreams::gzip_compressor());
+      rcfile.push(boost::iostreams::file_sink(c.alignment.c_str(), std::ios_base::out | std::ios_base::binary));
+      typedef typename TAlign::index TAIndex;
       for(TAIndex i = 0; i < (TAIndex) align.shape()[0]; ++i) {
-	rcfile << align[i][j];
+	rcfile << ">Read" << i << std::endl;
+	for(TAIndex j = 0; j < (TAIndex) align.shape()[1]; ++j) {
+	  rcfile << align[i][j];
+	}
+	rcfile << std::endl;
       }
-      rcfile << '|' << gapped[j] << std::endl;
+      rcfile.pop();
+    } else {
+      // Vertical alignment
+      boost::iostreams::filtering_ostream rcfile;
+      rcfile.push(boost::iostreams::gzip_compressor());
+      rcfile.push(boost::iostreams::file_sink(c.alignment.c_str(), std::ios_base::out | std::ios_base::binary));
+      typedef typename TAlign::index TAIndex;
+      for(TAIndex j = 0; j < (TAIndex) align.shape()[1]; ++j) {
+	for(TAIndex i = 0; i < (TAIndex) align.shape()[0]; ++i) {
+	  rcfile << align[i][j];
+	}
+	rcfile << '|' << gapped[j] << std::endl;
+      }
+      rcfile.pop();
     }
-    rcfile.pop();
-    
 
     //std::cerr << cs << std::endl;
     //std::cerr << std::endl;
