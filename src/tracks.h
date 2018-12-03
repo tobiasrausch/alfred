@@ -43,6 +43,7 @@ namespace bamstats
 {
 
   struct TrackConfig {
+    bool wiggleFormat;
     uint16_t minQual;
     uint32_t normalize;
     float resolution;
@@ -136,6 +137,9 @@ namespace bamstats
     if (c.format == "bedgraph") {
       // bedgraph
       dataOut << "track type=bedGraph name=\"" << c.sampleName << "\" description=\"" << c.sampleName << "\" visibility=full color=44,162,95" << std::endl;
+    } else if (c.format == "wiggle") {
+      // wiggle
+      dataOut << "track type=wiggle_0 name=\"" << c.sampleName << "\" description=\"" << c.sampleName << "\" visibility=full color=44,162,95" << std::endl;  
     } else {
       // bed
       dataOut << "chr\tstart\tend\tid\t" << c.sampleName << std::endl;
@@ -147,6 +151,7 @@ namespace bamstats
     boost::progress_display show_progress( hdr->n_targets );
     for(int32_t refIndex=0; refIndex < (int32_t) hdr->n_targets; ++refIndex) {
       ++show_progress;
+      if (c.wiggleFormat) dataOut << "fixedStep chrom=" << hdr->target_name[refIndex] << " start=1 step=1" << std::endl;
 
       // Find valid pairs
       std::set<std::size_t> validPairs;
@@ -238,70 +243,74 @@ namespace bamstats
 	hts_itr_destroy(iter);
 
 	// Coverage track
-	typedef std::list<Track> TrackLine;
-	TrackLine tl;
-	uint32_t wb = 0;
-	uint32_t we = 0;
-	double wval = cov[0];
-	for(uint32_t i = 1; i<cov.size(); ++i) {
-	  if (cov[i] == wval) ++we;
-	  else {
-	    tl.push_back(Track(wb, we+1, normFactor * wval));
-	    wb = i;
-	    we = i;
-	    wval = cov[i];
-	  }
-	}
-	tl.push_back(Track(wb, we+1, normFactor * wval));
-
-	// Reduce file size
-	if ((c.resolution > 0) && (c.resolution < 1)) {
-	  double red = 1;
-	  uint32_t origs = tl.size();
-	  while ((tl.size() > 1) && (red > c.resolution)) {
-	    TrackLine::iterator idx = tl.begin();
-	    TrackLine::iterator idxNext = tl.begin();
-	    ++idxNext;
-	    std::vector<double> errs;
-	    for(;idxNext != tl.end(); ++idx, ++idxNext) {
-	      uint32_t w1 = idx->end - idx->start;
-	      uint32_t w2 = idxNext->end - idxNext->start;
-	      double nwavg = (w1 * idx->score + w2 * idxNext->score) / (w1 + w2);
-	      double nerr = w1 * ((idx->score - nwavg) * (idx->score - nwavg));
-	      nerr += w2 * ((idxNext->score - nwavg) * (idxNext->score - nwavg));
-	      errs.push_back(nerr);
-	    }
-	    std::sort(errs.begin(), errs.end());
-	    uint32_t bpidx = (red - c.resolution) * tl.size();
-	    if (bpidx > 0) bpidx = bpidx - 1;
-	    double thres = errs[bpidx];
-	    idx = tl.begin();
-	    idxNext = tl.begin();
-	    ++idxNext;
-	    while(idxNext != tl.end()) {
-	      uint32_t w1 = idx->end - idx->start;
-	      uint32_t w2 = idxNext->end - idxNext->start;
-	      double nwavg = (w1 * idx->score + w2 * idxNext->score) / (w1 + w2);
-	      double nerr = w1 * ((idx->score - nwavg) * (idx->score - nwavg));
-	      nerr += w2 * ((idxNext->score - nwavg) * (idxNext->score - nwavg));
-	      if (nerr <= thres) {
-		++idxNext;
-		uint32_t oldst = idx->start;
-		tl.erase(idx++);
-		idx->start = oldst;
-		idx->score = nwavg;
-	      } else {
-		++idxNext;
-		++idx;
-	      }
-	    }
-	    red = (double) tl.size() / (double) origs;
-	  }
-	}
-	if (c.format == "bedgraph") {
-	  for(TrackLine::iterator idx = tl.begin(); idx != tl.end(); ++idx) dataOut << hdr->target_name[refIndex] << "\t" << idx->start << "\t" << idx->end << "\t" << idx->score << std::endl;
+	if (c.wiggleFormat) {
+	  for(uint32_t i = 0; i < cov.size(); ++i) dataOut << cov[i] << std::endl;
 	} else {
-	  for(TrackLine::iterator idx = tl.begin(); idx != tl.end(); ++idx) dataOut << hdr->target_name[refIndex] << "\t" << idx->start << "\t" << idx->end << "\t" << hdr->target_name[refIndex] << ":" << idx->start << "-" << idx->end << "\t" << idx->score << std::endl;
+	  typedef std::list<Track> TrackLine;
+	  TrackLine tl;
+	  uint32_t wb = 0;
+	  uint32_t we = 0;
+	  double wval = cov[0];
+	  for(uint32_t i = 1; i<cov.size(); ++i) {
+	    if (cov[i] == wval) ++we;
+	    else {
+	      tl.push_back(Track(wb, we+1, normFactor * wval));
+	      wb = i;
+	      we = i;
+	      wval = cov[i];
+	    }
+	  }
+	  tl.push_back(Track(wb, we+1, normFactor * wval));
+	  
+	  // Reduce file size
+	  if ((c.resolution > 0) && (c.resolution < 1)) {
+	    double red = 1;
+	    uint32_t origs = tl.size();
+	    while ((tl.size() > 1) && (red > c.resolution)) {
+	      TrackLine::iterator idx = tl.begin();
+	      TrackLine::iterator idxNext = tl.begin();
+	      ++idxNext;
+	      std::vector<double> errs;
+	      for(;idxNext != tl.end(); ++idx, ++idxNext) {
+		uint32_t w1 = idx->end - idx->start;
+		uint32_t w2 = idxNext->end - idxNext->start;
+		double nwavg = (w1 * idx->score + w2 * idxNext->score) / (w1 + w2);
+		double nerr = w1 * ((idx->score - nwavg) * (idx->score - nwavg));
+		nerr += w2 * ((idxNext->score - nwavg) * (idxNext->score - nwavg));
+		errs.push_back(nerr);
+	      }
+	      std::sort(errs.begin(), errs.end());
+	      uint32_t bpidx = (red - c.resolution) * tl.size();
+	      if (bpidx > 0) bpidx = bpidx - 1;
+	      double thres = errs[bpidx];
+	      idx = tl.begin();
+	      idxNext = tl.begin();
+	      ++idxNext;
+	      while(idxNext != tl.end()) {
+		uint32_t w1 = idx->end - idx->start;
+		uint32_t w2 = idxNext->end - idxNext->start;
+		double nwavg = (w1 * idx->score + w2 * idxNext->score) / (w1 + w2);
+		double nerr = w1 * ((idx->score - nwavg) * (idx->score - nwavg));
+		nerr += w2 * ((idxNext->score - nwavg) * (idxNext->score - nwavg));
+		if (nerr <= thres) {
+		  ++idxNext;
+		  uint32_t oldst = idx->start;
+		  tl.erase(idx++);
+		  idx->start = oldst;
+		  idx->score = nwavg;
+		} else {
+		  ++idxNext;
+		  ++idx;
+		}
+	      }
+	      red = (double) tl.size() / (double) origs;
+	    }
+	  }
+	  if (c.format == "bedgraph") {
+	    for(TrackLine::iterator idx = tl.begin(); idx != tl.end(); ++idx) dataOut << hdr->target_name[refIndex] << "\t" << idx->start << "\t" << idx->end << "\t" << idx->score << std::endl;
+	  } else {
+	    for(TrackLine::iterator idx = tl.begin(); idx != tl.end(); ++idx) dataOut << hdr->target_name[refIndex] << "\t" << idx->start << "\t" << idx->end << "\t" << hdr->target_name[refIndex] << ":" << idx->start << "-" << idx->end << "\t" << idx->score << std::endl;
+	  }
 	}
       }
     }
@@ -331,7 +340,7 @@ namespace bamstats
     boost::program_options::options_description window("Output options");
     window.add_options()
       ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("track.gz"), "track file")
-      ("format,f", boost::program_options::value<std::string>(&c.format)->default_value("bedgraph"), "output format [bedgraph|bed]")
+      ("format,f", boost::program_options::value<std::string>(&c.format)->default_value("bedgraph"), "output format [bedgraph|bed|wiggle]")
       ;
 
     boost::program_options::options_description hidden("Hidden options");
@@ -359,6 +368,15 @@ namespace bamstats
       std::cout << "Usage: alfred " << argv[0] << " [OPTIONS] <aligned.bam>" << std::endl;
       std::cout << visible_options << "\n";
       return 1;
+    }
+
+    // Wiggle format at 1bp resolution
+    c.wiggleFormat = false;
+    if (vm.count("format")) {
+      if (c.format == "wiggle") {
+	std::cerr << "Warning: Wiggle format triggers single-basepair resolution coverage track!" << std::endl;
+	c.wiggleFormat = true;
+      }
     }
 
     // Check bam file
