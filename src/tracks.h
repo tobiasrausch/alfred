@@ -44,6 +44,7 @@ namespace bamstats
 
   struct TrackConfig {
     bool wiggleFormat;
+    bool spanningCoverage;
     uint16_t minQual;
     uint32_t normalize;
     float resolution;
@@ -140,6 +141,8 @@ namespace bamstats
     } else if (c.format == "wiggle") {
       // wiggle
       dataOut << "track type=wiggle_0 name=\"" << c.sampleName << "\" description=\"" << c.sampleName << "\" visibility=full color=44,162,95" << std::endl;  
+    } else if (c.format == "raw") {
+      dataOut << "chr\tpos\t" << c.sampleName << std::endl;
     } else {
       // bed
       dataOut << "chr\tstart\tend\tid\t" << c.sampleName << std::endl;
@@ -215,26 +218,45 @@ namespace bamstats
 	    lastAlignedPos = rec->core.pos;
 	  }
 
-	  std::size_t hv = 0;
-	  if ((rec->core.pos < rec->core.mpos) || ((rec->core.pos == rec->core.mpos) && (lastAlignedPosReads.find(hash_string(bam_get_qname(rec))) == lastAlignedPosReads.end()))) hv = hash_pair(rec);
-	  else hv = hash_pair_mate(rec);
-	  if (validPairs.find(hv) != validPairs.end()) {
-
-	    // Reference pointer
-	    uint32_t rp = rec->core.pos;
-	    
-	    // Parse the CIGAR
-	    uint32_t* cigar = bam_get_cigar(rec);
-	    for (std::size_t i = 0; i < rec->core.n_cigar; ++i) {
-	      if ((bam_cigar_op(cigar[i]) == BAM_CMATCH) || (bam_cigar_op(cigar[i]) == BAM_CEQUAL) || (bam_cigar_op(cigar[i]) == BAM_CDIFF)) {
-		// match or mismatch
-		for(std::size_t k = 0; k<bam_cigar_oplen(cigar[i]);++k) {
-		  if (cov[rp] < maxCoverage) ++cov[rp];
-		  ++rp;
+	  if (c.spanningCoverage) {
+	    // Spanning coverage
+	    if ((rec->core.pos < rec->core.mpos) || ((rec->core.pos == rec->core.mpos) && (lastAlignedPosReads.find(hash_string(bam_get_qname(rec))) == lastAlignedPosReads.end()))) {
+	      // Do nothing
+	    } else {
+	      std::size_t hv = hash_pair_mate(rec);
+	      if ((validPairs.find(hv) != validPairs.end()) && (layout(rec) == 2)) {
+		int32_t pStart = rec->core.mpos + 50;
+		int32_t pEnd = rec->core.pos - 50;
+		if (pStart < pEnd) {
+		  for(int32_t i = pStart; i < pEnd; ++i) {
+		    if (cov[i] < maxCoverage) ++cov[i];
+		  }
 		}
 	      }
-	      else if (bam_cigar_op(cigar[i]) == BAM_CDEL) rp += bam_cigar_oplen(cigar[i]);
-	      else if (bam_cigar_op(cigar[i]) == BAM_CREF_SKIP) rp += bam_cigar_oplen(cigar[i]);
+	    }
+	  } else {
+	    // Sequence coverage
+	    std::size_t hv = 0;
+	    if ((rec->core.pos < rec->core.mpos) || ((rec->core.pos == rec->core.mpos) && (lastAlignedPosReads.find(hash_string(bam_get_qname(rec))) == lastAlignedPosReads.end()))) hv = hash_pair(rec);
+	    else hv = hash_pair_mate(rec);
+	    if (validPairs.find(hv) != validPairs.end()) {
+
+	      // Reference pointer
+	      uint32_t rp = rec->core.pos;
+	    
+	      // Parse the CIGAR
+	      uint32_t* cigar = bam_get_cigar(rec);
+	      for (std::size_t i = 0; i < rec->core.n_cigar; ++i) {
+		if ((bam_cigar_op(cigar[i]) == BAM_CMATCH) || (bam_cigar_op(cigar[i]) == BAM_CEQUAL) || (bam_cigar_op(cigar[i]) == BAM_CDIFF)) {
+		  // match or mismatch
+		  for(std::size_t k = 0; k<bam_cigar_oplen(cigar[i]);++k) {
+		    if (cov[rp] < maxCoverage) ++cov[rp];
+		    ++rp;
+		  }
+		}
+		else if (bam_cigar_op(cigar[i]) == BAM_CDEL) rp += bam_cigar_oplen(cigar[i]);
+		else if (bam_cigar_op(cigar[i]) == BAM_CREF_SKIP) rp += bam_cigar_oplen(cigar[i]);
+	      }
 	    }
 	  }
 	}
@@ -248,6 +270,12 @@ namespace bamstats
 	    for(uint32_t i = 0; i < cov.size(); ++i) dataOut << normFactor * cov[i] << std::endl;
 	  } else {
 	    for(uint32_t i = 0; i < cov.size(); ++i) dataOut << cov[i] << std::endl;
+	  }
+	} else if (c.format == "raw") {
+	  if (c.normalize) {
+	    for(uint32_t i = 0; i < cov.size(); ++i) dataOut << hdr->target_name[refIndex] << '\t' << (i+1) << '\t' << normFactor * cov[i] << std::endl;
+	  } else {
+	    for(uint32_t i = 0; i < cov.size(); ++i) dataOut << hdr->target_name[refIndex] << '\t' << (i+1) << '\t' << cov[i] << std::endl;
 	  }
 	} else {
 	  typedef std::list<Track> TrackLine;
@@ -337,14 +365,19 @@ namespace bamstats
     generic.add_options()
       ("help,?", "show help message")
       ("map-qual,m", boost::program_options::value<uint16_t>(&c.minQual)->default_value(10), "min. mapping quality")
-      ("resolution,r", boost::program_options::value<float>(&c.resolution)->default_value(0.2), "fractional resolution ]0,1]")
       ("normalize,n", boost::program_options::value<uint32_t>(&c.normalize)->default_value(30000000), "#pairs to normalize to (0: no normalization)")
+      ("spanning,s", "spanning coverage instead of sequencing coverage")
       ;
 
-    boost::program_options::options_description window("Output options");
-    window.add_options()
+    boost::program_options::options_description resolution("Resolution options (bedgraph/bed format)");
+    resolution.add_options()
+      ("resolution,r", boost::program_options::value<float>(&c.resolution)->default_value(0.2), "fractional resolution ]0,1]")
+      ;      
+
+    boost::program_options::options_description otp("Output options");
+    otp.add_options()
       ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("track.gz"), "track file")
-      ("format,f", boost::program_options::value<std::string>(&c.format)->default_value("bedgraph"), "output format [bedgraph|bed|wiggle]")
+      ("format,f", boost::program_options::value<std::string>(&c.format)->default_value("bedgraph"), "output format [bedgraph|bed|wiggle|raw]")
       ;
 
     boost::program_options::options_description hidden("Hidden options");
@@ -357,9 +390,9 @@ namespace bamstats
 
     // Set the visibility
     boost::program_options::options_description cmdline_options;
-    cmdline_options.add(generic).add(window).add(hidden);
+    cmdline_options.add(generic).add(resolution).add(otp).add(hidden);
     boost::program_options::options_description visible_options;
-    visible_options.add(generic).add(window);
+    visible_options.add(generic).add(resolution).add(otp);
 
     // Parse command-line
     boost::program_options::variables_map vm;
@@ -382,6 +415,10 @@ namespace bamstats
 	c.wiggleFormat = true;
       }
     }
+
+    // Spanning coverage
+    if (vm.count("spanning")) c.spanningCoverage = true;
+    else c.spanningCoverage = false;
 
     // Check bam file
     if (!(boost::filesystem::exists(c.bamFile) && boost::filesystem::is_regular_file(c.bamFile) && boost::filesystem::file_size(c.bamFile))) {
