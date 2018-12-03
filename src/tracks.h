@@ -244,7 +244,11 @@ namespace bamstats
 
 	// Coverage track
 	if (c.wiggleFormat) {
-	  for(uint32_t i = 0; i < cov.size(); ++i) dataOut << cov[i] << std::endl;
+	  if (c.normalize) {
+	    for(uint32_t i = 0; i < cov.size(); ++i) dataOut << normFactor * cov[i] << std::endl;
+	  } else {
+	    for(uint32_t i = 0; i < cov.size(); ++i) dataOut << cov[i] << std::endl;
+	  }
 	} else {
 	  typedef std::list<Track> TrackLine;
 	  TrackLine tl;
