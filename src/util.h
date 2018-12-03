@@ -394,6 +394,19 @@ namespace bamstats
     if (!rgPresent) rgs.insert("DefaultLib");
   }
 
+  template<typename TConfig>
+  inline int32_t
+  countRGs(TConfig const& c) {
+    samFile* samfile = sam_open(c.bamFile.string().c_str(), "r");
+    hts_set_fai_filename(samfile, c.genome.string().c_str());
+    bam_hdr_t* hdr = sam_hdr_read(samfile);
+    std::set<std::string> rgs;
+    getRGs(std::string(hdr->text), rgs);
+    bam_hdr_destroy(hdr);
+    sam_close(samfile);
+    return rgs.size();
+  }
+
 
   template<typename TVector>
   inline int32_t

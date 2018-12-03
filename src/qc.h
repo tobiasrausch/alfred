@@ -143,16 +143,6 @@ int qc(int argc, char **argv) {
   if (c.nXChrLen > 1) c.nXChrLen = 1;
   else if (c.nXChrLen < 0) c.nXChrLen = 0;
 
-  // Ignore read groups
-  if (vm.count("ignore")) {
-    c.ignoreRG = true;
-    c.singleRG = false;
-  } else {
-    c.ignoreRG = false;
-    if (vm.count("rg")) c.singleRG = true;
-    else c.singleRG = false;
-  }
-  
   // Check genome
   if (!(boost::filesystem::exists(c.genome) && boost::filesystem::is_regular_file(c.genome) && boost::filesystem::file_size(c.genome))) {
     std::cerr << "Input reference file is missing: " << c.genome.string() << std::endl;
@@ -210,6 +200,28 @@ int qc(int argc, char **argv) {
   bam_hdr_destroy(hdr);
   hts_idx_destroy(idx);
   sam_close(samfile);
+
+  // Ignore read groups
+  c.ignoreRG = true;
+  c.singleRG = false;
+  if (!vm.count("ignore")) {
+    // Single RG
+    if (vm.count("rg")) {
+      c.ignoreRG = false;
+      c.singleRG = true;
+    } else {
+      // Check number of RGs
+      int32_t rgc = countRGs(c);
+      if (rgc > 3) {
+	std::cerr << "Warning: BAM file has more than 3 RGs. Please run read-groups separately!" << std::endl;
+	std::cerr << "Warning: Program continues but ignores read-groups." << std::endl;
+      } else {
+	c.ignoreRG = false;
+	c.singleRG = false;
+      }
+    }
+  }
+
   
   // Check region file
   if (vm.count("bed")) {
