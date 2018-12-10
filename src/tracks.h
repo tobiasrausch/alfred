@@ -88,32 +88,43 @@ namespace bamstats
 	int32_t lastAlignedPos = 0;
 	std::set<std::size_t> lastAlignedPosReads;
 	while (sam_itr_next(samfile, iter, rec) >= 0) {
-	  if ((rec->core.flag & (BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP | BAM_FSUPPLEMENTARY | BAM_FUNMAP | BAM_FMUNMAP)) || (rec->core.tid != rec->core.mtid) || (!(rec->core.flag & BAM_FPAIRED))) continue;
+	  if (rec->core.flag & (BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP | BAM_FSUPPLEMENTARY | BAM_FUNMAP)) continue;
 	  if (rec->core.qual < c.minQual) continue;
+	  if (rec->core.flag & BAM_FPAIRED) {
+	    if ((rec->core.flag & BAM_FMUNMAP) || (rec->core.tid != rec->core.mtid)) continue;
 	  
-	  // Clean-up the read store for identical alignment positions
-	  if (rec->core.pos > lastAlignedPos) {
-	    lastAlignedPosReads.clear();
-	    lastAlignedPos = rec->core.pos;
-	  }
+	    // Clean-up the read store for identical alignment positions
+	    if (rec->core.pos > lastAlignedPos) {
+	      lastAlignedPosReads.clear();
+	      lastAlignedPos = rec->core.pos;
+	    }
 	
-	  if ((rec->core.pos < rec->core.mpos) || ((rec->core.pos == rec->core.mpos) && (lastAlignedPosReads.find(hash_string(bam_get_qname(rec))) == lastAlignedPosReads.end()))) {
-	    // First read
-	    lastAlignedPosReads.insert(hash_string(bam_get_qname(rec)));
-	    std::size_t hv = hash_pair(rec);
-	    qualities[hv] = rec->core.qual;
-	  } else {
-	    // Second read
-	    std::size_t hv = hash_pair_mate(rec);
-	    if (qualities.find(hv) == qualities.end()) continue; // Mate discarded
-	    uint8_t pairQuality = std::min((uint8_t) qualities[hv], (uint8_t) rec->core.qual);
-	    qualities[hv] = 0;
-	    
-	    // Pair quality
-	    if (pairQuality < c.minQual) continue; // Low quality pair
-	    
+	    if ((rec->core.pos < rec->core.mpos) || ((rec->core.pos == rec->core.mpos) && (lastAlignedPosReads.find(hash_string(bam_get_qname(rec))) == lastAlignedPosReads.end()))) {
+	      // First read
+	      lastAlignedPosReads.insert(hash_string(bam_get_qname(rec)));
+	      std::size_t hv = hash_pair(rec);
+	      qualities[hv] = rec->core.qual;
+	    } else {
+	      // Second read
+	      std::size_t hv = hash_pair_mate(rec);
+	      if (qualities.find(hv) == qualities.end()) continue; // Mate discarded
+	      uint8_t pairQuality = std::min((uint8_t) qualities[hv], (uint8_t) rec->core.qual);
+	      qualities[hv] = 0;
+	      
+	      // Pair quality
+	      if (pairQuality < c.minQual) continue; // Low quality pair
+	      
 	  
-	    // Get bases
+	      // Get bases
+	      uint32_t* cigar = bam_get_cigar(rec);
+	      for (std::size_t i = 0; i < rec->core.n_cigar; ++i) {
+		if ((bam_cigar_op(cigar[i]) == BAM_CMATCH) || (bam_cigar_op(cigar[i]) == BAM_CEQUAL) || (bam_cigar_op(cigar[i]) == BAM_CDIFF)) {
+		  totalPairs += bam_cigar_oplen(cigar[i]);
+		}
+	      }
+	    }
+	  } else {
+	    // Single end
 	    uint32_t* cigar = bam_get_cigar(rec);
 	    for (std::size_t i = 0; i < rec->core.n_cigar; ++i) {
 	      if ((bam_cigar_op(cigar[i]) == BAM_CMATCH) || (bam_cigar_op(cigar[i]) == BAM_CEQUAL) || (bam_cigar_op(cigar[i]) == BAM_CDIFF)) {
@@ -164,32 +175,38 @@ namespace bamstats
 	int32_t lastAlignedPos = 0;
 	std::set<std::size_t> lastAlignedPosReads;
 	while (sam_itr_next(samfile, iter, rec) >= 0) {
-	  if ((rec->core.flag & (BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP | BAM_FSUPPLEMENTARY | BAM_FUNMAP | BAM_FMUNMAP)) || (rec->core.tid != rec->core.mtid) || (!(rec->core.flag & BAM_FPAIRED))) continue;
+	  if (rec->core.flag & (BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP | BAM_FSUPPLEMENTARY | BAM_FUNMAP)) continue;
 	  if (rec->core.qual < c.minQual) continue;
+	  if (rec->core.flag & BAM_FPAIRED) {
+	    if ((rec->core.flag & BAM_FMUNMAP) || (rec->core.tid != rec->core.mtid)) continue;
 
-	  // Clean-up the read store for identical alignment positions
-	  if (rec->core.pos > lastAlignedPos) {
-	    lastAlignedPosReads.clear();
-	    lastAlignedPos = rec->core.pos;
-	  }
-	
-	  if ((rec->core.pos < rec->core.mpos) || ((rec->core.pos == rec->core.mpos) && (lastAlignedPosReads.find(hash_string(bam_get_qname(rec))) == lastAlignedPosReads.end()))) {
-	    // First read
-	    lastAlignedPosReads.insert(hash_string(bam_get_qname(rec)));
-	    std::size_t hv = hash_pair(rec);
-	    qualities[hv] = rec->core.qual;
+	    // Clean-up the read store for identical alignment positions
+	    if (rec->core.pos > lastAlignedPos) {
+	      lastAlignedPosReads.clear();
+	      lastAlignedPos = rec->core.pos;
+	    }
+	    
+	    if ((rec->core.pos < rec->core.mpos) || ((rec->core.pos == rec->core.mpos) && (lastAlignedPosReads.find(hash_string(bam_get_qname(rec))) == lastAlignedPosReads.end()))) {
+	      // First read
+	      lastAlignedPosReads.insert(hash_string(bam_get_qname(rec)));
+	      std::size_t hv = hash_pair(rec);
+	      qualities[hv] = rec->core.qual;
+	    } else {
+	      // Second read
+	      std::size_t hv = hash_pair_mate(rec);
+	      if (qualities.find(hv) == qualities.end()) continue; // Mate discarded
+	      uint8_t pairQuality = std::min((uint8_t) qualities[hv], (uint8_t) rec->core.qual);
+	      qualities[hv] = 0;
+
+	      // Pair quality
+	      if (pairQuality < c.minQual) continue; // Low quality pair
+
+	      // Insert valid pair
+	      validPairs.insert(hash_pair_mate(rec));
+	    }
 	  } else {
-	    // Second read
-	    std::size_t hv = hash_pair_mate(rec);
-	    if (qualities.find(hv) == qualities.end()) continue; // Mate discarded
-	    uint8_t pairQuality = std::min((uint8_t) qualities[hv], (uint8_t) rec->core.qual);
-	    qualities[hv] = 0;
-
-	    // Pair quality
-	    if (pairQuality < c.minQual) continue; // Low quality pair
-
-	    // Insert valid pair
-	    validPairs.insert(hash_pair_mate(rec));
+	    // Single-end
+	    validPairs.insert(hash_read(rec));
 	  }
 	}
 	// Clean-up
@@ -209,36 +226,61 @@ namespace bamstats
 	int32_t lastAlignedPos = 0;
 	std::set<std::size_t> lastAlignedPosReads;
 	while (sam_itr_next(samfile, iter, rec) >= 0) {
-	  if ((rec->core.flag & (BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP | BAM_FSUPPLEMENTARY | BAM_FUNMAP | BAM_FMUNMAP)) || (rec->core.tid != rec->core.mtid) || (!(rec->core.flag & BAM_FPAIRED))) continue;
+	  if (rec->core.flag & (BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP | BAM_FSUPPLEMENTARY | BAM_FUNMAP)) continue;
 	  if (rec->core.qual < c.minQual) continue;
+	  if (rec->core.flag & BAM_FPAIRED) {
+	    if ((rec->core.flag & BAM_FMUNMAP) || (rec->core.tid != rec->core.mtid)) continue;
 
-	  // Clean-up the read store for identical alignment positions
-	  if (rec->core.pos > lastAlignedPos) {
-	    lastAlignedPosReads.clear();
-	    lastAlignedPos = rec->core.pos;
-	  }
+	    // Clean-up the read store for identical alignment positions
+	    if (rec->core.pos > lastAlignedPos) {
+	      lastAlignedPosReads.clear();
+	      lastAlignedPos = rec->core.pos;
+	    }
 
-	  if (c.spanningCoverage) {
-	    // Spanning coverage
-	    if ((rec->core.pos < rec->core.mpos) || ((rec->core.pos == rec->core.mpos) && (lastAlignedPosReads.find(hash_string(bam_get_qname(rec))) == lastAlignedPosReads.end()))) {
-	      // Do nothing
-	    } else {
-	      std::size_t hv = hash_pair_mate(rec);
-	      if ((validPairs.find(hv) != validPairs.end()) && (layout(rec) == 2)) {
-		int32_t pStart = rec->core.mpos + 50;
-		int32_t pEnd = rec->core.pos - 50;
-		if (pStart < pEnd) {
-		  for(int32_t i = pStart; i < pEnd; ++i) {
-		    if (cov[i] < maxCoverage) ++cov[i];
+	    if (c.spanningCoverage) {
+	      // Spanning coverage
+	      if ((rec->core.pos < rec->core.mpos) || ((rec->core.pos == rec->core.mpos) && (lastAlignedPosReads.find(hash_string(bam_get_qname(rec))) == lastAlignedPosReads.end()))) {
+		// Do nothing
+	      } else {
+		std::size_t hv = hash_pair_mate(rec);
+		if ((validPairs.find(hv) != validPairs.end()) && (layout(rec) == 2)) {
+		  int32_t pStart = rec->core.mpos + 50;
+		  int32_t pEnd = rec->core.pos - 50;
+		  if (pStart < pEnd) {
+		    for(int32_t i = pStart; i < pEnd; ++i) {
+		      if (cov[i] < maxCoverage) ++cov[i];
+		    }
 		  }
+		}
+	      }
+	    } else {
+	      // Sequence coverage
+	      std::size_t hv = 0;
+	      if ((rec->core.pos < rec->core.mpos) || ((rec->core.pos == rec->core.mpos) && (lastAlignedPosReads.find(hash_string(bam_get_qname(rec))) == lastAlignedPosReads.end()))) hv = hash_pair(rec);
+	      else hv = hash_pair_mate(rec);
+	      if (validPairs.find(hv) != validPairs.end()) {
+
+		// Reference pointer
+		uint32_t rp = rec->core.pos;
+	    
+		// Parse the CIGAR
+		uint32_t* cigar = bam_get_cigar(rec);
+		for (std::size_t i = 0; i < rec->core.n_cigar; ++i) {
+		  if ((bam_cigar_op(cigar[i]) == BAM_CMATCH) || (bam_cigar_op(cigar[i]) == BAM_CEQUAL) || (bam_cigar_op(cigar[i]) == BAM_CDIFF)) {
+		    // match or mismatch
+		    for(std::size_t k = 0; k<bam_cigar_oplen(cigar[i]);++k) {
+		      if (cov[rp] < maxCoverage) ++cov[rp];
+		      ++rp;
+		    }
+		  }
+		  else if (bam_cigar_op(cigar[i]) == BAM_CDEL) rp += bam_cigar_oplen(cigar[i]);
+		  else if (bam_cigar_op(cigar[i]) == BAM_CREF_SKIP) rp += bam_cigar_oplen(cigar[i]);
 		}
 	      }
 	    }
 	  } else {
-	    // Sequence coverage
-	    std::size_t hv = 0;
-	    if ((rec->core.pos < rec->core.mpos) || ((rec->core.pos == rec->core.mpos) && (lastAlignedPosReads.find(hash_string(bam_get_qname(rec))) == lastAlignedPosReads.end()))) hv = hash_pair(rec);
-	    else hv = hash_pair_mate(rec);
+	    // Single end
+	    std::size_t hv = hash_read(rec);
 	    if (validPairs.find(hv) != validPairs.end()) {
 
 	      // Reference pointer
