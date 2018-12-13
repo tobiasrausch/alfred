@@ -38,3 +38,8 @@ Many aligners trim primary alignments using soft-clips and only secondary and su
 ```bash
 alfred qc -su -r <genome.fa> <input.bam>
 ```
+
+## Calculation of InDel rates and sequencing error rate?
+
+The sequencing error rates are calculated over all aligned bases. The total number of deletions, character D in the Cigar string, is divided
+by the total number of aligned bases (Cigar M). The same approach is used for insertion (Cigar I) and mismatches (Cigar M and mismatch to reference).
