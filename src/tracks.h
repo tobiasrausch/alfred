@@ -44,7 +44,7 @@ namespace bamstats
 
   struct TrackConfig {
     bool wiggleFormat;
-    bool spanningCoverage;
+    uint16_t covtype;   // 0: sequencing coverage, 1: spanning coverage, 2: footprints
     uint16_t minQual;
     uint32_t normalize;
     float resolution;
@@ -219,7 +219,13 @@ namespace bamstats
       typedef uint16_t TCount;
       uint32_t maxCoverage = std::numeric_limits<TCount>::max();
       typedef std::vector<TCount> TCoverage;
-      TCoverage cov(hdr->target_len[refIndex], 0);
+      TCoverage cov;
+      TCoverage scov;
+      if (c.covtype == 0) cov.resize(hdr->target_len[refIndex], 0);
+      else {
+	cov.resize(hdr->target_len[refIndex], 0);
+	scov.resize(hdr->target_len[refIndex], 0);
+      }
       if (validPairs.size()) {
 	hts_itr_t* iter = sam_itr_queryi(idx, refIndex, 0, hdr->target_len[refIndex]);
 	bam1_t* rec = bam_init1();
@@ -237,7 +243,7 @@ namespace bamstats
 	      lastAlignedPos = rec->core.pos;
 	    }
 
-	    if (c.spanningCoverage) {
+	    if (c.covtype > 0) {
 	      // Spanning coverage
 	      if ((rec->core.pos < rec->core.mpos) || ((rec->core.pos == rec->core.mpos) && (lastAlignedPosReads.find(hash_string(bam_get_qname(rec))) == lastAlignedPosReads.end()))) {
 		// Do nothing
@@ -248,12 +254,13 @@ namespace bamstats
 		  int32_t pEnd = rec->core.pos - 50;
 		  if (pStart < pEnd) {
 		    for(int32_t i = pStart; i < pEnd; ++i) {
-		      if (cov[i] < maxCoverage) ++cov[i];
+		      if (scov[i] < maxCoverage) ++scov[i];
 		    }
 		  }
 		}
 	      }
-	    } else {
+	    }
+	    if ((c.covtype == 0) || (c.covtype == 2)) {
 	      // Sequence coverage
 	      std::size_t hv = 0;
 	      if ((rec->core.pos < rec->core.mpos) || ((rec->core.pos == rec->core.mpos) && (lastAlignedPosReads.find(hash_string(bam_get_qname(rec))) == lastAlignedPosReads.end()))) hv = hash_pair(rec);
@@ -279,25 +286,27 @@ namespace bamstats
 	      }
 	    }
 	  } else {
-	    // Single end
-	    std::size_t hv = hash_read(rec);
-	    if (validPairs.find(hv) != validPairs.end()) {
-
-	      // Reference pointer
-	      uint32_t rp = rec->core.pos;
-	    
-	      // Parse the CIGAR
-	      uint32_t* cigar = bam_get_cigar(rec);
-	      for (std::size_t i = 0; i < rec->core.n_cigar; ++i) {
-		if ((bam_cigar_op(cigar[i]) == BAM_CMATCH) || (bam_cigar_op(cigar[i]) == BAM_CEQUAL) || (bam_cigar_op(cigar[i]) == BAM_CDIFF)) {
-		  // match or mismatch
-		  for(std::size_t k = 0; k<bam_cigar_oplen(cigar[i]);++k) {
-		    if (cov[rp] < maxCoverage) ++cov[rp];
-		    ++rp;
+	    // Single end, only sequencing coverage is possible
+	    if (c.covtype == 0) {
+	      std::size_t hv = hash_read(rec);
+	      if (validPairs.find(hv) != validPairs.end()) {
+		
+		// Reference pointer
+		uint32_t rp = rec->core.pos;
+		
+		// Parse the CIGAR
+		uint32_t* cigar = bam_get_cigar(rec);
+		for (std::size_t i = 0; i < rec->core.n_cigar; ++i) {
+		  if ((bam_cigar_op(cigar[i]) == BAM_CMATCH) || (bam_cigar_op(cigar[i]) == BAM_CEQUAL) || (bam_cigar_op(cigar[i]) == BAM_CDIFF)) {
+		    // match or mismatch
+		    for(std::size_t k = 0; k<bam_cigar_oplen(cigar[i]);++k) {
+		      if (cov[rp] < maxCoverage) ++cov[rp];
+		      ++rp;
+		    }
 		  }
+		  else if (bam_cigar_op(cigar[i]) == BAM_CDEL) rp += bam_cigar_oplen(cigar[i]);
+		  else if (bam_cigar_op(cigar[i]) == BAM_CREF_SKIP) rp += bam_cigar_oplen(cigar[i]);
 		}
-		else if (bam_cigar_op(cigar[i]) == BAM_CDEL) rp += bam_cigar_oplen(cigar[i]);
-		else if (bam_cigar_op(cigar[i]) == BAM_CREF_SKIP) rp += bam_cigar_oplen(cigar[i]);
 	      }
 	    }
 	  }
@@ -305,6 +314,34 @@ namespace bamstats
 	// Clean-up
 	bam_destroy1(rec);
 	hts_itr_destroy(iter);
+
+	// Coverage mangling
+	if (c.covtype == 1) {
+	  // Spanning coverage
+	  for(uint32_t i = 0; i < scov.size(); ++i) cov[i] = scov[i];
+	} else if (c.covtype == 2) {
+	  // slope window
+	  uint32_t slopewin = 85;
+	  TCoverage covStore(slopewin, 0);	  
+	  for(uint32_t i = 0; i < scov.size(); ++i) {
+	    TCount oldCovVal = covStore[i % 50];
+	    covStore[i % 50] = cov[i];
+	    if ((i < slopewin) || (i + slopewin >= scov.size())) cov[i] = 0;
+	    else {
+	      int32_t spanPeakLeft = (int32_t) scov[i]  - (int32_t) scov[i - slopewin];
+	      int32_t spanPeakRight = (int32_t) scov[i]  - (int32_t) scov[i + slopewin];
+	      int32_t spanPeak = (spanPeakLeft + spanPeakRight) / 2;
+	      int32_t covPeakLeft = (int32_t) cov[i]  - (int32_t) oldCovVal;
+	      int32_t covPeakRight = (int32_t) cov[i]  - (int32_t) cov[i + slopewin];
+	      int32_t covPeak = (covPeakLeft + covPeakRight) / 2;
+	      int32_t footprint = spanPeak - covPeak;
+	      if (spanPeak < footprint) footprint = spanPeak;
+	      if (footprint < 0) cov[i] = 0;
+	      else if (footprint < (int32_t) maxCoverage) cov[i] = (TCount) footprint;
+	      else cov[i] = maxCoverage;
+	    }
+	  }
+	}
 
 	// Coverage track
 	if (c.wiggleFormat) {
@@ -408,7 +445,7 @@ namespace bamstats
       ("help,?", "show help message")
       ("map-qual,m", boost::program_options::value<uint16_t>(&c.minQual)->default_value(10), "min. mapping quality")
       ("normalize,n", boost::program_options::value<uint32_t>(&c.normalize)->default_value(30000000), "#pairs to normalize to (0: no normalization)")
-      ("spanning,s", "spanning coverage instead of sequencing coverage")
+      ("covtype,c", boost::program_options::value<uint16_t>(&c.covtype)->default_value(0), "coverage type (0: sequencing coverage, 1: spanning coverage, 2: footprinting)")
       ;
 
     boost::program_options::options_description resolution("Resolution options (bedgraph/bed format)");
@@ -458,9 +495,8 @@ namespace bamstats
       }
     }
 
-    // Spanning coverage
-    if (vm.count("spanning")) c.spanningCoverage = true;
-    else c.spanningCoverage = false;
+    // Coverage type
+    if (c.covtype > 2) c.covtype = 0;
 
     // Check bam file
     if (!(boost::filesystem::exists(c.bamFile) && boost::filesystem::is_regular_file(c.bamFile) && boost::filesystem::file_size(c.bamFile))) {
