@@ -44,6 +44,8 @@ namespace bamstats
 
   struct CountDNAConfig {
     bool fragments;
+    uint32_t fraglow;
+    uint32_t fraghigh;    
     uint32_t window_size;
     uint32_t window_offset;
     uint32_t window_num;
@@ -245,7 +247,7 @@ namespace bamstats
 	    // Count mid point
 	    if (c.fragments) {
 	      int32_t fraglen = rec->core.pos + alignmentLength(rec) - rec->core.mpos;
-	      if ((fraglen >= 0) && (fraglen < 10000)) {
+	      if ((fraglen >= 0) && ((uint32_t) fraglen >= c.fraglow) && ((uint32_t) fraglen < c.fraghigh)) {
 		int32_t fmidpoint = rec->core.mpos + fraglen / 2;
 		if ((fmidpoint < (int32_t) hdr->target_len[refIndex]) && (cov[fmidpoint] < maxCoverage - 1)) ++cov[fmidpoint];
 	      }
@@ -316,6 +318,7 @@ namespace bamstats
 
   int count_dna(int argc, char **argv) {
     CountDNAConfig c;
+    std::string fragmentString;
 
     // Parameter
     boost::program_options::options_description generic("Generic options");
@@ -323,7 +326,7 @@ namespace bamstats
       ("help,?", "show help message")
       ("map-qual,m", boost::program_options::value<uint16_t>(&c.minQual)->default_value(10), "min. mapping quality")
       ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("cov.gz"), "coverage output file")
-      ("fragments,f", "count fragment midpoint [illumina PE data only]")
+      ("fragments,f", boost::program_options::value<std::string>(&fragmentString), "count illumina PE fragments using lower and upper bound on insert size, i.e. -f 0,10000")
       ;
 
     boost::program_options::options_description window("Window options");
@@ -362,8 +365,25 @@ namespace bamstats
     }
 
     // Fragment midpoint counting
-    if (vm.count("fragments")) c.fragments = true;
-    else c.fragments = false;
+    if (vm.count("fragments")) {
+      c.fragments = true;
+      std::vector<std::string> parts;
+      boost::split(parts, fragmentString, boost::is_any_of(","));
+      if (parts.size() == 2) {
+	int32_t fraglow = boost::lexical_cast<int32_t>(parts[0]);
+	int32_t fraghigh = boost::lexical_cast<int32_t>(parts[1]);
+	if ((fraglow >= 0) && (fraghigh >= 0) && (fraglow < fraghigh)) {
+	  c.fraglow = fraglow;
+	  c.fraghigh = fraghigh;
+	} else {
+	  std::cerr << "Lower bound needs to be smaller than upper bound for insert size and all bounds >= 0!" << std::endl;
+	  return 1;
+	}
+      } else {
+	std::cerr << "Could not parse lower and upper bound on insert size. Format is -f 50,1000 without any spaces before or after the comma!" << std::endl;
+	return 1;
+      }
+    } else c.fragments = false;
 
     // Check bam file
     if (!(boost::filesystem::exists(c.bamFile) && boost::filesystem::is_regular_file(c.bamFile) && boost::filesystem::file_size(c.bamFile))) {
