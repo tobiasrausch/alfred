@@ -43,6 +43,7 @@ namespace bamstats
 {
 
   struct CountDNAConfig {
+    bool fragments;
     uint32_t window_size;
     uint32_t window_offset;
     uint32_t window_num;
@@ -242,8 +243,16 @@ namespace bamstats
 	    mateMap[hv] = false;
 
 	    // Count mid point
-	    int32_t midPoint = rec->core.pos + halfAlignmentLength(rec);
-	    if ((midPoint < (int32_t) hdr->target_len[refIndex]) && (cov[midPoint] < maxCoverage - 1)) ++cov[midPoint];
+	    if (c.fragments) {
+	      int32_t fraglen = rec->core.pos + alignmentLength(rec) - rec->core.mpos;
+	      if ((fraglen >= 0) && (fraglen < 10000)) {
+		int32_t fmidpoint = rec->core.mpos + fraglen / 2;
+		if ((fmidpoint < (int32_t) hdr->target_len[refIndex]) && (cov[fmidpoint] < maxCoverage - 1)) ++cov[fmidpoint];
+	      }
+	    } else {
+	      int32_t midPoint = rec->core.pos + halfAlignmentLength(rec);
+	      if ((midPoint < (int32_t) hdr->target_len[refIndex]) && (cov[midPoint] < maxCoverage - 1)) ++cov[midPoint];
+	    }
 	  }
 	} else {
 	  // Count mid point
@@ -314,6 +323,7 @@ namespace bamstats
       ("help,?", "show help message")
       ("map-qual,m", boost::program_options::value<uint16_t>(&c.minQual)->default_value(10), "min. mapping quality")
       ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("cov.gz"), "coverage output file")
+      ("fragments,f", "count fragment midpoint [illumina PE data only]")
       ;
 
     boost::program_options::options_description window("Window options");
@@ -350,6 +360,10 @@ namespace bamstats
       std::cout << visible_options << "\n";
       return 1;
     }
+
+    // Fragment midpoint counting
+    if (vm.count("fragments")) c.fragments = true;
+    else c.fragments = false;
 
     // Check bam file
     if (!(boost::filesystem::exists(c.bamFile) && boost::filesystem::is_regular_file(c.bamFile) && boost::filesystem::file_size(c.bamFile))) {
