@@ -209,7 +209,6 @@ namespace bamstats
       rfile << j.dump();
     }
     rfile << ",";
-    rfile << std::endl;
     
     // Read-group information
     rfile << "\"readGroups\": [";
@@ -459,68 +458,91 @@ namespace bamstats
       
       // Mean Base Quality
       {
-	rfile << ",{\"id\": \"baseQuality\",";	
-	rfile << "\"title\": \"Mean base quality distribution\",";
-	rfile << "\"x\": {\"data\": [{\"values\": [";
-	uint32_t lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc, 0);
-	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	  if (i > 0) rfile << ",";
-	  rfile << i;
-	}
+	rfile << ',';
+	nlohmann::json j;
+	j["id"] = "baseQuality";
+	j["title"] = "Mean base quality distribution";
+	j["x"]["data"] = nlohmann::json::array();
+	j["x"]["axis"]["title"] = "Read position";
+	{
+	  nlohmann::json axisX;
+	  nlohmann::json valx = nlohmann::json::array();
+	  uint32_t lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc, 0);
+	  for(uint32_t i = 0; i <= lastValidBQIdx; ++i) valx.push_back(i);
+	  axisX["values"] = valx;
+	  j["x"]["data"].push_back(axisX);
+	}	  
 	// Paired-end?
 	if (itRg->second.pc.paired) {
 	  // Multiple x-axis (for different read length)
-	  rfile << "]},";
-	  rfile << "{\"values\": [";
-	  lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc, 1);
-	  for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	    if (i > 0) rfile << ",";
-	    rfile << i;
-	  }
+	  nlohmann::json axisX;
+	  nlohmann::json valx = nlohmann::json::array();
+	  uint32_t lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc, 1);
+	  for(uint32_t i = 0; i <= lastValidBQIdx; ++i) valx.push_back(i);
+	  axisX["values"] = valx;
+	  j["x"]["data"].push_back(axisX);
 	}
-	rfile << "]}], \"axis\": {\"title\": \"Read position\"}},";
-	rfile << "\"y\": {\"data\": [{\"values\": [";
-	lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc, 0);
-	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	  if (i > 0) rfile << ",";
-	  uint64_t bcount = itRg->second.rc.aCount[0][i] + itRg->second.rc.cCount[0][i] + itRg->second.rc.gCount[0][i] + itRg->second.rc.tCount[0][i] + itRg->second.rc.nCount[0][i];
-	  if (bcount > 0) rfile << (double) (itRg->second.rc.bqCount[0][i]) / (double) (bcount);
-	  else rfile << 0;
+	j["y"]["data"] = nlohmann::json::array();
+	{
+	  nlohmann::json axisY;
+	  nlohmann::json valy = nlohmann::json::array();
+	  uint32_t lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc, 0);
+	  for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
+	    uint64_t bcount = itRg->second.rc.aCount[0][i] + itRg->second.rc.cCount[0][i] + itRg->second.rc.gCount[0][i] + itRg->second.rc.tCount[0][i] + itRg->second.rc.nCount[0][i];
+	    if (bcount > 0) valy.push_back((double) (itRg->second.rc.bqCount[0][i]) / (double) (bcount));
+	    else valy.push_back(nullptr);
+	  }
+	  axisY["values"] = valy;
+	  if (itRg->second.pc.paired) axisY["title"] = "Read1";
+	  j["y"]["data"].push_back(axisY);
 	}
 	// Paired-end?
 	if (itRg->second.pc.paired) {
-	  rfile << "], \"title\": \"Read1\"},";
-	  rfile << "{\"values\": [";
-	  lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc, 1);
+	  nlohmann::json axisY;
+	  nlohmann::json valy = nlohmann::json::array();
+	  uint32_t lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc, 1);
 	  for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	    if (i > 0) rfile << ",";
 	    uint64_t bcount = itRg->second.rc.aCount[1][i] + itRg->second.rc.cCount[1][i] + itRg->second.rc.gCount[1][i] + itRg->second.rc.tCount[1][i] + itRg->second.rc.nCount[1][i];
-	    if (bcount > 0) rfile << (double) (itRg->second.rc.bqCount[1][i]) / (double) (bcount);
-	    else rfile << 0;
+	    if (bcount > 0) valy.push_back((double) (itRg->second.rc.bqCount[1][i]) / (double) (bcount));
+	    else valy.push_back(nullptr);
 	  }
-	  rfile << "], \"title\": \"Read2\"}], \"axis\": {\"title\": \"Average base quality\"}}, \"type\": \"line\"}";
-	} else {
-	  rfile << "]}], \"axis\": {\"title\": \"Average base quality\"}}, \"type\": \"line\"}";
+	  axisY["values"] = valy;
+	  axisY["title"] = "Read2";
+	  j["y"]["data"].push_back(axisY);
 	}
+	j["y"]["axis"]["title"] = "Average base quality";
+	j["type"] = "line";
+	rfile << j.dump();	  
       }
 
       // Mapping quality histogram
       {
-	rfile << ",{\"id\": \"mappingQuality\", \"title\": \"Mapping quality distribution\",";
-	rfile << "\"x\": {\"data\": [{\"values\": [";
+	rfile << ',';
+	nlohmann::json j;
+	j["id"] = "mappingQuality";
+	j["title"] = "Mapping quality distribution";
+	j["x"]["data"] = nlohmann::json::array();
+	j["x"]["axis"]["title"] = "Mapping Quality";
 	uint32_t lastValidMQ = _lastNonZeroIdx(itRg->second.qc.qcount);
-	for(uint32_t i = 0; i <= lastValidMQ; ++i) {
-	  if (i > 0) rfile << ",";
-	  rfile << i;
+	{
+	  nlohmann::json axisX;
+	  nlohmann::json valx = nlohmann::json::array();
+	  for(uint32_t i = 0; i <= lastValidMQ; ++i) valx.push_back(i);
+	  axisX["values"] = valx;
+	  j["x"]["data"].push_back(axisX);
 	}
-	rfile << "]}], \"axis\": {\"title\": \"Mapping Quality\"}},";
-	rfile << "\"y\": {\"data\": [{\"values\": [";
-	for(uint32_t i = 0; i <= lastValidMQ; ++i) {
-	  if (i > 0) rfile << ",";
-	  rfile << itRg->second.qc.qcount[i];
+	j["y"]["data"] = nlohmann::json::array();
+	{
+	  nlohmann::json axisY;
+	  nlohmann::json valy = nlohmann::json::array();
+	  for(uint32_t i = 0; i <= lastValidMQ; ++i) valy.push_back(itRg->second.qc.qcount[i]);
+	  axisY["values"] = valy;
+	  j["y"]["data"].push_back(axisY);
 	}
-	rfile << "]}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"bar\", \"options\": {\"layout\": \"group\"}}";
-	//rfile << "]}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"bar\"}";
+	j["y"]["axis"]["title"] = "Count";
+	j["type"] = "bar";
+	j["options"]["layout"] = "group";
+	rfile << j.dump();
       }
 
       // Coverage Histogram
