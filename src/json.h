@@ -700,32 +700,50 @@ namespace bamstats
 
       // InDel Size
       {
-	rfile << ",{\"id\": \"indelSize\", \"title\": \"InDel Size\",";
-	rfile << "\"x\": {\"data\": [{\"values\": [";
+	rfile << ',';
+	nlohmann::json j;
+	j["id"] = "indelSize";
+	j["title"] = "InDel Size";
+	j["x"]["data"] = nlohmann::json::array();
+	j["x"]["axis"]["title"] = "InDel Size";
+	j["x"]["axis"]["range"] = {0, 10};
 	uint32_t lastSize = itRg->second.bc.delSize.size();
 	if (itRg->second.bc.insSize.size() > lastSize) lastSize = itRg->second.bc.insSize.size();
-	for(uint32_t i = 0; i < lastSize; ++i) {
-	  if (i > 0) rfile << ",";
-	  rfile << i;
+	{
+	  nlohmann::json axisX;
+	  nlohmann::json valx = nlohmann::json::array();
+	  for(uint32_t i = 0; i < lastSize; ++i) valx.push_back(i);
+	  axisX["values"] = valx;
+	  j["x"]["data"].push_back(axisX);
 	}
-	rfile << "]}], \"axis\": {\"title\": \"InDel Size\", \"range\": [0,10]}},";
-	rfile << "\"y\": {\"data\": [";
-	rfile << "{\"values\": [";
-	for(uint32_t i = 0; i < lastSize; ++i) {
-	  if (i > 0) rfile << ",";
-	  if (i < itRg->second.bc.delSize.size()) rfile << itRg->second.bc.delSize[i];
-	  else rfile << '0';
+	j["y"]["data"] = nlohmann::json::array();
+	{
+	  nlohmann::json axisY;
+	  nlohmann::json valy = nlohmann::json::array();
+	  for(uint32_t i = 0; i < lastSize; ++i) {
+	    if (i < itRg->second.bc.delSize.size()) valy.push_back(itRg->second.bc.delSize[i]);
+	    else valy.push_back(0);
+	  }
+	  axisY["values"] = valy;
+	  axisY["title"] = "Deletion";
+	  j["y"]["data"].push_back(axisY);
 	}
-	rfile << "], \"title\": \"Deletion\"},";
-	rfile << "{\"values\": [";
-	for(uint32_t i = 0; i < lastSize; ++i) {
-	  if (i > 0) rfile << ",";
-	  if (i < itRg->second.bc.insSize.size()) rfile << itRg->second.bc.insSize[i];
-	  else rfile << '0';
+	{
+	  nlohmann::json axisY;
+	  nlohmann::json valy = nlohmann::json::array();
+	  for(uint32_t i = 0; i < lastSize; ++i) {
+	    if (i < itRg->second.bc.insSize.size()) valy.push_back(itRg->second.bc.insSize[i]);
+	    else valy.push_back(0);
+	  }
+	  axisY["values"] = valy;
+	  axisY["title"] = "Insertion";
+	  j["y"]["data"].push_back(axisY);
 	}
-	rfile << "], \"title\": \"Insertion\"}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"bar\", \"options\": {\"layout\": \"group\"}}";
+	j["y"]["axis"]["title"] = "Count";
+	j["type"] = "bar";
+	j["options"]["layout"] = "group";
+	rfile << j.dump();
       }
-
 
       // GC Content
       {
