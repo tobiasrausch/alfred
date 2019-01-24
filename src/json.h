@@ -549,22 +549,35 @@ namespace bamstats
       {
 	uint32_t lastValidCO = _lastNonZeroIdx(itRg->second.bc.bpWithCoverage, itRg->second.bc.maxCoverage);
 	float lastFrac = _lastPercentage(itRg->second.bc.bpWithCoverage, itRg->second.bc.maxCoverage);
-	rfile << ",{\"id\": \"coverageHistogram\", \"title\": \"Coverage histogram\",";
+	rfile << ',';
+	nlohmann::json j;
+	j["id"] = "coverageHistogram";
+	j["title"] = "Coverage histogram";
 	if (lastFrac > 0) {
-	  rfile << "\"subtitle\": \"" << lastFrac << "% of all bases with >= " << itRg->second.bc.maxCoverage << "x coverage\",";
+	  std::string rlstr = boost::lexical_cast<std::string>(lastFrac) + "% of all bases with >= " + boost::lexical_cast<std::string>(itRg->second.bc.maxCoverage) + "x coverage";
+	  j["subtitle"] = rlstr;
 	}
-	rfile << "\"x\": {\"data\": [{\"values\": [";
-	for(uint32_t i = 0; i <= lastValidCO; ++i) {
-	  if (i > 0) rfile << ",";
-	  rfile << i;
+	j["x"]["data"] = nlohmann::json::array();
+	j["x"]["axis"]["title"] = "Coverage";
+	j["x"]["axis"]["range"] = {1, 60};
+	{
+	  nlohmann::json axisX;
+	  nlohmann::json valx = nlohmann::json::array();
+	  for(uint32_t i = 0; i <= lastValidCO; ++i) valx.push_back(i);
+	  axisX["values"] = valx;
+	  j["x"]["data"].push_back(axisX);
 	}
-	rfile << "]}], \"axis\": {\"title\": \"Coverage\", \"range\": [1,60]}},";
-	rfile << "\"y\": {\"data\": [{\"values\": [";
-	for(uint32_t i = 0; i <= lastValidCO; ++i) {
-	  if (i > 0) rfile << ",";
-	  rfile << itRg->second.bc.bpWithCoverage[i];
+	j["y"]["data"] = nlohmann::json::array();
+	{
+	  nlohmann::json axisY;
+	  nlohmann::json valy = nlohmann::json::array();
+	  for(uint32_t i = 0; i <= lastValidCO; ++i) valy.push_back(itRg->second.bc.bpWithCoverage[i]);
+	  axisY["values"] = valy;
+	  j["y"]["data"].push_back(axisY);
 	}
-	rfile << "]}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"line\"}";
+	j["y"]["axis"]["title"] = "Count";
+	j["type"] = "line";
+	rfile << j.dump();
       }
 
       // Insert Size Histogram
@@ -621,22 +634,36 @@ namespace bamstats
       if (c.hasRegionFile) {
 	// On target rate
 	{
-	  rfile << ",{\"id\": \"onTarget\",";
-	  rfile << "\"title\": \"On-target rate\",";
-	  rfile << "\"x\": {\"data\": [{\"values\": [";
+	  rfile << ',';
+	  nlohmann::json j;
+	  j["id"] = "onTarget";
+	  j["title"] = "On-target rate";
+	  j["x"]["data"] = nlohmann::json::array();
+	  j["x"]["axis"]["title"] = "Target Extension";
 	  uint64_t alignedbases = itRg->second.bc.matchCount + itRg->second.bc.mismatchCount;
 	  typename BedCounts::TOnTargetMap::const_iterator itOT = be.onTarget.find(itRg->first);
-	  for(uint32_t i = 0; i < itOT->second.size(); ++i) {
-	    if (i > 0) rfile << ",";
-	    rfile << i * be.stepsize;
+	  {
+	    nlohmann::json axisX;
+	    nlohmann::json valx = nlohmann::json::array();
+	    for(uint32_t i = 0; i < itOT->second.size(); ++i) valx.push_back(i * be.stepsize);
+	    axisX["values"] = valx;
+	    j["x"]["data"].push_back(axisX);
 	  }
-	  rfile << "]}], \"axis\": {\"title\": \"Target Extension\"}},";
-	  rfile << "\"y\": {\"data\": [{\"values\": [";
-	  for(uint32_t i = 0; i < itOT->second.size(); ++i) {
-	    if (i > 0) rfile << ",";
-	    rfile << (double) itOT->second[i] / (double) alignedbases;
+	  j["y"]["data"] = nlohmann::json::array();
+	  {
+	    nlohmann::json axisY;
+	    nlohmann::json valy = nlohmann::json::array();
+	    for(uint32_t i = 0; i < itOT->second.size(); ++i) {
+	      if (alignedbases > 0) valy.push_back((double) itOT->second[i] / (double) alignedbases);
+	      else valy.push_back(nullptr);
+	    }
+	    axisY["values"] = valy;
+	    j["y"]["data"].push_back(axisY);
 	  }
-	  rfile << "]}], \"axis\": {\"title\": \"Fraction on target\", \"range\": [0,1]}}, \"type\": \"line\"}";
+	  j["y"]["axis"]["title"] = "Fraction on target";
+	  j["y"]["axis"]["range"] = {0, 1};
+	  j["type"] = "line";
+	  rfile << j.dump();
 	}
 
 	// Avg. target coverage
