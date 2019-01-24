@@ -397,54 +397,64 @@ namespace bamstats
       {
 	float lastFrac1 = _lastPercentage(itRg->second.rc.lRc[0], itRg->second.rc.maxReadLength);
 	float lastFrac2 = _lastPercentage(itRg->second.rc.lRc[1], itRg->second.rc.maxReadLength);
-	rfile << ",{\"id\": \"readLength\",";
-	rfile << "\"title\": \"Read length distribution\",";
+	rfile << ',';
+	nlohmann::json j;
+	j["id"] = "readLength";
+	j["title"] = "Read length distribution";
 	if (itRg->second.pc.paired) {
 	  if ((lastFrac1 > 0) || (lastFrac2 > 0)) {
-	    rfile << "\"subtitle\": \"" << lastFrac1 << "%," << lastFrac2 <<"% of all reads >= " << itRg->second.rc.maxReadLength << "bp\",";
+	    std::string rlstr = boost::lexical_cast<std::string>(lastFrac1) + "%, " + boost::lexical_cast<std::string>(lastFrac2) + "% of all reads >= " + boost::lexical_cast<std::string>(itRg->second.rc.maxReadLength) + "bp";
+	    j["subtitle"] = rlstr;
 	  }
 	} else {
 	  if (lastFrac1 > 0) {
-	    rfile << "\"subtitle\": \"" << lastFrac1 << "% of all reads >= " << itRg->second.rc.maxReadLength << "bp\",";
+	    std::string rlstr = boost::lexical_cast<std::string>(lastFrac1) + "% of all reads >= " + boost::lexical_cast<std::string>(itRg->second.rc.maxReadLength) + "bp";
+	    j["subtitle"] = rlstr;
 	  }
 	}
-	rfile << "\"x\": {\"data\": [{\"values\": [";
-	uint32_t lastValidRL = _lastNonZeroIdx(itRg->second.rc.lRc[0], itRg->second.rc.maxReadLength);
-	for(uint32_t i = 0; i <= lastValidRL; ++i) {
-	  if (i > 0) rfile << ",";
-	  rfile << i;
+	j["x"]["data"] = nlohmann::json::array();
+	j["x"]["axis"]["title"] = "Read length";
+	{
+	  nlohmann::json axisX;
+	  nlohmann::json valx = nlohmann::json::array();
+	  uint32_t lastValidRL = _lastNonZeroIdx(itRg->second.rc.lRc[0], itRg->second.rc.maxReadLength);
+	  for(uint32_t i = 0; i <= lastValidRL; ++i) valx.push_back(i);
+	  axisX["values"] = valx;
+	  j["x"]["data"].push_back(axisX);
 	}
 	// Paired-end?
 	if (itRg->second.pc.paired) {
-	  // Multiple x-axis
-	  rfile << "]},";
-	  lastValidRL = _lastNonZeroIdx(itRg->second.rc.lRc[1], itRg->second.rc.maxReadLength);
-	  rfile << "{\"values\": [";
-	  for(uint32_t i = 0; i <= lastValidRL; ++i) {
-	    if (i > 0) rfile << ",";
-	    rfile << i;
-	  }
+	  nlohmann::json axisX;
+	  nlohmann::json valx = nlohmann::json::array();
+	  uint32_t lastValidRL = _lastNonZeroIdx(itRg->second.rc.lRc[1], itRg->second.rc.maxReadLength);
+	  for(uint32_t i = 0; i <= lastValidRL; ++i) valx.push_back(i);
+	  axisX["values"] = valx;
+	  j["x"]["data"].push_back(axisX);
 	}
-	rfile << "]}], \"axis\": {\"title\": \"Read length\"}},";
-	rfile << "\"y\": {\"data\": [{\"values\": [";
-	lastValidRL = _lastNonZeroIdx(itRg->second.rc.lRc[0], itRg->second.rc.maxReadLength);
-	for(uint32_t i = 0; i <= lastValidRL; ++i) {
-	  if (i > 0) rfile << ",";
-	  rfile << itRg->second.rc.lRc[0][i];
+	j["y"]["data"] = nlohmann::json::array();
+	{
+	  nlohmann::json axisY;
+	  nlohmann::json valy = nlohmann::json::array();
+	  uint32_t lastValidRL = _lastNonZeroIdx(itRg->second.rc.lRc[0], itRg->second.rc.maxReadLength);
+	  for(uint32_t i = 0; i <= lastValidRL; ++i) valy.push_back(itRg->second.rc.lRc[0][i]);
+	  axisY["values"] = valy;
+	  if (itRg->second.pc.paired) axisY["title"] = "Read1";
+	  j["y"]["data"].push_back(axisY);
 	}
 	// Paired-end?
 	if (itRg->second.pc.paired) {
-	  rfile << "], \"title\": \"Read1\"},";
-	  rfile << "{\"values\": [";
-	  lastValidRL = _lastNonZeroIdx(itRg->second.rc.lRc[1], itRg->second.rc.maxReadLength);
-	  for(uint32_t i = 0; i <= lastValidRL; ++i) {
-	    if (i > 0) rfile << ",";
-	    rfile << itRg->second.rc.lRc[1][i];
-	  }
-	  rfile << "], \"title\": \"Read2\"}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"bar\", \"options\": {\"layout\": \"group\"}}";
-	} else {
-	  rfile << "]}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"bar\", \"options\": {\"layout\": \"group\"}}";
+	  nlohmann::json axisY;
+	  nlohmann::json valy = nlohmann::json::array();
+	  uint32_t lastValidRL = _lastNonZeroIdx(itRg->second.rc.lRc[1], itRg->second.rc.maxReadLength);
+	  for(uint32_t i = 0; i <= lastValidRL; ++i) valy.push_back(itRg->second.rc.lRc[1][i]);
+	  axisY["values"] = valy;
+	  axisY["title"] = "Read2";
+	  j["y"]["data"].push_back(axisY);
 	}
+	j["y"]["axis"]["title"] = "Count";
+	j["type"] = "bar";
+	j["options"]["layout"] = "group";
+	rfile << j.dump();	  
       }
       
       // Mean Base Quality
