@@ -668,22 +668,33 @@ namespace bamstats
 
 	// Avg. target coverage
 	{
-	  rfile << ",{\"id\": \"targetCoverage\",";
-	  rfile << "\"title\": \"Targets above coverage threshold\",";
-	  rfile << "\"x\": {\"data\": [{\"values\": [";
+	  rfile << ',';
+	  nlohmann::json j;
+	  j["id"] = "targetCoverage";
+	  j["title"] = "Targets above coverage threshold";
+	  j["x"]["data"] = nlohmann::json::array();
+	  j["x"]["axis"]["title"] = "Coverage Level";
 	  std::vector<double> fracAboveCov;
 	  uint32_t maxBedCov = _lastCoverageLevel(be, rf, hdr->n_targets, fracAboveCov);
-	  for(uint32_t i = 0; i < maxBedCov; ++i) {
-	    if (i > 0) rfile << ",";
-	    rfile << i;
+	  {
+	    nlohmann::json axisX;
+	    nlohmann::json valx = nlohmann::json::array();
+	    for(uint32_t i = 0; i < maxBedCov; ++i) valx.push_back(i);
+	    axisX["values"] = valx;
+	    j["x"]["data"].push_back(axisX);
 	  }
-	  rfile << "]}], \"axis\": {\"title\": \"Coverage Level\"}},";
-	  rfile << "\"y\": {\"data\": [{\"values\": [";
-	  for(uint32_t i = 0; i < maxBedCov; ++i) {
-	    if (i > 0) rfile << ", ";
-	    rfile << fracAboveCov[i];
+	  j["y"]["data"] = nlohmann::json::array();
+	  {
+	    nlohmann::json axisY;
+	    nlohmann::json valy = nlohmann::json::array();
+	    for(uint32_t i = 0; i < maxBedCov; ++i) valy.push_back(fracAboveCov[i]);
+	    axisY["values"] = valy;
+	    j["y"]["data"].push_back(axisY);
 	  }
-	  rfile << "]}], \"axis\": {\"title\": \"Fraction above coverage\", \"range\": [0,1]}}, \"type\": \"line\"}";
+	  j["y"]["axis"]["title"] = "Fraction above coverage";
+	  j["y"]["axis"]["range"] = {0, 1};
+	  j["type"] = "line";
+	  rfile << j.dump();
 	}
       }
 
