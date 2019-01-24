@@ -223,67 +223,89 @@ namespace bamstats
 
       // Base content read1
       {
+	nlohmann::json j;
 	// Paired-end?
 	if (itRg->second.pc.paired) {
-	  rfile << "{\"id\": \"baseContentRead1\",";
-	  rfile << "\"title\": \"Base content distribution read1\",";
+	  j["id"] = "baseContentRead1";
+	  j["title"] = "Base content distribution read1";
 	} else {
-	  rfile << "{\"id\": \"baseContent\",";
-	  rfile << "\"title\": \"Base content distribution\",";
+	  j["id"] = "baseContent";
+	  j["title"] = "Base content distribution";
 	}
-	rfile << "\"x\": {\"data\": [{\"values\": [";
 	uint32_t lastValidBQIdx = _lastNonZeroIdxACGTN(itRg->second.rc, 0);
-	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	  if (i > 0) rfile << ",";
-	  rfile << i;
+	j["x"]["data"] = nlohmann::json::array();
+	j["x"]["axis"]["title"] = "Position in read";
+	{
+	  nlohmann::json axisX;
+	  nlohmann::json valx = nlohmann::json::array();
+	  for(uint32_t i = 0; i <= lastValidBQIdx; ++i) valx.push_back(i);
+	  axisX["values"] = valx;
+	  j["x"]["data"].push_back(axisX);
 	}
-	rfile << "]}], \"axis\": {\"title\": \"Position in read\"}},";
-	rfile << "\"y\": {\"data\": [";
-	rfile << "{\"values\": [";
-	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	  uint64_t bcount = itRg->second.rc.aCount[0][i] + itRg->second.rc.cCount[0][i] + itRg->second.rc.gCount[0][i] + itRg->second.rc.tCount[0][i] + itRg->second.rc.nCount[0][i];
-	  if (bcount > 0) {
-	    if (i > 0) rfile << ",";
-	    rfile << (double) itRg->second.rc.aCount[0][i] / (double) bcount;
+	j["y"]["data"] = nlohmann::json::array();
+	{
+	  nlohmann::json axisY;
+	  nlohmann::json valy = nlohmann::json::array();
+	  for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
+	    uint64_t bcount = itRg->second.rc.aCount[0][i] + itRg->second.rc.cCount[0][i] + itRg->second.rc.gCount[0][i] + itRg->second.rc.tCount[0][i] + itRg->second.rc.nCount[0][i];
+	    if (bcount > 0) valy.push_back((double) itRg->second.rc.aCount[0][i] / (double) bcount);
+	    else valy.push_back(nullptr);
 	  }
+	  axisY["values"] = valy;
+	  axisY["title"] = "A";
+	  j["y"]["data"].push_back(axisY);
 	}
-	rfile << "], \"title\": \"A\"},";
-	rfile << "{\"values\": [";
-	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	  uint64_t bcount = itRg->second.rc.aCount[0][i] + itRg->second.rc.cCount[0][i] + itRg->second.rc.gCount[0][i] + itRg->second.rc.tCount[0][i] + itRg->second.rc.nCount[0][i];
-	  if (bcount > 0) {
-	    if (i > 0) rfile << ",";
-	    rfile << (double) itRg->second.rc.cCount[0][i] / (double) bcount;
+	{
+	  nlohmann::json axisY;
+	  nlohmann::json valy = nlohmann::json::array();
+	  for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
+	    uint64_t bcount = itRg->second.rc.aCount[0][i] + itRg->second.rc.cCount[0][i] + itRg->second.rc.gCount[0][i] + itRg->second.rc.tCount[0][i] + itRg->second.rc.nCount[0][i];
+	    if (bcount > 0) valy.push_back((double) itRg->second.rc.cCount[0][i] / (double) bcount);
+	    else valy.push_back(nullptr);
 	  }
+	  axisY["values"] = valy;
+	  axisY["title"] = "C";
+	  j["y"]["data"].push_back(axisY);
 	}
-	rfile << "], \"title\": \"C\"},";
-	rfile << "{\"values\": [";
-	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	  uint64_t bcount = itRg->second.rc.aCount[0][i] + itRg->second.rc.cCount[0][i] + itRg->second.rc.gCount[0][i] + itRg->second.rc.tCount[0][i] + itRg->second.rc.nCount[0][i];
-	  if (bcount > 0) {
-	    if (i > 0) rfile << ",";
-	    rfile << (double) itRg->second.rc.gCount[0][i] / (double) bcount;
+	{
+	  nlohmann::json axisY;
+	  nlohmann::json valy = nlohmann::json::array();
+	  for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
+	    uint64_t bcount = itRg->second.rc.aCount[0][i] + itRg->second.rc.cCount[0][i] + itRg->second.rc.gCount[0][i] + itRg->second.rc.tCount[0][i] + itRg->second.rc.nCount[0][i];
+	    if (bcount > 0) valy.push_back((double) itRg->second.rc.gCount[0][i] / (double) bcount);
+	    else valy.push_back(nullptr);
 	  }
+	  axisY["values"] = valy;
+	  axisY["title"] = "G";
+	  j["y"]["data"].push_back(axisY);
 	}
-	rfile << "], \"title\": \"G\"},";
-	rfile << "{\"values\": [";
-	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	  uint64_t bcount = itRg->second.rc.aCount[0][i] + itRg->second.rc.cCount[0][i] + itRg->second.rc.gCount[0][i] + itRg->second.rc.tCount[0][i] + itRg->second.rc.nCount[0][i];
-	  if (bcount > 0) {
-	    if (i > 0) rfile << ",";
-	    rfile << (double) itRg->second.rc.tCount[0][i] / (double) bcount;
+	{
+	  nlohmann::json axisY;
+	  nlohmann::json valy = nlohmann::json::array();
+	  for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
+	    uint64_t bcount = itRg->second.rc.aCount[0][i] + itRg->second.rc.cCount[0][i] + itRg->second.rc.gCount[0][i] + itRg->second.rc.tCount[0][i] + itRg->second.rc.nCount[0][i];
+	    if (bcount > 0) valy.push_back((double) itRg->second.rc.tCount[0][i] / (double) bcount);
+	    else valy.push_back(nullptr);
 	  }
+	  axisY["values"] = valy;
+	  axisY["title"] = "T";
+	  j["y"]["data"].push_back(axisY);
 	}
-	rfile << "], \"title\": \"T\"},";
-	rfile << "{\"values\": [";
-	for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
-	  uint64_t bcount = itRg->second.rc.aCount[0][i] + itRg->second.rc.cCount[0][i] + itRg->second.rc.gCount[0][i] + itRg->second.rc.tCount[0][i] + itRg->second.rc.nCount[0][i];
-	  if (bcount > 0) {
-	    if (i > 0) rfile << ",";
-	    rfile << (double) itRg->second.rc.nCount[0][i] / (double) bcount;
+	{
+	  nlohmann::json axisY;
+	  nlohmann::json valy = nlohmann::json::array();
+	  for(uint32_t i = 0; i <= lastValidBQIdx; ++i) {
+	    uint64_t bcount = itRg->second.rc.aCount[0][i] + itRg->second.rc.cCount[0][i] + itRg->second.rc.gCount[0][i] + itRg->second.rc.tCount[0][i] + itRg->second.rc.nCount[0][i];
+	    if (bcount > 0) valy.push_back((double) itRg->second.rc.nCount[0][i] / (double) bcount);
+	    else valy.push_back(nullptr);
 	  }
+	  axisY["values"] = valy;
+	  axisY["title"] = "N";
+	  j["y"]["data"].push_back(axisY);
 	}
-	rfile << "], \"title\": \"N\"}], \"axis\": {\"title\": \"Base Fraction\"}}, \"type\": \"line\"}";
+	j["y"]["axis"]["title"] = "Base Fraction";
+	j["type"] = "line";
+	rfile << j.dump();
       }
 
       // Paired-end?
