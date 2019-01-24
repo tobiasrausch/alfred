@@ -31,6 +31,8 @@ Contact: Tobias Rausch (rausch@embl.de)
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/device/file.hpp>
 
+#include <nlohmann/json.hpp>
+
 #include "tsv.h"
 
 namespace bamstats
@@ -51,152 +53,160 @@ namespace bamstats
     // Summary Table
     rfile << "\"summary\": ";
     {
-      rfile << "{\"id\": \"summaryTable\",";
-      rfile << "\"title\": \"Summary Statistics\",";
-      rfile << "\"data\": {\"columns\": [\"Sample\", \"Library\", \"#QCFail\", \"QCFailFraction\", \"#DuplicateMarked\", \"DuplicateFraction\", \"#Unmapped\", \"UnmappedFraction\", \"#Mapped\", \"MappedFraction\", \"#MappedRead1\", \"#MappedRead2\", \"RatioMapped2vsMapped1\", \"#MappedForward\", \"MappedForwardFraction\", \"#MappedReverse\", \"MappedReverseFraction\", \"#SecondaryAlignments\", \"SecondaryAlignmentFraction\", \"#SupplementaryAlignments\", \"SupplementaryAlignmentFraction\", \"#SplicedAlignments\", \"SplicedAlignmentFraction\", ";
-      rfile << "\"#Pairs\", \"#MappedPairs\", \"MappedPairsFraction\", \"#MappedSameChr\", \"MappedSameChrFraction\", \"#MappedProperPair\", \"MappedProperFraction\", ";
-      rfile << "\"#ReferenceBp\", \"#ReferenceNs\", \"#AlignedBases\", \"#MatchedBases\", \"MatchRate\", \"#MismatchedBases\", \"MismatchRate\", \"#DeletionsCigarD\", \"DeletionRate\", \"HomopolymerContextDel\", \"#InsertionsCigarI\", \"InsertionRate\", \"HomopolymerContextIns\", \"#SoftClippedBases\", \"SoftClipRate\", \"#HardClippedBases\", \"HardClipRate\", \"ErrorRate\", ";
-      rfile << "\"MedianReadLength\", \"DefaultLibraryLayout\", \"MedianInsertSize\", \"MedianCoverage\", \"SDCoverage\", \"CoveredBp\", \"FractionCovered\", \"BpCov1ToCovNRatio\", \"BpCov1ToCov2Ratio\", \"MedianMAPQ\"";
-      if (c.hasRegionFile) {
-	rfile << ",";
-	rfile << "\"#TotalBedBp\", \"#AlignedBasesInBed\", \"FractionInBed\", \"EnrichmentOverBed\"";
-      }
-      if (c.isMitagged) {
-	rfile << ",";
-	rfile << "\"#MItagged\", \"FractionMItagged\", \"#UMIs\"";
-      }
-      if (c.isHaplotagged) {
-	rfile << ",";
-	rfile << "\"#HaploTagged\", \"FractionHaploTagged\", \"#PhasedBlocks\", \"N50PhasedBlockLength\"";
-      }
-      rfile << "], \"rows\": ["; 
+      nlohmann::json j;
+      j["id"] = "summaryTable";
+      j["title"] = "Summary Statistics";
+      j["type"] = "table";
+      
+      // Columns
+      j["data"]["columns"] = {"Sample", "Library", "#QCFail", "QCFailFraction", "#DuplicateMarked", "DuplicateFraction", "#Unmapped", "UnmappedFraction", "#Mapped", "MappedFraction", "#MappedRead1", "#MappedRead2", "RatioMapped2vsMapped1", "#MappedForward", "MappedForwardFraction", "#MappedReverse", "MappedReverseFraction", "#SecondaryAlignments", "SecondaryAlignmentFraction", "#SupplementaryAlignments", "SupplementaryAlignmentFraction", "#SplicedAlignments", "SplicedAlignmentFraction", "#Pairs", "#MappedPairs", "MappedPairsFraction", "#MappedSameChr", "MappedSameChrFraction", "#MappedProperPair", "MappedProperFraction", "#ReferenceBp", "#ReferenceNs", "#AlignedBases", "#MatchedBases", "MatchRate", "#MismatchedBases", "MismatchRate", "#DeletionsCigarD", "DeletionRate", "HomopolymerContextDel", "#InsertionsCigarI", "InsertionRate", "HomopolymerContextIns", "#SoftClippedBases", "SoftClipRate", "#HardClippedBases", "HardClipRate", "ErrorRate", "MedianReadLength", "DefaultLibraryLayout", "MedianInsertSize", "MedianCoverage", "SDCoverage", "CoveredBp", "FractionCovered", "BpCov1ToCovNRatio", "BpCov1ToCov2Ratio", "MedianMAPQ"};
+      if (c.hasRegionFile) j["data"]["columns"].insert(j["data"]["columns"].end(), {"#TotalBedBp", "#AlignedBasesInBed", "FractionInBed", "EnrichmentOverBed"});
+      if (c.isMitagged) j["data"]["columns"].insert(j["data"]["columns"].end(), {"#MItagged", "FractionMItagged", "#UMIs"});
+      if (c.isHaplotagged) j["data"]["columns"].insert(j["data"]["columns"].end(), {"#HaploTagged", "FractionHaploTagged", "#PhasedBlocks", "N50PhasedBlockLength"});
+
+      // Rows
+      j["data"]["rows"] = nlohmann::json::array();
       for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
 	uint64_t totalReadCount = _totalReadCount(itRg);
 	uint64_t mappedCount = itRg->second.rc.mapped1 + itRg->second.rc.mapped2;
-	if (itRg != rgMap.begin()) rfile << ",";
-	rfile << "[";
-	rfile << "\"" << c.sampleName << "\"" << ",";
-	rfile << "\"" << itRg->first << "\"" << ",";
-	rfile << itRg->second.rc.qcfail << ",";
-	rfile << (double) itRg->second.rc.qcfail / (double) totalReadCount << ",";
-	rfile << itRg->second.rc.dup << ",";
-	rfile << (double) itRg->second.rc.dup / (double) totalReadCount << ",";
-	rfile << itRg->second.rc.unmap << ",";
-	rfile << (double) itRg->second.rc.unmap / (double) totalReadCount << ",";
-	rfile << mappedCount << ",";
-	rfile << (double) mappedCount / (double) totalReadCount << ",";
-	rfile << itRg->second.rc.mapped1 << ",";
-	rfile << itRg->second.rc.mapped2 << ",";
-	rfile << (double) itRg->second.rc.mapped2 / (double) itRg->second.rc.mapped1 << ",";
-	rfile << itRg->second.rc.forward << ",";
-	rfile << (double) itRg->second.rc.forward / (double) mappedCount << ",";
-	rfile << itRg->second.rc.reverse << ",";
-	rfile << (double) itRg->second.rc.reverse / (double) mappedCount << ",";
-	rfile << itRg->second.rc.secondary << ",";
-	rfile << (double) itRg->second.rc.secondary / (double) mappedCount << ",";
-	rfile << itRg->second.rc.supplementary << ",";
-	rfile << (double) itRg->second.rc.supplementary / (double) mappedCount << ",";
-	rfile << itRg->second.rc.spliced << ",";
-	rfile << (double) itRg->second.rc.spliced / (double) mappedCount << ",";
+	
+	nlohmann::json row = nlohmann::json::array();
+	row.push_back(c.sampleName);
+	row.push_back(itRg->first);
+	row.push_back(itRg->second.rc.qcfail);
+	if (totalReadCount > 0) row.push_back(itRg->second.rc.qcfail / (double) totalReadCount);
+	else row.push_back(nullptr);
+	row.push_back(itRg->second.rc.dup);
+	if (totalReadCount > 0) row.push_back((double) itRg->second.rc.dup / (double) totalReadCount);
+	else row.push_back(nullptr);
+	row.push_back(itRg->second.rc.unmap);
+	if (totalReadCount > 0) row.push_back((double) itRg->second.rc.unmap / (double) totalReadCount);
+	else row.push_back(nullptr);
+	row.push_back(mappedCount);
+	if (totalReadCount > 0) row.push_back((double) mappedCount / (double) totalReadCount);
+	else row.push_back(nullptr);
+	row.push_back(itRg->second.rc.mapped1);
+	row.push_back(itRg->second.rc.mapped2);
+	if (itRg->second.rc.mapped1 > 0) row.push_back((double) itRg->second.rc.mapped2 / (double) itRg->second.rc.mapped1);
+	else row.push_back(nullptr);
+	row.push_back(itRg->second.rc.forward);
+	if (mappedCount > 0) row.push_back((double) itRg->second.rc.forward / (double) mappedCount);
+	else row.push_back(nullptr);
+	row.push_back(itRg->second.rc.reverse);
+	if (mappedCount > 0) row.push_back((double) itRg->second.rc.reverse / (double) mappedCount);
+	else row.push_back(nullptr);
+	row.push_back(itRg->second.rc.secondary);
+	if (mappedCount > 0) row.push_back((double) itRg->second.rc.secondary / (double) mappedCount);
+	else row.push_back(nullptr);
+	row.push_back(itRg->second.rc.supplementary);
+	if (mappedCount > 0) row.push_back((double) itRg->second.rc.supplementary / (double) mappedCount);
+	else row.push_back(nullptr);
+	row.push_back(itRg->second.rc.spliced);
+	if (mappedCount > 0) row.push_back((double) itRg->second.rc.spliced / (double) mappedCount);
+	else row.push_back(nullptr);
 
 	// Paired counts
 	int64_t paired = itRg->second.pc.paired / 2;
 	int64_t mapped = itRg->second.pc.mapped / 2;
 	int64_t mappedSameChr = itRg->second.pc.mappedSameChr / 2;
 	int64_t mappedProper = itRg->second.pc.mappedProper / 2;
-	double mappedpairedfrac = 0;
-	if (paired > 0) mappedpairedfrac = (double) mapped / (double) paired;
-	double mappedpairedchrfrac = 0;
-	if (paired > 0) mappedpairedchrfrac = (double) mappedSameChr / (double) paired;
-	double mappedproperfrac = 0;
-	if (paired > 0) mappedproperfrac = (double) mappedProper / (double) paired;
-	rfile << paired << ",";
-	rfile << mapped << ",";
-	rfile << mappedpairedfrac << ",";
-	rfile << mappedSameChr << ",";
-	rfile << mappedpairedchrfrac << ",";
-	rfile << mappedProper << ",";
-	rfile << mappedproperfrac << ",";
-
+	row.push_back(paired);
+	row.push_back(mapped);
+	if (paired > 0) row.push_back((double) mapped / (double) paired);
+	else row.push_back(nullptr);
+	row.push_back(mappedSameChr);
+	if (paired > 0) row.push_back((double) mappedSameChr / (double) paired);
+	else row.push_back(nullptr);
+	row.push_back(mappedProper);
+	if (paired > 0) row.push_back((double) mappedProper / (double) paired);
+	else row.push_back(nullptr);
+	
 	// Homopolymer Context of InDels
 	double insFrac = _homopolymerIndel(itRg->second.bc.insHomACGTN);
 	double delFrac = _homopolymerIndel(itRg->second.bc.delHomACGTN);
 
 	// Error rates
 	uint64_t alignedbases = itRg->second.bc.matchCount + itRg->second.bc.mismatchCount;
-	double errRate = (double) (itRg->second.bc.mismatchCount + itRg->second.bc.delCount + itRg->second.bc.insCount + itRg->second.bc.softClipCount + itRg->second.bc.hardClipCount) / (double) alignedbases;
-	rfile << rf.referencebp << ",";
-	rfile << rf.ncount << ",";
-	rfile << alignedbases << ",";
-	rfile << itRg->second.bc.matchCount << ",";
-	rfile << (double) itRg->second.bc.matchCount / (double) alignedbases << ",";
-	rfile << itRg->second.bc.mismatchCount << ",";
-	rfile << (double) itRg->second.bc.mismatchCount / (double) alignedbases << ",";
-	rfile << itRg->second.bc.delCount << ",";
-	rfile << (double) itRg->second.bc.delCount / (double) alignedbases << ",";
-	rfile << delFrac << ",";
-	rfile << itRg->second.bc.insCount << ",";
-	rfile << (double) itRg->second.bc.insCount / (double) alignedbases << ",";
-	rfile << insFrac << ",";
-	rfile << itRg->second.bc.softClipCount << ",";
-	rfile << (double) itRg->second.bc.softClipCount / (double) alignedbases << ",";
-	rfile << itRg->second.bc.hardClipCount << ",";
-	rfile << (double) itRg->second.bc.hardClipCount / (double) alignedbases << ",";
-	rfile << errRate << ",";
-
-	// Median coverage, read length, etc.
+	row.push_back(rf.referencebp);
+	row.push_back(rf.ncount);
+	row.push_back(alignedbases);
+	row.push_back(itRg->second.bc.matchCount);
+	if (alignedbases > 0) row.push_back((double) itRg->second.bc.matchCount / (double) alignedbases);
+	else row.push_back(nullptr);
+	row.push_back(itRg->second.bc.mismatchCount);
+	if (alignedbases > 0) row.push_back((double) itRg->second.bc.mismatchCount / (double) alignedbases);
+	else row.push_back(nullptr);
+	row.push_back(itRg->second.bc.delCount);
+	if (alignedbases > 0) row.push_back((double) itRg->second.bc.delCount / (double) alignedbases);
+	else row.push_back(nullptr);
+	row.push_back(delFrac);
+	row.push_back(itRg->second.bc.insCount);
+	if (alignedbases > 0) row.push_back((double) itRg->second.bc.insCount / (double) alignedbases);
+	else row.push_back(nullptr);
+	row.push_back(insFrac);
+	row.push_back(itRg->second.bc.softClipCount);
+	if (alignedbases > 0) row.push_back((double) itRg->second.bc.softClipCount / (double) alignedbases);
+	else row.push_back(nullptr);
+	row.push_back(itRg->second.bc.hardClipCount);
+	if (alignedbases > 0) row.push_back((double) itRg->second.bc.hardClipCount / (double) alignedbases);
+	else row.push_back(nullptr);
+	if (alignedbases > 0) row.push_back((double) (itRg->second.bc.mismatchCount + itRg->second.bc.delCount + itRg->second.bc.insCount + itRg->second.bc.softClipCount + itRg->second.bc.hardClipCount) / (double) alignedbases);
+	else row.push_back(nullptr);
+	
+	// Median coverage, read length, standardized SD of genomic coverage, ...
 	int32_t deflayout = _defLayout(itRg);
-	int32_t medISize = _medISize(itRg, deflayout);
-
-	// Standardized SD of genomic coverage
-	double ssdcov = 1000 * sdFromHistogram(itRg->second.bc.bpWithCoverage) / std::sqrt((double) mappedCount);
-	double fraccovbp = (double) itRg->second.bc.nd / (double) (rf.referencebp - rf.ncount);
-	double pbc1 = (double) itRg->second.bc.n1 / (double) itRg->second.bc.nd;
-	double pbc2 = (double) itRg->second.bc.n1 / (double) itRg->second.bc.n2;
-
-	if (itRg->second.pc.paired) rfile << "\"" << medianFromHistogram(itRg->second.rc.lRc[0]) << ":" << medianFromHistogram(itRg->second.rc.lRc[1]) << "\",";
-	else rfile << medianFromHistogram(itRg->second.rc.lRc[0]) << ",";
-	rfile << "\"" << _defLayoutToString(deflayout) << "\"" << ",";
-	rfile << medISize << ",";
-	rfile <<  medianFromHistogram(itRg->second.bc.bpWithCoverage) << ",";
-	rfile << ssdcov << ",";
-	rfile << itRg->second.bc.nd << ",";
-	rfile << fraccovbp << ",";
-	rfile << pbc1 << ",";
-	rfile << pbc2 << ",";
-	rfile << medianFromHistogram(itRg->second.qc.qcount);
-
+	if (itRg->second.pc.paired) {
+	  std::string rlstr = boost::lexical_cast<std::string>(medianFromHistogram(itRg->second.rc.lRc[0])) + ":" + boost::lexical_cast<std::string>(medianFromHistogram(itRg->second.rc.lRc[1]));
+	  row.push_back(rlstr);
+	  row.push_back(_defLayoutToString(deflayout));
+	  row.push_back(_medISize(itRg, deflayout));
+	} else {
+	  row.push_back(medianFromHistogram(itRg->second.rc.lRc[0]));
+	  row.push_back(nullptr);
+	  row.push_back(nullptr);
+	}
+	row.push_back(medianFromHistogram(itRg->second.bc.bpWithCoverage));
+	if (mappedCount > 0) row.push_back((double) (1000.0 * sdFromHistogram(itRg->second.bc.bpWithCoverage) / std::sqrt((double) mappedCount)));
+	else row.push_back(nullptr);
+	row.push_back(itRg->second.bc.nd);
+	if ((rf.referencebp - rf.ncount) > 0) row.push_back((double) itRg->second.bc.nd / (double) (rf.referencebp - rf.ncount));
+	else row.push_back(nullptr);
+	if (itRg->second.bc.nd > 0) row.push_back((double) itRg->second.bc.n1 / (double) itRg->second.bc.nd);
+	else row.push_back(nullptr);
+	if (itRg->second.bc.n2 > 0) row.push_back((double) itRg->second.bc.n1 / (double) itRg->second.bc.n2);
+	else row.push_back(nullptr);
+	row.push_back(medianFromHistogram(itRg->second.qc.qcount));
+	
 	// Bed metrics
 	if (c.hasRegionFile) {
 	  uint64_t nonN = rf.referencebp - rf.ncount;
 	  typename BedCounts::TOnTargetMap::const_iterator itOT = be.onTarget.find(itRg->first);
 	  uint64_t alignedBedBases = itOT->second[0];
 	  double fractioninbed = (double) alignedBedBases / (double) alignedbases;
-	  double enrichment = fractioninbed / ((double) rf.totalBedSize / (double) nonN);
-	  rfile << ",";
-	  rfile << rf.totalBedSize << ",";
-	  rfile << alignedBedBases << ",";
-	  rfile << fractioninbed << ",";
-	  rfile << enrichment;
+	  double bedfraction = ((double) rf.totalBedSize / (double) nonN);
+	  row.push_back(rf.totalBedSize);
+	  row.push_back(alignedBedBases);
+	  if (alignedbases > 0) row.push_back((double) alignedBedBases / (double) alignedbases);
+	  else row.push_back(nullptr);
+	  if (bedfraction > 0) row.push_back(fractioninbed / bedfraction);
+	  else row.push_back(nullptr);
 	}
 	if (c.isMitagged) {
-	  rfile << ",";
-	  rfile << itRg->second.rc.mitagged << ",";
-	  rfile << (double) itRg->second.rc.mitagged / (double) totalReadCount << ",";
-	  rfile << itRg->second.rc.umi.count();
+	  row.push_back(itRg->second.rc.mitagged);
+	  if (totalReadCount > 0) row.push_back((double) itRg->second.rc.mitagged / (double) totalReadCount);
+	  else row.push_back(nullptr);
+	  row.push_back(itRg->second.rc.umi.count());
 	}
 	if (c.isHaplotagged) {
-	  int32_t n50ps = n50PhasedBlockLength(itRg->second.rc.brange);
-	  rfile << ",";
-	  rfile << itRg->second.rc.haplotagged << ",";
-	  rfile << (double) itRg->second.rc.haplotagged / (double) totalReadCount << ",";
-	  rfile << phasedBlocks(itRg->second.rc.brange) << ",";
-	  rfile << n50ps;
+	  row.push_back(itRg->second.rc.haplotagged);
+	  if (totalReadCount > 0) row.push_back((double) itRg->second.rc.haplotagged / (double) totalReadCount);
+	  else row.push_back(nullptr);
+	  row.push_back(phasedBlocks(itRg->second.rc.brange));
+	  row.push_back(n50PhasedBlockLength(itRg->second.rc.brange));
 	}
-	rfile << "]";
+	j["data"]["rows"].push_back(row);
       }
-      rfile << "]},";
-      rfile << "\"type\": \"table\"}";
+      rfile << j.dump();
     }
     rfile << ",";
     rfile << std::endl;

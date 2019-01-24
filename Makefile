@@ -4,6 +4,7 @@ STATIC ?= 0
 # Submodules
 PWD = $(shell pwd)
 EBROOTHTSLIB ?= ${PWD}/src/htslib/
+JLIB ?= ${PWD}/src/jlib/
 
 # Install dir
 prefix = ${PWD}
@@ -13,9 +14,9 @@ bindir ?= $(exec_prefix)/bin
 # Flags
 CXX=g++
 CXXFLAGS = ${CMDCXXFLAGS}
-CXXFLAGS += -isystem ${EBROOTHTSLIB} -pedantic -W -Wall -Wno-unknown-pragmas -D__STDC_LIMIT_MACROS -fno-strict-aliasing -fpermissive
+CXXFLAGS += -std=c++11 -isystem ${JLIB} -isystem ${EBROOTHTSLIB} -pedantic -W -Wall -Wno-unknown-pragmas -D__STDC_LIMIT_MACROS -fno-strict-aliasing
 LDFLAGS = ${CMDLDFLAGS}
-LDFLAGS += -L${EBROOTHTSLIB} -L${EBROOTHTSLIB}/lib -lboost_iostreams -lboost_filesystem -lboost_system -lboost_program_options -lboost_date_time 
+LDFLAGS += -L${EBROOTHTSLIB} -L${EBROOTHTSLIB}/lib -lboost_iostreams -lboost_filesystem -lboost_system -lboost_program_options -lboost_date_time -L${EBROOTHTSLIB} -L${EBROOTHTSLIB}/lib -lpthread
 
 # Additional flags for release/debug
 ifeq (${STATIC}, 1)
