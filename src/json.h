@@ -809,22 +809,35 @@ namespace bamstats
 
       // Homopolymer InDel Context
       {
-	rfile << ",{\"id\": \"homIndelContext\", \"title\": \"InDel Context\",";
-	rfile << "\"x\": {\"data\": [{\"values\": [\"A\",\"C\",\"G\",\"T\",\"N\",\"None\"]";
-	rfile << "}], \"axis\": {\"title\": \"Homopolymer\"}},";
-	rfile << "\"y\": {\"data\": [";
-	rfile << "{\"values\": [";
-	for(uint32_t i = 0; i < itRg->second.bc.delHomACGTN.size(); ++i) {
-	  if (i > 0) rfile << ",";
-	  rfile << itRg->second.bc.delHomACGTN[i];
+	rfile << ',';
+	nlohmann::json j;
+	j["id"] = "homIndelContext";
+	j["title"] = "InDel Context";
+	j["x"]["data"] = nlohmann::json::array();
+	nlohmann::json axisX;
+	axisX["values"] = {"A", "C", "G", "T", "N", "None"};
+	j["x"]["data"].push_back(axisX);
+	j["x"]["axis"]["title"] = "Homopolymer";
+	{
+	  nlohmann::json axisY;
+	  nlohmann::json valy = nlohmann::json::array();	
+	  for(uint32_t i = 0; i < itRg->second.bc.delHomACGTN.size(); ++i) valy.push_back(itRg->second.bc.delHomACGTN[i]);
+	  axisY["values"] = valy;
+	  axisY["title"] = "Deletion";
+	  j["y"]["data"].push_back(axisY);
 	}
-	rfile << "], \"title\": \"Deletion\"},";
-	rfile << "{\"values\": [";	
-	for(uint32_t i = 0; i < itRg->second.bc.insHomACGTN.size(); ++i) {
-	  if (i > 0) rfile << ",";
-	  rfile << itRg->second.bc.insHomACGTN[i];
+	{
+	  nlohmann::json axisY;
+	  nlohmann::json valy = nlohmann::json::array();
+	  for(uint32_t i = 0; i < itRg->second.bc.insHomACGTN.size(); ++i) valy.push_back(itRg->second.bc.insHomACGTN[i]);
+	  axisY["values"] = valy;
+	  axisY["title"] = "Insertion";
+	  j["y"]["data"].push_back(axisY);
 	}
-	rfile << "], \"title\": \"Insertion\"}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"bar\", \"options\": {\"layout\": \"group\"}}";
+	j["y"]["axis"]["title"] = "Count";
+	j["type"] = "bar";
+	j["options"]["layout"] = "group";
+	rfile << j.dump();
       }
       
       // Mapping statistics by chromosome
