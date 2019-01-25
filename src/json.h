@@ -592,41 +592,62 @@ namespace bamstats
 	  else if (deflayout == 2) lastFrac = _lastPercentage(itRg->second.pc.rPlus, itRg->second.pc.maxInsertSize);
 	  else if (deflayout == 3) lastFrac = _lastPercentage(itRg->second.pc.rMinus, itRg->second.pc.maxInsertSize);
 	  else lastFrac = 0;
-	  rfile << ",{\"id\": \"insertSize\", \"title\": \"Insert size histogram\",";
+	  rfile << ',';
+	  nlohmann::json j;
+	  j["id"] = "insertSize";
+	  j["title"] = "Insert size histogram";
+	  j["x"]["data"] = nlohmann::json::array();
+	  j["x"]["axis"]["title"] = "Insert Size";
+	  j["x"]["axis"]["range"] = {0, 1000};
 	  if (lastFrac > 0) {
-	    rfile << "\"subtitle\": \"" << lastFrac << "% of all " << _defLayoutToString(deflayout) << " pairs span >= " << itRg->second.pc.maxInsertSize << "bp\",";
+	    std::string rlstr = boost::lexical_cast<std::string>(lastFrac) + "% of all ";
+	    rlstr += _defLayoutToString(deflayout);
+	    rlstr += " pairs span >= " + boost::lexical_cast<std::string>(itRg->second.pc.maxInsertSize) + "bp";
+	    j["subtitle"] = rlstr;
 	  }
-	  rfile << "\"x\": {\"data\": [{\"values\": [";
-	  for(uint32_t i = 0; i <= lastValidIS; ++i) {
-	    if (i > 0) rfile << ",";
-	    rfile << i;
+	  {
+	    nlohmann::json axisX;
+	    nlohmann::json valx = nlohmann::json::array();
+	    for(uint32_t i = 0; i <= lastValidIS; ++i) valx.push_back(i);
+	    axisX["values"] = valx;
+	    j["x"]["data"].push_back(axisX);
 	  }
-	  rfile << "]}], \"axis\": {\"title\": \"Insert Size\", \"range\": [0,1000]}},";
-	  rfile << "\"y\": {\"data\": [";
-	  rfile << "{\"values\": [";
-	  for(uint32_t i = 0; i <= lastValidIS; ++i) {
-	    if (i > 0) rfile << ",";
-	    rfile << itRg->second.pc.fPlus[i];
+	  j["y"]["data"] = nlohmann::json::array();
+	  {
+	    nlohmann::json axisY;
+	    nlohmann::json valy = nlohmann::json::array();
+	    for(uint32_t i = 0; i <= lastValidIS; ++i) valy.push_back(itRg->second.pc.fPlus[i]);
+	    axisY["values"] = valy;
+	    axisY["title"] = "F+";
+	    j["y"]["data"].push_back(axisY);
 	  }
-	  rfile << "], \"title\": \"F+\"},";
-	  rfile << "{\"values\": [";
-	  for(uint32_t i = 0; i <= lastValidIS; ++i) {
-	    if (i > 0) rfile << ",";
-	    rfile << itRg->second.pc.fMinus[i];
+	  {
+	    nlohmann::json axisY;
+	    nlohmann::json valy = nlohmann::json::array();
+	    for(uint32_t i = 0; i <= lastValidIS; ++i) valy.push_back(itRg->second.pc.fMinus[i]);
+	    axisY["values"] = valy;
+	    axisY["title"] = "F-";
+	    j["y"]["data"].push_back(axisY);
 	  }
-	  rfile << "], \"title\": \"F-\"},";
-	  rfile << "{\"values\": [";
-	  for(uint32_t i = 0; i <= lastValidIS; ++i) {
-	    if (i > 0) rfile << ",";
-	    rfile << itRg->second.pc.rPlus[i];
+	  {
+	    nlohmann::json axisY;
+	    nlohmann::json valy = nlohmann::json::array();
+	    for(uint32_t i = 0; i <= lastValidIS; ++i) valy.push_back(itRg->second.pc.rPlus[i]);
+	    axisY["values"] = valy;
+	    axisY["title"] = "R+";
+	    j["y"]["data"].push_back(axisY);
 	  }
-	  rfile << "], \"title\": \"R+\"},";
-	  rfile << "{\"values\": [";
-	  for(uint32_t i = 0; i <= lastValidIS; ++i) {
-	    if (i > 0) rfile << ",";
-	    rfile << itRg->second.pc.rMinus[i];
+	  {
+	    nlohmann::json axisY;
+	    nlohmann::json valy = nlohmann::json::array();
+	    for(uint32_t i = 0; i <= lastValidIS; ++i) valy.push_back(itRg->second.pc.rMinus[i]);
+	    axisY["values"] = valy;
+	    axisY["title"] = "R-";
+	    j["y"]["data"].push_back(axisY);
 	  }
-	  rfile << "], \"title\": \"R-\"}], \"axis\": {\"title\": \"Count\"}}, \"type\": \"line\"}";
+	  j["y"]["axis"]["title"] = "Count";
+	  j["type"] = "line";
+	  rfile << j.dump();
 	}
       }
 
