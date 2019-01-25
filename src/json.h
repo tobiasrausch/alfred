@@ -47,7 +47,29 @@ namespace bamstats
     rfile.push(boost::iostreams::file_sink(c.jsonout.string().c_str(), std::ios_base::out | std::ios_base::binary));
 
     // Sample information
-    rfile << "{\"samples\": [";
+    rfile << '{';
+    nlohmann::json meta;
+    meta["method"] = "alfred";
+    meta["version"] = alfredVersionNumber;
+    meta["subcommand"] = "qc";
+    meta["regionFile"] == c.regionFile.string();
+    meta["jsonout"] = c.jsonout.string();
+    meta["outfile"] = c.outfile.string();
+    meta["genome"] = c.genome.string();
+    meta["bamFile"] = c.bamFile.string();
+    meta["sampleName"] = c.sampleName;
+    meta["rgname"] = c.rgname;
+    meta["minChrLen"] = c.minChrLen;
+    meta["secondary"] = c.secondary;
+    meta["supplementary"] = c.supplementary;
+    meta["isHaplotagged"] = c.isHaplotagged;
+    meta["isMitagged"] = c.isMitagged;
+    meta["nXChrLen"] = c.nXChrLen;
+    meta["ignoreRG"] = c.ignoreRG;
+    meta["singleRG"] = c.singleRG;
+    rfile << "\"meta\":" << meta.dump() << ',';
+    
+    rfile << "\"samples\":[";
     nlohmann::json sp;
     sp["id"] = c.sampleName;
 
