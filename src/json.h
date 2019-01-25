@@ -47,11 +47,11 @@ namespace bamstats
     rfile.push(boost::iostreams::file_sink(c.jsonout.string().c_str(), std::ios_base::out | std::ios_base::binary));
 
     // Sample information
-    rfile << "{\"samples\": [{";
-    rfile << "\"id\": \"" << c.sampleName << "\",";
+    rfile << "{\"samples\": [";
+    nlohmann::json sp;
+    sp["id"] = c.sampleName;
 
     // Summary Table
-    rfile << "\"summary\": ";
     {
       nlohmann::json j;
       j["id"] = "summaryTable";
@@ -206,19 +206,17 @@ namespace bamstats
 	}
 	j["data"]["rows"].push_back(row);
       }
-      rfile << j.dump();
+      sp["summary"] = j;
     }
-    rfile << ",";
     
     // Read-group information
-    rfile << "\"readGroups\": [";
+    sp["readGroups"] = nlohmann::json::array();
 
     // All read-groups
     for(typename TRGMap::const_iterator itRg = rgMap.begin(); itRg != rgMap.end(); ++itRg) {
-      if (itRg != rgMap.begin()) rfile << ", ";
-      rfile << "{";
-      rfile << "\"id\": \"" << itRg->first << "\",";
-      rfile << "\"metrics\": [";
+      nlohmann::json rg;
+      rg["id"] = itRg->first;
+      rg["metrics"] = nlohmann::json::array();
 
       // Base content read1
       {
@@ -304,14 +302,13 @@ namespace bamstats
 	}
 	j["y"]["axis"]["title"] = "Base Fraction";
 	j["type"] = "line";
-	rfile << j.dump();
+	rg["metrics"].push_back(j);
       }
 
       // Paired-end?
       if (itRg->second.pc.paired) {
 	// Base content read2
 	{
-	  rfile << ',';
 	  nlohmann::json j;
 	  j["id"] = "baseContentRead2";
 	  j["title"] = "Base content distribution read2";
@@ -388,7 +385,7 @@ namespace bamstats
 	  }
 	  j["y"]["axis"]["title"] = "Base Fraction";
 	  j["type"] = "line";
-	  rfile << j.dump();
+	  rg["metrics"].push_back(j);
 	}
       }
 	
@@ -396,7 +393,6 @@ namespace bamstats
       {
 	float lastFrac1 = _lastPercentage(itRg->second.rc.lRc[0], itRg->second.rc.maxReadLength);
 	float lastFrac2 = _lastPercentage(itRg->second.rc.lRc[1], itRg->second.rc.maxReadLength);
-	rfile << ',';
 	nlohmann::json j;
 	j["id"] = "readLength";
 	j["title"] = "Read length distribution";
@@ -453,12 +449,11 @@ namespace bamstats
 	j["y"]["axis"]["title"] = "Count";
 	j["type"] = "bar";
 	j["options"]["layout"] = "group";
-	rfile << j.dump();	  
+	rg["metrics"].push_back(j);
       }
       
       // Mean Base Quality
       {
-	rfile << ',';
 	nlohmann::json j;
 	j["id"] = "baseQuality";
 	j["title"] = "Mean base quality distribution";
@@ -512,12 +507,11 @@ namespace bamstats
 	}
 	j["y"]["axis"]["title"] = "Average base quality";
 	j["type"] = "line";
-	rfile << j.dump();	  
+	rg["metrics"].push_back(j);
       }
 
       // Mapping quality histogram
       {
-	rfile << ',';
 	nlohmann::json j;
 	j["id"] = "mappingQuality";
 	j["title"] = "Mapping quality distribution";
@@ -542,14 +536,13 @@ namespace bamstats
 	j["y"]["axis"]["title"] = "Count";
 	j["type"] = "bar";
 	j["options"]["layout"] = "group";
-	rfile << j.dump();
+	rg["metrics"].push_back(j);
       }
 
       // Coverage Histogram
       {
 	uint32_t lastValidCO = _lastNonZeroIdx(itRg->second.bc.bpWithCoverage, itRg->second.bc.maxCoverage);
 	float lastFrac = _lastPercentage(itRg->second.bc.bpWithCoverage, itRg->second.bc.maxCoverage);
-	rfile << ',';
 	nlohmann::json j;
 	j["id"] = "coverageHistogram";
 	j["title"] = "Coverage histogram";
@@ -577,7 +570,7 @@ namespace bamstats
 	}
 	j["y"]["axis"]["title"] = "Count";
 	j["type"] = "line";
-	rfile << j.dump();
+	rg["metrics"].push_back(j);
       }
 
       // Insert Size Histogram
@@ -592,7 +585,6 @@ namespace bamstats
 	  else if (deflayout == 2) lastFrac = _lastPercentage(itRg->second.pc.rPlus, itRg->second.pc.maxInsertSize);
 	  else if (deflayout == 3) lastFrac = _lastPercentage(itRg->second.pc.rMinus, itRg->second.pc.maxInsertSize);
 	  else lastFrac = 0;
-	  rfile << ',';
 	  nlohmann::json j;
 	  j["id"] = "insertSize";
 	  j["title"] = "Insert size histogram";
@@ -647,7 +639,7 @@ namespace bamstats
 	  }
 	  j["y"]["axis"]["title"] = "Count";
 	  j["type"] = "line";
-	  rfile << j.dump();
+	  rg["metrics"].push_back(j);
 	}
       }
 
@@ -655,7 +647,6 @@ namespace bamstats
       if (c.hasRegionFile) {
 	// On target rate
 	{
-	  rfile << ',';
 	  nlohmann::json j;
 	  j["id"] = "onTarget";
 	  j["title"] = "On-target rate";
@@ -684,12 +675,11 @@ namespace bamstats
 	  j["y"]["axis"]["title"] = "Fraction on target";
 	  j["y"]["axis"]["range"] = {0, 1};
 	  j["type"] = "line";
-	  rfile << j.dump();
+	  rg["metrics"].push_back(j);
 	}
 
 	// Avg. target coverage
 	{
-	  rfile << ',';
 	  nlohmann::json j;
 	  j["id"] = "targetCoverage";
 	  j["title"] = "Targets above coverage threshold";
@@ -715,13 +705,12 @@ namespace bamstats
 	  j["y"]["axis"]["title"] = "Fraction above coverage";
 	  j["y"]["axis"]["range"] = {0, 1};
 	  j["type"] = "line";
-	  rfile << j.dump();
+	  rg["metrics"].push_back(j);
 	}
       }
 
       // InDel Size
       {
-	rfile << ',';
 	nlohmann::json j;
 	j["id"] = "indelSize";
 	j["title"] = "InDel Size";
@@ -763,12 +752,11 @@ namespace bamstats
 	j["y"]["axis"]["title"] = "Count";
 	j["type"] = "bar";
 	j["options"]["layout"] = "group";
-	rfile << j.dump();
+	rg["metrics"].push_back(j);
       }
 
       // GC Content
       {
-	rfile << ',';
 	nlohmann::json j;
 	j["id"] = "gcContent";
 	j["title"] = "GC content";
@@ -825,12 +813,11 @@ namespace bamstats
 	}
 	j["y"]["axis"]["title"] = "Normalized Fraction";
 	j["type"] = "line";
-	rfile << j.dump();
+	rg["metrics"].push_back(j);
       }
 
       // Homopolymer InDel Context
       {
-	rfile << ',';
 	nlohmann::json j;
 	j["id"] = "homIndelContext";
 	j["title"] = "InDel Context";
@@ -858,12 +845,11 @@ namespace bamstats
 	j["y"]["axis"]["title"] = "Count";
 	j["type"] = "bar";
 	j["options"]["layout"] = "group";
-	rfile << j.dump();
+	rg["metrics"].push_back(j);
       }
       
       // Mapping statistics by chromosome
       {
-	rfile << ',';
 	nlohmann::json j;
 	j["id"] = "mappingByChromosome";
 	j["title"] = "Mapping statistics by chromosome";
@@ -894,13 +880,12 @@ namespace bamstats
 	  }
 	}
 	j["type"] = "table";
-	rfile << j.dump();
+	rg["metrics"].push_back(j);
       }
-
-      
-      rfile << "]}";
+      sp["readGroups"].push_back(rg);
     }
-    rfile << "]}]}" << std::endl;
+    rfile << sp.dump();
+    rfile << "]}" << std::endl;
     rfile.pop();
   }
  
