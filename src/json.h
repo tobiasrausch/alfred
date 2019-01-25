@@ -747,8 +747,12 @@ namespace bamstats
 
       // GC Content
       {
-	rfile << ",{\"id\": \"gcContent\", \"title\": \"GC content\",";
-	rfile << "\"x\": {\"data\": [{\"values\": [";
+	rfile << ',';
+	nlohmann::json j;
+	j["id"] = "gcContent";
+	j["title"] = "GC content";
+	j["x"]["data"] = nlohmann::json::array();
+	j["x"]["axis"]["title"] = "GC fraction";
 	double refTotal = 0;
 	double sampleTotal = 0;
 	double beTotal = 0;
@@ -757,38 +761,50 @@ namespace bamstats
 	  sampleTotal += itRg->second.rc.gcContent[i];
 	  if (c.hasRegionFile) beTotal += be.bedGcContent[i];
 	}
-	for(uint32_t i = 0; i < 102; ++i) {
-	  if (i > 0) rfile << ",";
-	  rfile << (double) i / (double) 101;
+	{
+	  nlohmann::json axisX;
+	  nlohmann::json valx = nlohmann::json::array();
+	  for(uint32_t i = 0; i < 102; ++i) valx.push_back((double) i / (double) 101);
+	  axisX["values"] = valx;
+	  j["x"]["data"].push_back(axisX);
 	}
-	rfile << "]}], \"axis\": {\"title\": \"GC fraction\"}},";
-	rfile << "\"y\": {\"data\": [";
-	rfile << "{\"values\": [";
-	for(uint32_t i = 0; i < 102; ++i) {
-	  if (i > 0) rfile << ",";
-	  double frac = 0;
-	  if (refTotal > 0) frac = (double) (rf.refGcContent[i]) / refTotal;
-	  rfile << frac;
-	}
-	rfile << "], \"title\": \"Reference\"},";
-	if (c.hasRegionFile) {
-	  rfile << "{\"values\": [";
+	j["y"]["data"] = nlohmann::json::array();
+	{
+	  nlohmann::json axisY;
+	  nlohmann::json valy = nlohmann::json::array();
 	  for(uint32_t i = 0; i < 102; ++i) {
-	    if (i > 0) rfile << ",";
-	    double frac = 0;
-	    if (beTotal > 0) frac = (double) be.bedGcContent[i] / beTotal;
-	    rfile << frac;
+	    if (refTotal > 0) valy.push_back((double) (rf.refGcContent[i]) / (double) refTotal);
+	    else valy.push_back(nullptr);
 	  }
-	  rfile << "], \"title\": \"Target\"},";
+	  axisY["values"] = valy;
+	  axisY["title"] = "Reference";
+	  j["y"]["data"].push_back(axisY);
 	}
-	rfile << "{\"values\": [";
-	for(uint32_t i = 0; i < 102; ++i) {
-	  if (i > 0) rfile << ",";
-	  double frac = 0;
-	  if (sampleTotal > 0) frac = (double) itRg->second.rc.gcContent[i] / sampleTotal;
-	  rfile << frac;
+	if (c.hasRegionFile) {
+	  nlohmann::json axisY;
+	  nlohmann::json valy = nlohmann::json::array();
+	  for(uint32_t i = 0; i < 102; ++i) {
+	    if (beTotal > 0) valy.push_back((double) be.bedGcContent[i] / (double) beTotal);
+	    else valy.push_back(nullptr);
+	  }
+	  axisY["values"] = valy;
+	  axisY["title"] = "Target";
+	  j["y"]["data"].push_back(axisY);
 	}
-	rfile << "], \"title\": \"Sample\"}], \"axis\": {\"title\": \"Normalized Fraction\"}}, \"type\": \"line\"}";
+	{
+	  nlohmann::json axisY;
+	  nlohmann::json valy = nlohmann::json::array();
+	  for(uint32_t i = 0; i < 102; ++i) {
+	    if (sampleTotal > 0) valy.push_back((double) itRg->second.rc.gcContent[i] / (double) sampleTotal);
+	    else valy.push_back(nullptr);
+	  }
+	  axisY["values"] = valy;
+	  axisY["title"] = "Sample";
+	  j["y"]["data"].push_back(axisY);
+	}
+	j["y"]["axis"]["title"] = "Normalized Fraction";
+	j["type"] = "line";
+	rfile << j.dump();
       }
 
       // Homopolymer InDel Context
