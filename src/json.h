@@ -842,37 +842,38 @@ namespace bamstats
       
       // Mapping statistics by chromosome
       {
-	rfile << ",{\"id\": \"mappingByChromosome\",";
-	rfile << "\"title\": \"Mapping statistics by chromosome\",";
-	rfile << "\"data\": {\"columns\": [\"Chr\", \"Size\", \"#N\", \"#GC\", \"GC-fraction\", \"mapped\", \"fracTotal\", \"observedExpected\"], \"rows\": [";
+	rfile << ',';
+	nlohmann::json j;
+	j["id"] = "mappingByChromosome";
+	j["title"] = "Mapping statistics by chromosome";
+	j["data"]["columns"] = {"Chr", "Size", "#N", "#GC", "GC-fraction", "mapped", "fracTotal", "observedExpected"};
 	uint64_t totalMappedChr = 0;
-	bool firstVal = true;
 	for(uint32_t i = 0; i < itRg->second.rc.mappedchr.size(); ++i) totalMappedChr += itRg->second.rc.mappedchr[i];
+	j["data"]["rows"] = nlohmann::json::array();
 	for(uint32_t i = 0; i < itRg->second.rc.mappedchr.size(); ++i) {
-	  if (hdr->target_len[i] > c.minChrLen) {
-	    if (!firstVal) rfile << ",";
-	    else firstVal = false;
-	    rfile << "[";
+	  if (hdr->target_len[i] > c.minChrLen) {	    	
+	    nlohmann::json row = nlohmann::json::array();
+	    row.push_back(hdr->target_name[i]);
+	    row.push_back(hdr->target_len[i]);
+	    row.push_back(rf.chrGC[i].ncount);
+	    row.push_back(rf.chrGC[i].gccount);
 	    double frac = 0;
 	    if (totalMappedChr > 0) frac = (double) itRg->second.rc.mappedchr[i] / (double) totalMappedChr;
-	    double expect = (double) (hdr->target_len[i] - rf.chrGC[i].ncount) / (double) (rf.referencebp - rf.ncount);
-	    double obsexprat = frac / expect;
-	    rfile << "\"" << hdr->target_name[i] << "\",";
-	    rfile << hdr->target_len[i] << ",";
-	    rfile << rf.chrGC[i].ncount << ",";
-	    rfile << rf.chrGC[i].gccount << ",";
+	    double expect = 0;
+	    if ((rf.referencebp - rf.ncount) > 0) expect = (double) (hdr->target_len[i] - rf.chrGC[i].ncount) / (double) (rf.referencebp - rf.ncount);
 	    double totalBases = hdr->target_len[i] - rf.chrGC[i].ncount;
-	    double gcfrac = 0;
-	    if (totalBases > 0) gcfrac = (double) rf.chrGC[i].gccount / totalBases;
-	    rfile << gcfrac << ",";
-	    rfile << itRg->second.rc.mappedchr[i] << ",";
-	    rfile << frac << ",";
-	    rfile << obsexprat;
-	    rfile << "]";
+	    if (totalBases > 0) row.push_back((double) rf.chrGC[i].gccount / totalBases);
+	    else row.push_back(nullptr);
+	    row.push_back(itRg->second.rc.mappedchr[i]);
+	    if (totalMappedChr > 0) row.push_back(frac);
+	    else row.push_back(nullptr);
+	    if ((totalMappedChr > 0) && (expect > 0)) row.push_back(frac / expect);
+	    else row.push_back(nullptr);
+	    j["data"]["rows"].push_back(row);
 	  }
 	}
-	rfile << "]},";
-	rfile << "\"type\": \"table\"}";
+	j["type"] = "table";
+	rfile << j.dump();
       }
 
       
