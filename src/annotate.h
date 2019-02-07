@@ -121,7 +121,7 @@ namespace bamstats
 	    int32_t start = boost::lexical_cast<int32_t>(*tokIter++);
 	    int32_t end = boost::lexical_cast<int32_t>(*tokIter++);
 	    {
-	      std::string name = "Peak" + boost::lexical_cast<std::string>(peakNames.size());
+	      std::string name = "Interval" + boost::lexical_cast<std::string>(peakNames.size());
 	      if (tokIter != tokens.end()) name = *tokIter++;
 	      peakNames.push_back(name);
 	    }
