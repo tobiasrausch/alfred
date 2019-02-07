@@ -49,6 +49,7 @@ namespace bamstats
   struct AnnotateConfig {
     typedef std::map<std::string, int32_t> TChrMap;
     bool motifPosOut;
+    bool nearest;
     uint8_t inputFileFormat;   // 0 = gtf, 1 = bed, 2 = gff3, 3 = motif file
     int32_t maxDistance;
     float motifScoreQuantile;
@@ -157,18 +158,30 @@ namespace bamstats
 	    }
 
 	    // Output overlapping features
+	    int32_t bestDistance = 250000000;
 	    int32_t peakId = peakNames.size() - 1;
 	    ofile << chrName << "\t" << start << "\t" << end << "\t" << peakNames[peakId] << "\t";
 	    // Feature names
 	    if (featureid.empty()) {
 	      ofile << "NA";
 	    } else {
-	      bool firstF = true;
-	      for(typename TFeatureIds::const_iterator itF = featureid.begin(); itF != featureid.end(); ++itF) {
-		if (!firstF) ofile << ',';
-		else firstF = false;
-		ofile << geneIds[*itF];
-		geneView[*itF].push_back(std::make_pair(dist[*itF], peakId));
+	      for(typename TFeatureIds::const_iterator itF = featureid.begin(); itF != featureid.end(); ++itF) geneView[*itF].push_back(std::make_pair(dist[*itF], peakId));
+	      if (c.nearest) {
+		int32_t bestFeature = 0;
+		for(typename TFeatureIds::const_iterator itF = featureid.begin(); itF != featureid.end(); ++itF) {
+		  if (std::abs(dist[*itF]) < std::abs(bestDistance)) {
+		    bestDistance = dist[*itF];
+		    bestFeature = *itF;
+		  }
+		}
+		ofile << geneIds[bestFeature];
+	      } else {
+		bool firstF = true;
+		for(typename TFeatureIds::const_iterator itF = featureid.begin(); itF != featureid.end(); ++itF) {
+		  if (!firstF) ofile << ',';
+		  else firstF = false;
+		  ofile << geneIds[*itF];
+		}
 	      }
 	    }
 	    ofile << "\t";
@@ -176,11 +189,15 @@ namespace bamstats
 	    if (featureid.empty()) {
 	      ofile << "NA";
 	    } else {
-	      bool firstF = true;
-	      for(typename TFeatureIds::const_iterator itF = featureid.begin(); itF != featureid.end(); ++itF) {
-		if (!firstF) ofile << ',';
-		else firstF = false;
-		ofile << dist[*itF];
+	      if (c.nearest) {
+		ofile << bestDistance;
+	      } else {
+		bool firstF = true;
+		for(typename TFeatureIds::const_iterator itF = featureid.begin(); itF != featureid.end(); ++itF) {
+		  if (!firstF) ofile << ',';
+		  else firstF = false;
+		  ofile << dist[*itF];
+		}
 	      }
 	    }
 	    ofile << std::endl;
@@ -196,22 +213,34 @@ namespace bamstats
     gfile << "gene\tpeak\tdistance" << std::endl;
     for(uint32_t i = 0; i < geneIds.size(); ++i) {
       if (!geneView[i].empty()) {
-	gfile << geneIds[i] << "\t";
-	std::sort(geneView[i].begin(), geneView[i].end());
-	bool firstF = true;
-	for(typename TPeaksPerGene::const_iterator itDP = geneView[i].begin(); itDP != geneView[i].end(); ++itDP) {
-	  if (!firstF) gfile << ',';
-	  else firstF = false;
-	  gfile << peakNames[itDP->second];
+	if (c.nearest) {
+	  int32_t bestDistance = 250000000;
+	  int32_t bestIdx = -1;
+	  for(typename TPeaksPerGene::const_iterator itDP = geneView[i].begin(); itDP != geneView[i].end(); ++itDP) {
+	    if (std::abs(itDP->first) < std::abs(bestDistance)) {
+	      bestIdx = itDP->second;
+	      bestDistance = itDP->first;
+	    }
+	  }
+	  gfile << geneIds[i] << "\t" << peakNames[bestIdx] << "\t" << bestDistance << std::endl;
+	} else {
+	  gfile << geneIds[i] << "\t";
+	  std::sort(geneView[i].begin(), geneView[i].end());
+	  bool firstF = true;
+	  for(typename TPeaksPerGene::const_iterator itDP = geneView[i].begin(); itDP != geneView[i].end(); ++itDP) {
+	    if (!firstF) gfile << ',';
+	    else firstF = false;
+	    gfile << peakNames[itDP->second];
+	  }
+	  gfile << "\t";
+	  firstF = true;
+	  for(typename TPeaksPerGene::const_iterator itDP = geneView[i].begin(); itDP != geneView[i].end(); ++itDP) {
+	    if (!firstF) gfile << ',';
+	    else firstF = false;
+	    gfile << itDP->first;
+	  }
+	  gfile << std::endl;
 	}
-	gfile << "\t";
-	firstF = true;
-	for(typename TPeaksPerGene::const_iterator itDP = geneView[i].begin(); itDP != geneView[i].end(); ++itDP) {
-	  if (!firstF) gfile << ',';
-	  else firstF = false;
-	  gfile << itDP->first;
-	}
-	gfile << std::endl;
       }
     }
     gfile.close();
@@ -277,6 +306,7 @@ namespace bamstats
       ("distance,d", boost::program_options::value<int32_t>(&c.maxDistance)->default_value(0), "max. distance (0: overlapping features only)")
       ("outgene,u", boost::program_options::value<boost::filesystem::path>(&c.outgene)->default_value("gene.bed"), "gene/motif-level output")
       ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("anno.bed"), "annotated peaks output")
+      ("nearest,n", "nearest feature only")
       ;
 
     boost::program_options::options_description gtfopt("GTF/GFF3 annotation file options");
@@ -331,6 +361,10 @@ namespace bamstats
     // Motif position
     if (vm.count("position")) c.motifPosOut = true;
     else c.motifPosOut = false;
+
+    // Nearest feature only
+    if (vm.count("nearest")) c.nearest = true;
+    else c.nearest = false;
     
     // Input BED file
     if (!(boost::filesystem::exists(c.infile) && boost::filesystem::is_regular_file(c.infile) && boost::filesystem::file_size(c.infile))) {
