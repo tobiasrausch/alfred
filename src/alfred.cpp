@@ -59,6 +59,7 @@ Contact: Tobias Rausch (rausch@embl.de)
 #include "qc.h"
 #include "consensus.h"
 #include "pwalign.h"
+#include "spaced.h"
 
 using namespace bamstats;
 
@@ -86,6 +87,7 @@ displayUsage() {
   std::cout << "    count_jct    counting RNA split-reads at exon junctions" << std::endl;
   std::cout << "    tracks       create browser tracks" << std::endl;
   std::cout << "    annotate     annotate peaks" << std::endl;
+  std::cout << "    spaced_motif find spaced motifs" << std::endl;
   std::cout << "    split        split BAM into haplotypes" << std::endl;
   std::cout << "    consensus    consensus computation for error-prone reads" << std::endl;
   std::cout << "    pwalign      pairwise alignment using dynamic programming" << std::endl;
@@ -137,6 +139,9 @@ int main(int argc, char **argv) {
   }
   else if ((std::string(argv[1]) == "annotate")) {
     return annotate(argc-1,argv+1);
+  }
+  else if ((std::string(argv[1]) == "spaced_motif")) {
+    return spaced(argc-1,argv+1);
   }
   else if ((std::string(argv[1]) == "split")) {
     return split(argc-1,argv+1);

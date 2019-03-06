@@ -167,7 +167,7 @@ namespace bamstats
 
   template<typename TConfig, typename TBitSet, typename TMotifHits>
   inline void
-  scorePwm(TConfig const& c, char const* seq, TBitSet const& evalPos, Pwm const& inpwm, TMotifHits& mh) {
+  scorePwm(TConfig const& c, char const* seq, TBitSet const& evalPos, Pwm const& inpwm, std::string const& tname, TMotifHits& mh, boost::iostreams::filtering_ostream& dataOut) {
     Pwm pwmFwd(inpwm);
     scale(pwmFwd);
     Pwm pwmRev;
@@ -201,6 +201,14 @@ namespace bamstats
 	  //std::cerr << "Genom:" << ref << "," << ref << std::endl;
 	  //std::cerr << "Query:" << _maxSimpleMotif(pwmFwd) << "," << _maxSimpleMotif(pwmRev) << std::endl;
 	  mh.push_back(pos);
+	  if (c.motifPosOut) {
+	    if (scoreFwd > c.motifScoreQuantile) {
+	      dataOut << tname << "\t" << (pos + 1) << "\t" << pos + motiflen << "\t" << inpwm.symbol << "\t+" << std::endl;
+	    }
+	    if (scoreRev > c.motifScoreQuantile) {
+	      dataOut << tname << "\t" << (pos + 1) << "\t" << pos + motiflen << "\t" << inpwm.symbol << "\t-" << std::endl;
+	    }
+	  }
 	}
       }
     }
@@ -328,7 +336,7 @@ namespace bamstats
     if (c.motifPosOut) {
       dataOut.push(boost::iostreams::gzip_compressor());
       dataOut.push(boost::iostreams::file_sink(c.outpos.string().c_str(), std::ios_base::out | std::ios_base::binary));
-      dataOut << "chr\tstart\tend\tid" << std::endl;
+      dataOut << "chr\tstart\tend\tid\tstrand" << std::endl;
     }
     
     // Iterate chromosomes
@@ -387,12 +395,11 @@ namespace bamstats
 	for(uint32_t i = 0; i<pwms.size(); ++i) {
 	  typedef std::vector<int32_t> TMotifHits;
 	  TMotifHits mh;
-	  scorePwm(c, seq, evalPos, pwms[i], mh);
+	  scorePwm(c, seq, evalPos, pwms[i], tname, mh, dataOut);
 
 	  int32_t motiflen = pwms[i].matrix.shape()[1];
 	  for(uint32_t hit = 0; hit < mh.size(); ++hit) {
 	    _insertInterval(overlappingRegions[refIndex], mh[hit], mh[hit] + motiflen, '*', i, 0);
-	    if (c.motifPosOut) dataOut << tname << "\t" << (mh[hit] + 1) << "\t" << mh[hit] + motiflen << "\t" << pwms[i].symbol << std::endl;
 	  }
 	}
 
