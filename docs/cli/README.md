@@ -149,6 +149,23 @@ alfred annotate -p hits.gz -r <hg19.fa> -m motif/jaspar.gz <peaks.bed>
 ```
 
 
+## Joined motif hits
+
+You can also obtain all motif hits across a reference genome. For instance, to identify all hits for recombination signal sequences (RSS) you can use:
+
+```bash
+cat <hg19.fa.fai>  | cut -f 1,2 | awk '{print $1"\t0\t"$2;}' > all.chrom.bed
+alfred annotate -m motif/rss.gz -r <hg19.fa> -q 0.9 -p motif.hits.gz all.chrom.bed
+```
+
+To then join all motif hits of the conserved heptamer sequence (7bp), a spacer sequence (12bp or 23bp), and a conserved nonamer sequence (9bp) you can use:
+
+```bash
+alfred spaced_motif -l 11 -h 13 motif.hits.gz
+```
+
+
+
 ## Browser Tracks
 
 Normalized and file size optimized browser tracks are essential to compare peak profiles across samples and upload them quickly in online genome browsers such as the [UCSC Genome Browser](https://genome.ucsc.edu/). Alfred generates browser tracks in [UCSC bedgraph format](https://genome.ucsc.edu/goldenpath/help/bedgraph.html) with configurable resolution. Lower resolution values leed to coarse-grained windows at reduced file size. Contrarily, high resolution values leed to fine-grained windows at greater file size.
