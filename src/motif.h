@@ -203,10 +203,10 @@ namespace bamstats
 	  mh.push_back(pos);
 	  if (c.motifPosOut) {
 	    if (scoreFwd > c.motifScoreQuantile) {
-	      dataOut << tname << "\t" << (pos + 1) << "\t" << pos + motiflen << "\t" << inpwm.symbol << "\t+" << std::endl;
+	      dataOut << tname << "\t" << (pos + 1) << "\t" << pos + motiflen << "\t" << inpwm.symbol << "\t+\t" << scoreFwd << std::endl;
 	    }
 	    if (scoreRev > c.motifScoreQuantile) {
-	      dataOut << tname << "\t" << (pos + 1) << "\t" << pos + motiflen << "\t" << inpwm.symbol << "\t-" << std::endl;
+	      dataOut << tname << "\t" << (pos + 1) << "\t" << pos + motiflen << "\t" << inpwm.symbol << "\t-\t" << scoreRev << std::endl;
 	    }
 	  }
 	}
@@ -336,7 +336,7 @@ namespace bamstats
     if (c.motifPosOut) {
       dataOut.push(boost::iostreams::gzip_compressor());
       dataOut.push(boost::iostreams::file_sink(c.outpos.string().c_str(), std::ios_base::out | std::ios_base::binary));
-      dataOut << "chr\tstart\tend\tid\tstrand" << std::endl;
+      dataOut << "chr\tstart\tend\tid\tstrand\tquantile" << std::endl;
     }
     
     // Iterate chromosomes

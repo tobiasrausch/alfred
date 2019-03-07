@@ -60,7 +60,8 @@ namespace bamstats
     int32_t motiflen2 =	-1;
 
     // Motif hits
-    typedef std::vector<uint32_t> TMotifHit;
+    typedef std::pair<uint32_t, float> TPosScore;
+    typedef std::vector<TPosScore> TMotifHit;
     typedef std::vector<TMotifHit> TGenomicMotifHit;
     typedef std::vector<TGenomicMotifHit> TStrandGenomicHit;
     TStrandGenomicHit mo1(2, TGenomicMotifHit());
@@ -92,8 +93,9 @@ namespace bamstats
 	int32_t end = boost::lexical_cast<int32_t>(*tokIter++);
 	std::string id = *tokIter++;
 	if ((id == c.motif1) || (id == c.motif2)) {
-	  std::string strandStr = *tokIter;
+	  std::string strandStr = *tokIter++;
 	  char strand = strandStr[0];
+	  float score = boost::lexical_cast<float>(*tokIter);
 	  uint32_t refIndex = numChr;
 	  TChrMap::const_iterator it = chrMap.find(chrName);
 	  if (it == chrMap.end()) {
@@ -111,22 +113,28 @@ namespace bamstats
 	    else if (motiflen1 != len1) {
 	      std::cerr << "Warning: Motif hits have different lengths!" << std::endl;
 	    }
-	    if (strand == '+') mo1[0][refIndex].push_back(start);
-	    else mo1[1][refIndex].push_back(start);
+	    if (strand == '+') mo1[0][refIndex].push_back(std::make_pair(start, score));
+	    else mo1[1][refIndex].push_back(std::make_pair(start, score));
 	  } else {
 	    int32_t len2 = (end - start) + 1;
 	    if (motiflen2 == -1) motiflen2 = len2;
 	    else if (motiflen2 != len2) {
 	      std::cerr	<< "Warning: Motif hits have different lengths!" << std::endl;
 	    }
-	    if (strand == '+') mo2[0][refIndex].push_back(start);
-	    else mo2[1][refIndex].push_back(start);
+	    if (strand == '+') mo2[0][refIndex].push_back(std::make_pair(start, score));
+	    else mo2[1][refIndex].push_back(std::make_pair(start, score));
 	  }
 	}
       }
     }
     dataIn.pop();
 
+    // Output file
+    boost::iostreams::filtering_ostream dataOut;
+    dataOut.push(boost::iostreams::gzip_compressor());
+    dataOut.push(boost::iostreams::file_sink(c.outfile.string().c_str(), std::ios_base::out | std::ios_base::binary));
+    dataOut << "chr\tstart\tend\tjoined_motifs" << std::endl;
+    
     // Motifs
     for(uint32_t strand = 0; strand < 2; ++strand) {
       char strandlabel = '+';
@@ -136,22 +144,37 @@ namespace bamstats
 	std::sort(mo2[strand][refIndex].begin(), mo2[strand][refIndex].end());
 	for(uint32_t i = 0; i < mo1[strand][refIndex].size(); ++i) {
 	  for(uint32_t j = 0; j < mo2[strand][refIndex].size(); ++j) {
-	    if (strand) {
-	      if (mo2[strand][refIndex][j] + c.high < mo1[strand][refIndex][i]) continue;
-	      if (mo2[strand][refIndex][j] + c.low > mo1[strand][refIndex][i]) break;
-	      std::cout << revMap[refIndex] << ',' << mo1[strand][refIndex][i] << ',' << mo1[strand][refIndex][i] + motiflen1 - 1 << ',' << c.motif1 << ',' << strandlabel << ',' << revMap[refIndex] << ',' << mo2[strand][refIndex][j] << ',' << mo2[strand][refIndex][j] + motiflen2 - 1 << ',' << c.motif2 << ',' << strandlabel << std::endl;
-	    } else {
-	      if (mo1[strand][refIndex][i] + c.high < mo2[strand][refIndex][j]) break;
-	      if (mo1[strand][refIndex][i] + c.low > mo2[strand][refIndex][j]) continue;
-	      std::cout << revMap[refIndex] << ',' << mo1[strand][refIndex][i] << ',' << mo1[strand][refIndex][i] + motiflen1 - 1 << ',' << c.motif1 << ',' << strandlabel << ',' << revMap[refIndex] << ',' << mo2[strand][refIndex][j] << ',' << mo2[strand][refIndex][j] + motiflen2 - 1 << ',' << c.motif2 << ',' << strandlabel << std::endl;
+	    std::vector<int32_t> allpos;
+	    allpos.push_back(mo1[strand][refIndex][i].first);
+	    allpos.push_back(mo1[strand][refIndex][i].first + motiflen1 - 1);
+	    allpos.push_back(mo2[strand][refIndex][j].first);
+	    allpos.push_back(mo2[strand][refIndex][j].first + motiflen2 - 1);
+	    std::sort(allpos.begin(), allpos.end());
+	    int32_t spacing = 0; // Overlapping motifs
+	    if (mo1[strand][refIndex][i].first + motiflen1 - 1 < mo2[strand][refIndex][j].first) spacing = mo2[strand][refIndex][j].first - (mo1[strand][refIndex][i].first + motiflen1);
+	    if (mo2[strand][refIndex][j].first + motiflen2 - 1 < mo1[strand][refIndex][i].first) spacing = mo1[strand][refIndex][i].first - (mo2[strand][refIndex][j].first + motiflen2);
+	    // Correct spacing?
+	    if ((c.low <= spacing) && (spacing <= c.high)) {
+	      // Correct order?
+	      if (strand) {
+		if (mo2[strand][refIndex][j].first < mo1[strand][refIndex][i].first) {
+		  dataOut << revMap[refIndex] << "\t" << allpos[0] << "\t" << allpos[3] << "\t" << revMap[refIndex] << ',' << mo1[strand][refIndex][i].first << ',' << mo1[strand][refIndex][i].first + motiflen1 - 1 << ',' << c.motif1 << ',' << strandlabel << ',' << mo1[strand][refIndex][i].second << ':' << revMap[refIndex] << ',' << mo2[strand][refIndex][j].first << ',' << mo2[strand][refIndex][j].first + motiflen2 - 1 << ',' << c.motif2 << ',' << strandlabel << ',' << mo2[strand][refIndex][j].second << ":Spacing=" << spacing << std::endl;
+		}
+	      } else {
+		if (mo1[strand][refIndex][i].first < mo2[strand][refIndex][j].first) {
+		  dataOut << revMap[refIndex] << "\t" << allpos[0] << "\t" << allpos[3] << "\t" << revMap[refIndex] << ',' << mo1[strand][refIndex][i].first << ',' << mo1[strand][refIndex][i].first + motiflen1 - 1 << ',' << c.motif1 << ',' << strandlabel << ',' << mo1[strand][refIndex][i].second << ':' << revMap[refIndex] << ',' << mo2[strand][refIndex][j].first << ',' << mo2[strand][refIndex][j].first + motiflen2 - 1 << ',' << c.motif2 << ',' << strandlabel << ',' << mo2[strand][refIndex][j].second << ":Spacing=" << spacing << std::endl;
+		}
+	      }
 	    }
 	  }
 	}
       }
     }
-    
-    
-    
+    dataOut.pop();
+
+    // Done
+    boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
+    std::cout << '[' << boost::posix_time::to_simple_string(now) << "] Done." << std::endl;
     return 0;
   }
 
@@ -167,7 +190,7 @@ namespace bamstats
       ("motif2,n", boost::program_options::value<std::string>(&c.motif2)->default_value("Nonamer"), "motif2 name")
       ("spacer-low,l", boost::program_options::value<int32_t>(&c.low)->default_value(18), "min. spacer length (left-most to left-most)")
       ("spacer-high,h", boost::program_options::value<int32_t>(&c.high)->default_value(20), "max. spacer length (left-most to left-most)")
-      ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("joined.bed"), "joined motif hits")
+      ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("joined.bed.gz"), "joined motif hits")
       ;
 
     boost::program_options::options_description hidden("Hidden options");
