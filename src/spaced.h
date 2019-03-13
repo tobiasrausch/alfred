@@ -188,8 +188,8 @@ namespace bamstats
       ("help,?", "show help message")
       ("motif1,m", boost::program_options::value<std::string>(&c.motif1)->default_value("Heptamer"), "motif1 name")
       ("motif2,n", boost::program_options::value<std::string>(&c.motif2)->default_value("Nonamer"), "motif2 name")
-      ("spacer-low,l", boost::program_options::value<int32_t>(&c.low)->default_value(18), "min. spacer length (left-most to left-most)")
-      ("spacer-high,h", boost::program_options::value<int32_t>(&c.high)->default_value(20), "max. spacer length (left-most to left-most)")
+      ("spacer-low,l", boost::program_options::value<int32_t>(&c.low)->default_value(11), "min. spacer length")
+      ("spacer-high,h", boost::program_options::value<int32_t>(&c.high)->default_value(13), "max. spacer length")
       ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("joined.bed.gz"), "joined motif hits")
       ;
 
