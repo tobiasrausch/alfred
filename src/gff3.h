@@ -169,7 +169,7 @@ namespace bamstats
       }
       std::string chrName=*tokIter++;
       if (c.nchr.find(chrName) == c.nchr.end()) continue;
-      int32_t chrid = c.nchr.find(chrName)->second;      
+      int32_t chrid = c.nchr.find(chrName)->second;
       if (tokIter == tokens.end()) {
 	std::cerr << "Corrupted GFF3 file!" << std::endl;
 	return 0;
@@ -229,6 +229,10 @@ namespace bamstats
 	  }
 	}
       }
+    }
+    if (geneIds.empty()) {
+      std::cerr << "No elements found with " << c.feature << "!" << std::endl;
+      std::cerr << "Are you specifying a feature present in the gff file?" << std::endl;
     }
     return geneIds.size();
   }
