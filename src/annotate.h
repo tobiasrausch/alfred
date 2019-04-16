@@ -50,6 +50,7 @@ namespace bamstats
     typedef std::map<std::string, int32_t> TChrMap;
     bool motifPosOut;
     bool nearest;
+    bool overlappingHits;
     uint8_t inputFileFormat;   // 0 = gtf, 1 = bed, 2 = gff3, 3 = motif file
     int32_t maxDistance;
     float motifScoreQuantile;
@@ -322,6 +323,7 @@ namespace bamstats
       ("reference,r", boost::program_options::value<boost::filesystem::path>(&c.genome), "reference file")
       ("quantile,q", boost::program_options::value<float>(&c.motifScoreQuantile)->default_value(0.95), "motif quantile score [0,1]")
       ("position,p", boost::program_options::value<boost::filesystem::path>(&c.outpos), "gzipped output file of motif hits")
+      ("exclude,x", "exclude overlapping hits of the same motif")
       ;
     
     
@@ -365,6 +367,10 @@ namespace bamstats
     // Nearest feature only
     if (vm.count("nearest")) c.nearest = true;
     else c.nearest = false;
+
+    // Overlapping motif hits
+    if (vm.count("exclude")) c.overlappingHits = false;
+    else c.overlappingHits = true;
     
     // Input BED file
     if (!(boost::filesystem::exists(c.infile) && boost::filesystem::is_regular_file(c.infile) && boost::filesystem::file_size(c.infile))) {

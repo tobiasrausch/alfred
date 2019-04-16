@@ -174,6 +174,7 @@ namespace bamstats
     revComp(inpwm, pwmRev);
     scale(pwmRev);
     int32_t motiflen = pwmFwd.matrix.shape()[1];
+    int32_t lastHit = -(motiflen + 1);
     //std::cerr << _minScore(pwmFwd) << ',' << _maxScore(pwmFwd) << std::endl;
     //std::cerr << _minScore(pwmRev) << ',' << _maxScore(pwmRev) << std::endl;
     
@@ -200,13 +201,16 @@ namespace bamstats
 	if ((k == motiflen) && ((scoreFwd > c.motifScoreQuantile) || (scoreRev > c.motifScoreQuantile))) {
 	  //std::cerr << "Genom:" << ref << "," << ref << std::endl;
 	  //std::cerr << "Query:" << _maxSimpleMotif(pwmFwd) << "," << _maxSimpleMotif(pwmRev) << std::endl;
-	  mh.push_back(pos);
-	  if (c.motifPosOut) {
-	    if (scoreFwd > c.motifScoreQuantile) {
-	      dataOut << tname << "\t" << (pos + 1) << "\t" << pos + motiflen << "\t" << inpwm.symbol << "\t+\t" << scoreFwd << std::endl;
-	    }
-	    if (scoreRev > c.motifScoreQuantile) {
-	      dataOut << tname << "\t" << (pos + 1) << "\t" << pos + motiflen << "\t" << inpwm.symbol << "\t-\t" << scoreRev << std::endl;
+	  if ((c.overlappingHits) || (lastHit + motiflen < (int32_t) pos)) {
+	    mh.push_back(pos);
+	    lastHit = pos;
+	    if (c.motifPosOut) {
+	      if (scoreFwd > c.motifScoreQuantile) {
+		dataOut << tname << "\t" << (pos + 1) << "\t" << pos + motiflen << "\t" << inpwm.symbol << "\t+\t" << scoreFwd << std::endl;
+	      }
+	      if (scoreRev > c.motifScoreQuantile) {
+		dataOut << tname << "\t" << (pos + 1) << "\t" << pos + motiflen << "\t" << inpwm.symbol << "\t-\t" << scoreRev << std::endl;
+	      }
 	    }
 	  }
 	}
