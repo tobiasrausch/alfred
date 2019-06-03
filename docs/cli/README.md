@@ -228,3 +228,23 @@ Alfred implements methods to generate allele-specific expression tables. If the 
 ```bash
 alfred ase -r <ref.fa> -s NA12878 -v <snps.bcf> -a <ase.tsv> <input.bam>
 ```
+
+## Analysis of replication timing by NGS
+
+Alfred implements a method to analyze replication timing using next-generation sequencing (Repli-Seq). The order of BAM files on the command-line must follow the cell-cycle.
+
+```bash
+alfred replication -r <ref.fa> -o outprefix <g1b.bam> <s1.bam> <s2.bam> <s3.bam> <s4.bam> <g2.bam>
+```
+
+There is a supporting script that plots the tag density for each cell-cycle fraction.
+
+```bash
+Rscript R/reppattern.R -f outprefix.profile.tsv -r chr12:24000000-26000000
+```
+
+There is also a script for plotting the replication time along a given chromosome.
+
+```bash
+Rscript R/reptime.R -f outprefix.reptime.tsv -r chr12
+```
