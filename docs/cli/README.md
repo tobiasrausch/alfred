@@ -240,11 +240,11 @@ alfred replication -r <ref.fa> -o outprefix <g1b.bam> <s1.bam> <s2.bam> <s3.bam>
 There is a supporting script that plots the tag density for each cell-cycle fraction.
 
 ```bash
-Rscript R/reppattern.R -f outprefix.profile.tsv -r chr12:24000000-26000000
+Rscript scripts/reppattern.R -f outprefix.profile.tsv -r chr12:24000000-26000000
 ```
 
 There is also a script for plotting the replication time along a given chromosome.
 
 ```bash
-Rscript R/reptime.R -f outprefix.reptime.tsv -r chr12
+Rscript scripts/reptime.R -f outprefix.reptime.tsv -r chr12
 ```
