@@ -1,5 +1,5 @@
 # use the ubuntu base image
-FROM ubuntu:14.04
+FROM ubuntu:18.04
 
 MAINTAINER Tobias Rausch rausch@embl.de
 
@@ -26,17 +26,10 @@ RUN apt-get update && apt-get install -y \
 
 # set environment
 ENV BOOST_ROOT /usr
-ENV EBROOTHTSLIB /opt/htslib
 
 # install alfred
 RUN cd /opt \
-    && git clone https://github.com/samtools/htslib.git \
-    && cd /opt/htslib \
-    && make \
-    && make lib-static \
-    && make install
-RUN cd /opt \
-    && git clone https://github.com/tobiasrausch/alfred.git \
+    && git clone --recursive https://github.com/tobiasrausch/alfred.git \
     && cd /opt/alfred/ \
     && make STATIC=1 all \
     && make install
