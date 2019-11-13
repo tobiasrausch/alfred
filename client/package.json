@@ -11,7 +11,7 @@
   "author": "",
   "license": "",
   "devDependencies": {
-    "parcel-bundler": "^1.12.3",
+    "parcel-bundler": "^1.12.4",
     "rimraf": "^2.7.1"
   },
   "dependencies": {
