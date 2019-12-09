@@ -4,7 +4,7 @@ Alfred uses subcommands for [quality control](#alignment-quality-control) ([qc](
 
 ## Alignment Quality Control
 
-Alfred supports a command-line interface to run alignment quality control and a [web application](https://gear.embl.de) can be used to render all QC metrics.
+Alfred supports a command-line interface to run alignment quality control and a [web application](https://www.gear-genomics.com) can be used to render all QC metrics.
 
 ## Command-line Interfact for BAM Quality Control
 
@@ -28,13 +28,13 @@ zgrep ^ME qc.tsv.gz | cut -f 2- | datamash transpose | column -t
 
 ## Interactive Quality Control Browser
 
-Quality control metrics can be browsed interactively using the [web front end of Alfred](https://gear.embl.de/alfred).
+Quality control metrics can be browsed interactively using the [web front end of Alfred](https://www.gear-genomics.com/alfred).
 
 ```bash
 alfred qc -r <ref.fa> -f json -o qc.json.gz <align.bam>
 ```
 
-Then just upload the qc.json.gz file to the Alfred GUI [https://gear.embl.de/alfred](https://gear.embl.de/alfred). A convenient feature of the web-front end is that multiple samples can be uploaded and compared.
+Then just upload the qc.json.gz file to the Alfred GUI [https://www.gear-genomics.com/alfred](https://www.gear-genomics.com/alfred). A convenient feature of the web-front end is that multiple samples can be uploaded and compared.
 
 
 ## BAM Alignment Quality Control for Targeted Sequencing
@@ -53,7 +53,7 @@ alfred qc -r <hg19.fa> -b maps/exonic.hg19.bed.gz -o qc.tsv.gz <exome.bam>
 Rscript scripts/stats.R qc.tsv.gz
 ```
 
-Alternatively, one can use the [interactive GUI](https://gear.embl.de/alfred) and upload the json file.
+Alternatively, one can use the [interactive GUI](https://www.gear-genomics.com/alfred) and upload the json file.
 
 ```bash
 alfred qc -r <hg19.fa> -b maps/exonic.hg19.bed.gz -f json -o qc.json.gz <exome.bam>
@@ -77,7 +77,7 @@ ATAC-Seq libraries often have a large number of mitochondrial reads depending on
 zgrep ^CM qc.tsv.gz | egrep "Mapped|chrM"
 ```
 
-Alternatively, one can use the [interactive GUI](https://gear.embl.de/alfred) and upload the json file.
+Alternatively, one can use the [interactive GUI](https://www.gear-genomics.com/alfred) and upload the json file.
 
 ```bash
 alfred qc -r <hg19.fa> -b maps/hg19.promoter.bed.gz -f json -o qc.json.gz <atac.bam>
@@ -190,7 +190,7 @@ Alfred supports global and local pairwise sequence alignments with configurable 
 alfred pwalign -a align.fa.gz <seq1.fasta> <seq2.fasta>
 ```
 
-All computed pairwise alignments are "linear" alignments that is the order of sequence nucleotides is preserved. For more complex pairwise alignments involving inversions or duplications you can use [Maze](https://gear.embl.de/maze/).
+All computed pairwise alignments are "linear" alignments that is the order of sequence nucleotides is preserved. For more complex pairwise alignments involving inversions or duplications you can use [Maze](https://www.gear-genomics.com/maze/).
 
 ## BAM Consensus Computation
 
@@ -210,7 +210,7 @@ alfred consensus -c <hap1.fa.gz> -f bam -t ont -p chr1:chr4:500500 <haplotype1.b
 alfred consensus -c <hap2.fa.gz> -f bam -t ont -p chr1:chr4:500500 <haplotype2.bam>
 ```
 
-To identify variants, you can then compare the two locally assembled haplotypes using our online dotplot method [Maze](https://gear.embl.de/maze) or align them pairwise against each other using the subcommand [pwalign](#pairwise-sequence-alignment).
+To identify variants, you can then compare the two locally assembled haplotypes using our online dotplot method [Maze](https://www.gear-genomics.com/maze) or align them pairwise against each other using the subcommand [pwalign](#pairwise-sequence-alignment).
 
 
 ## Haplotype-specific BAM files

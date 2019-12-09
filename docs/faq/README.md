@@ -25,7 +25,7 @@ For the web front end.
 alfred qc -r example/E.coli.fa.gz -f json -o ecoli.json.gz example/E.coli.cram
 ```
 
-Please upload `ecoli.json.gz` to the [Alfred web application](https://gear.embl.de/alfred).
+Please upload `ecoli.json.gz` to the [Alfred web application](https://www.gear-genomics.com/alfred).
 
 ## Is the feature counting paired-end aware?
 

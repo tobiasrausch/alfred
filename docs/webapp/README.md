@@ -1,7 +1,7 @@
 # Web application
 
 Alfred's quality control JSON files can be interactively browsed with the
-[companion web application](https://gear.embl.de/alfred).
+[companion web application](https://www.gear-genomics.com/alfred).
 All charts support panning and zooming and can be downloaded as PNG images.
 The summary QC table can be downloaded as a CSV file.
 
@@ -12,7 +12,7 @@ alfred qc -r <ref.fa> -f json -o qc.json.gz <align.bam>
 ```
 
 The output file `qc.json.gz` can then be uploaded at
-[https://gear.embl.de/alfred/](https://gear.embl.de/alfred/).
+[https://www.gear-genomics.com/alfred/](https://www.gear-genomics.com/alfred/).
 
 ## Features
 
@@ -121,7 +121,7 @@ if the BED file contains all target regions.
 
 ## Example Data Sets
 
-The [web application](https://gear.embl.de/alfred) hosts example data sets for a number of sequencing assays and sequencing technologies.
+The [web application](https://www.gear-genomics.com/alfred) hosts example data sets for a number of sequencing assays and sequencing technologies.
 
 | Sequencing Assay  | Sequencing Technology |
 | ----------------- | --------------------- |
