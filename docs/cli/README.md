@@ -31,7 +31,7 @@ zgrep ^ME qc.tsv.gz | cut -f 2- | datamash transpose | column -t
 Quality control metrics can be browsed interactively using the [web front end of Alfred](https://www.gear-genomics.com/alfred).
 
 ```bash
-alfred qc -r <ref.fa> -f json -o qc.json.gz <align.bam>
+alfred qc -r <ref.fa> -j qc.json.gz -o qc.tsv.gz <align.bam>
 ```
 
 Then just upload the qc.json.gz file to the Alfred GUI [https://www.gear-genomics.com/alfred](https://www.gear-genomics.com/alfred). A convenient feature of the web-front end is that multiple samples can be uploaded and compared.
@@ -49,14 +49,14 @@ For instance, for a human whole-exome data set.
 
 ```bash
 cd maps/ && Rscript exon.R
-alfred qc -r <hg19.fa> -b maps/exonic.hg19.bed.gz -o qc.tsv.gz <exome.bam>
+alfred qc -r <hg19.fa> -b maps/exonic.hg19.bed.gz -j qc.json.gz -o qc.tsv.gz <exome.bam>
 Rscript scripts/stats.R qc.tsv.gz
 ```
 
 Alternatively, one can use the [interactive GUI](https://www.gear-genomics.com/alfred) and upload the json file.
 
 ```bash
-alfred qc -r <hg19.fa> -b maps/exonic.hg19.bed.gz -f json -o qc.json.gz <exome.bam>
+alfred qc -r <hg19.fa> -b maps/exonic.hg19.bed.gz -j qc.json.gz -o qc.tsv.gz <exome.bam>
 ```
 
 
@@ -80,7 +80,7 @@ zgrep ^CM qc.tsv.gz | egrep "Mapped|chrM"
 Alternatively, one can use the [interactive GUI](https://www.gear-genomics.com/alfred) and upload the json file.
 
 ```bash
-alfred qc -r <hg19.fa> -b maps/hg19.promoter.bed.gz -f json -o qc.json.gz <atac.bam>
+alfred qc -r <hg19.fa> -b maps/hg19.promoter.bed.gz -j qc.json.gz -o qc.json.gz <atac.bam>
 ```
 
 ## BAM Feature Counting
