@@ -14,7 +14,7 @@
 
 ## Alfred: BAM alignment statistics, feature counting and feature annotation
 
-Alfred is available as a [Bioconda package](https://anaconda.org/bioconda/alfred), as a statically linked binary from the [GitHub release page](https://github.com/tobiasrausch/alfred/releases/) or as a minimal [Docker container](https://hub.docker.com/r/trausch/alfred/). Please have a look at [Alfred's documentation](https://www.gear-genomics.com/docs/alfred/) for any installation or usage questions.
+Alfred is available as a [Bioconda package](https://anaconda.org/bioconda/alfred), as a pre-compiled statically linked binary from [Alfred's github release page](https://github.com/tobiasrausch/alfred/releases/), as a singularity container [SIF file](https://github.com/tobiasrausch/alfred/releases/) or as a minimal [Docker container](https://hub.docker.com/r/trausch/alfred/). Please have a look at [Alfred's documentation](https://www.gear-genomics.com/docs/alfred/) for any installation or usage questions.
 
 [Source Code](https://github.com/tobiasrausch/alfred/)
 
@@ -25,6 +25,6 @@ Alfred is available as a [Bioconda package](https://anaconda.org/bioconda/alfred
 ## Citation
 
 Tobias Rausch, Markus Hsi-Yang Fritz, Jan O Korbel, Vladimir Benes.     
-[Alfred: Interactive multi-sample BAM alignment statistics, feature counting and feature annotation for long- and short-read sequencing.](https://academic.oup.com/bioinformatics/advance-article-abstract/doi/10.1093/bioinformatics/bty1007/5232224)    
+Alfred: Interactive multi-sample BAM alignment statistics, feature counting and feature annotation for long- and short-read sequencing.
 Bioinformatics. 2018 Dec 6.
-
+[https://doi.org/10.1093/bioinformatics/bty1007](https://doi.org/10.1093/bioinformatics/bty1007)
