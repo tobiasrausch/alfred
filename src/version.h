@@ -25,7 +25,7 @@ Contact: Tobias Rausch (rausch@embl.de)
 namespace bamstats
 {
 
-  std::string alfredVersionNumber = "0.1.17";
+  std::string alfredVersionNumber = "0.1.18";
 
   inline 
     void printTitle(std::string const& title) 
@@ -38,8 +38,9 @@ namespace bamstats
       std::cout <<  std::endl;
       std::cout <<  title << " (Version: " << alfredVersionNumber << ")" << std::endl;
       std::cout << "Contact: Gear Genomics Team (gear_genomics@embl.de)" << std::endl;
-      std::cout << "Web Application: https://gear.embl.de/alfred/" << std::endl;
-      std::cout << "Documentation: https://gear.embl.de/docs/alfred/" << std::endl;
+      std::cout << "Web Application: https://www.gear-genomics.com/alfred/" << std::endl;
+      std::cout << "Documentation: https://www.gear-genomics.com/docs/alfred/" << std::endl;
+      std::cout << "Citation: https://doi.org/10.1093/bioinformatics/bty1007" << std::endl;
       std::cout << "**********************************************************************" << std::endl;
       std::cout << std::endl;
     }
