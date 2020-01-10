@@ -50,7 +50,7 @@ all:   	$(TARGETS)
 .htslib: $(HTSLIBSOURCES)
 	if [ -r src/htslib/Makefile ]; then cd src/htslib && make && make lib-static && cd ../../ && touch .htslib; fi
 
-src/alfred: ${SUBMODULES} $(SOURCES)
+src/alfred: ${SUBMODULES} ${SOURCES}
 	$(CXX) $(CXXFLAGS) $@.cpp -o $@ $(LDFLAGS)
 
 install: ${BUILT_PROGRAMS}
