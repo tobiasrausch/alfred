@@ -229,8 +229,13 @@ namespace bamstats
 	  if (hp1votes > 2*hp2votes) hp = 1;
 	  else if (hp2votes > 2*hp1votes) hp = 2;
 	  if (hp) {
-	    if (hp == 1) h1.insert(hash_pair(rec));
-	    else h2.insert(hash_pair(rec));
+	    if (hp == 1) {
+	      if (rec->core.flag & BAM_FREAD1) h1.insert(hash_pair(rec));
+	      else  h1.insert(hash_pair_mate(rec));
+	    } else {
+	      if (rec->core.flag & BAM_FREAD1) h2.insert(hash_pair(rec));
+	      else h2.insert(hash_pair_mate(rec));
+	    }
 	  }
 	}
       }
@@ -247,13 +252,15 @@ namespace bamstats
       hts_itr_t* itr = sam_itr_queryi(idx, refIndex, 0, hdr->target_len[refIndex]);
       bam1_t* r = bam_init1();
       while (sam_itr_next(samfile, itr, r) >= 0) {
-	if (r->core.flag & (BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP | BAM_FSUPPLEMENTARY | BAM_FUNMAP)) continue;
-	if ((r->core.qual < c.minMapQual) || (r->core.tid<0)) continue;
-	if ((r->core.flag & BAM_FPAIRED) && (r->core.flag & BAM_FMUNMAP)) continue;
 	bool h1Found = false;
 	bool h2Found = false;
-	if (h1.find(hash_pair(r)) != h1.end()) h1Found = true;
-	if (h2.find(hash_pair(r)) != h2.end()) h2Found = true;
+	if (r->core.flag & BAM_FREAD1) {
+	  if (h1.find(hash_pair(r)) != h1.end()) h1Found = true;
+	  if (h2.find(hash_pair(r)) != h2.end()) h2Found = true;
+	} else {
+	  if (h1.find(hash_pair_mate(r)) != h1.end()) h1Found = true;
+	  if (h2.find(hash_pair_mate(r)) != h2.end()) h2Found = true;
+	}
 	if ((h1Found) && (h2Found)) {
 	  // Inconsistent haplotype assignment for this pair
 	  //std::cout << "Read\t" << bam_get_qname(r) << "\t" <<  hdr->target_name[r->core.tid] << "\t" << r->core.pos << "\t" << hdr->target_name[r->core.mtid] << "\t" << r->core.mpos << std::endl;
