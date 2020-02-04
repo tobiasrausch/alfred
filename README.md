@@ -3,7 +3,7 @@
    <h1></h1>
 </p>
 
-[![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat-square)](http://bioconda.github.io/recipes/alfred/README.html)
+[![Anaconda-Server Badge](https://anaconda.org/bioconda/alfred/badges/installer/conda.svg)](https://anaconda.org/bioconda/alfred)
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/alfred/badges/downloads.svg)](https://anaconda.org/bioconda/alfred)
 [![Build Status](https://travis-ci.org/tobiasrausch/alfred.svg?branch=master)](https://travis-ci.org/tobiasrausch/alfred)
 [![Docker Build](https://img.shields.io/docker/build/trausch/alfred.svg)](https://hub.docker.com/r/trausch/alfred/)
