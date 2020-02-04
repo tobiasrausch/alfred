@@ -27,3 +27,8 @@ Alfred is available as a [Bioconda package](https://anaconda.org/bioconda/alfred
 Tobias Rausch, Markus Hsi-Yang Fritz, Jan O Korbel, Vladimir Benes.     
 Alfred: Interactive multi-sample BAM alignment statistics, feature counting and feature annotation for long- and short-read sequencing. Bioinformatics. 2018 Dec 6.       
 [https://doi.org/10.1093/bioinformatics/bty1007](https://doi.org/10.1093/bioinformatics/bty1007)
+
+
+License
+-------
+Alfred is distributed under the BSD 3-Clause license. Consult the accompanying [LICENSE](https://github.com/tobiasrausch/alfred/blob/master/LICENSE) file for more details.
