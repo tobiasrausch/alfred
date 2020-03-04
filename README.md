@@ -23,9 +23,9 @@ Alfred is available as a [Bioconda package](https://anaconda.org/bioconda/alfred
 [Documentation](https://www.gear-genomics.com/docs/alfred/)
 
 ## Citation
-
-Tobias Rausch, Markus Hsi-Yang Fritz, Jan O Korbel, Vladimir Benes.     
-Alfred: Interactive multi-sample BAM alignment statistics, feature counting and feature annotation for long- and short-read sequencing. Bioinformatics. 2018 Dec 6.       
+Tobias Rausch, Markus Hsi-Yang Fritz, Jan O Korbel, Vladimir Benes.      
+Alfred: interactive multi-sample BAM alignment statistics, feature counting and feature annotation for long- and short-read sequencing.       
+Bioinformatics. 2019 Jul 15;35(14):2489-2491.       
 [https://doi.org/10.1093/bioinformatics/bty1007](https://doi.org/10.1093/bioinformatics/bty1007)
 
 
