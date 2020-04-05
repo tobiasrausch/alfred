@@ -5,11 +5,13 @@ MAINTAINER Tobias Rausch rausch@embl.de
 
 # install required packages
 RUN apt-get update && apt-get install -y \
+    autoconf \
     build-essential \
     cmake \
     g++ \
     gfortran \
     git \
+    libcurl4-gnutls-dev \
     hdf5-tools \
     libboost-date-time-dev \
     libboost-program-options-dev \
