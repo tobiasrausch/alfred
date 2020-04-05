@@ -24,6 +24,7 @@ namespace bamstats
 {
 
   struct CountRNAConfig {
+    bool ambiguous;
     uint8_t inputFileFormat;   // 0 = gtf, 1 = bed, 2 = gff3
     uint8_t inputBamFormat; // 0 = bam, 1 = bed
     uint16_t stranded;  // 0 = unstranded, 1 = stranded, 2 = stranded (opposite)
@@ -97,6 +98,8 @@ namespace bamstats
 	    // Find feature
 	    bool ambiguous = false;
 	    int32_t featureid = -1;  // No feature by default
+	    typedef std::set<int32_t> TFIdSet;
+	    TFIdSet fidset;
 	    if (!featurepos.empty()) {
 	      int32_t fpfirst = featurepos[0];
 	      int32_t fplast = featurepos[featurepos.size()-1];
@@ -112,20 +115,28 @@ namespace bamstats
 			if (vIt->strand == strand) continue;
 		      }
 		    }
-		    if (featureid == -1) featureid = vIt->lid;
+		    if (c.ambiguous) fidset.insert(vIt->lid);
 		    else {
-		      ambiguous = true;
-		      break;
+		      if (featureid == -1) featureid = vIt->lid;
+		      else {
+			ambiguous = true;
+			break;
+		      }
 		    }
 		  }
 		}
 	      }
 	    }
-	    if (ambiguous) continue; // Ambiguous read
+	    if ((!c.ambiguous) && (ambiguous)) continue; // Ambiguous read
 
 	    // Check feature agreement
-	    if (featureid == -1) continue; // No feature
-	    ++fc[featureid];
+	    if (c.ambiguous) {
+	      if (fidset.empty()) continue; // No feature
+	      for(typename TFIdSet::const_iterator it = fidset.begin(); it != fidset.end(); ++it) ++fc[*it];
+	    } else {
+	      if (featureid == -1) continue; // No feature
+	      ++fc[featureid];
+	    }
 	  }
 	}
 	chrFile.close();
@@ -153,6 +164,10 @@ namespace bamstats
     // Pair qualities and features
     typedef boost::unordered_map<std::size_t, int32_t> TFeatures;
     TFeatures features;
+    // Feature sets for ambiguous counting
+    typedef std::set<int32_t> TFIdSet;
+    typedef boost::unordered_map<std::size_t, TFIdSet> TFeatureSet;
+    TFeatureSet fset;
 
     // Iterate chromosomes
     for(int32_t refIndex=0; refIndex < (int32_t) hdr->n_targets; ++refIndex) {
@@ -223,6 +238,7 @@ namespace bamstats
 	// Find feature
 	bool ambiguous = false;
 	int32_t featureid = -1;  // No feature by default
+	TFIdSet fidset;
 	if (!featurepos.empty()) {
 	  int32_t fpfirst = featurepos[0];
 	  int32_t fplast = featurepos[featurepos.size()-1];
@@ -233,16 +249,19 @@ namespace bamstats
 	    for(TFeaturePos::const_iterator fIt = featurepos.begin(); fIt != featurepos.end(); ++fIt) {
 	      if ((vIt->start <= *fIt) && (vIt->end > *fIt) && (featureid != vIt->lid)) {
 		if (!_strandOkay(rec, vIt->strand, c.stranded)) continue;
-		if (featureid == -1) featureid = vIt->lid;
+		if (c.ambiguous) fidset.insert(vIt->lid);
 		else {
-		  ambiguous = true;
-		  break;
+		  if (featureid == -1) featureid = vIt->lid;
+		  else {
+		    ambiguous = true;
+		    break;
+		  }
 		}
 	      }
 	    }
 	  }
 	}
-	if (ambiguous) continue; // Ambiguous read
+	if ((!c.ambiguous) && (ambiguous)) continue; // Ambiguous read
 
 	if (rec->core.flag & BAM_FPAIRED) {
 	  // First or Second Read?	
@@ -250,25 +269,34 @@ namespace bamstats
 	    // First read
 	    lastAlignedPosReads.insert(hash_string(bam_get_qname(rec)));
 	    std::size_t hv = hash_pair(rec);
-	    features[hv] = featureid;
+	    if (c.ambiguous) fset[hv] = fidset;
+	    else features[hv] = featureid;
 	  } else {
 	    // Second read
 	    std::size_t hv = hash_pair_mate(rec);
-	    if (features.find(hv) == features.end()) continue; // Mate discarded
-	    int32_t featuremate = features[hv];
-	    features[hv] = -1;
+	    if (c.ambiguous) {
+	      if (fset.find(hv) == fset.end()) continue; // Mate discarded
+	      fidset.insert(fset[hv].begin(), fset[hv].end());
+	      fset[hv] = TFIdSet();
+	      if (fidset.empty()) continue; // No feature
+	      for(typename TFIdSet::const_iterator it = fidset.begin(); it != fidset.end(); ++it) ++fc[*it];
+	    } else {
+	      if (features.find(hv) == features.end()) continue; // Mate discarded
+	      int32_t featuremate = features[hv];
+	      features[hv] = -1;
 	    
-	    // Check feature agreement
-	    if ((featureid == -1) && (featuremate == -1)) continue; // No feature
-	    else if ((featureid == -1) && (featuremate != -1)) featureid = featuremate;
-	    else if ((featureid != -1) && (featuremate == -1)) featuremate = featureid;
-	    else {
-	      // Both reads have a feature assignment
-	      if (featureid != featuremate) continue; // Feature disagreement
-	    }
+	      // Check feature agreement
+	      if ((featureid == -1) && (featuremate == -1)) continue; // No feature
+	      else if ((featureid == -1) && (featuremate != -1)) featureid = featuremate;
+	      else if ((featureid != -1) && (featuremate == -1)) featuremate = featureid;
+	      else {
+		// Both reads have a feature assignment
+		if (featureid != featuremate) continue; // Feature disagreement
+	      }
 
-	    // Hurray, we finally have a valid pair
-	    ++fc[featureid];
+	      // Hurray, we finally have a valid pair
+	      ++fc[featureid];
+	    }
 	  }
 	} else {
 	  // Single-end
@@ -341,7 +369,8 @@ namespace bamstats
       }
     }
     std::sort(pGenes.begin(), pGenes.end());
-    int32_t uqval = pGenes[(int32_t) ((pGenes.size() * 3) / 4)];
+    int32_t uqval = 0;
+    if (!pGenes.empty()) uqval = pGenes[(int32_t) ((pGenes.size() * 3) / 4)];
 
     // Debug code
     //for(uint32_t idval = 0; idval < geneIds.size(); ++idval) std::cerr << geneIds[idval] << "\t" << pCoding[idval] << "\t" << geneLength[idval] << "\t" << fc[idval] << std::endl;
@@ -401,6 +430,7 @@ namespace bamstats
       ("stranded,s", boost::program_options::value<uint16_t>(&c.stranded)->default_value(0), "strand-specific counting (0: unstranded, 1: stranded, 2: reverse stranded)")
       ("normalize,n", boost::program_options::value<std::string>(&c.normalize)->default_value("raw"), "normalization [raw|fpkm|fpkm_uq]")
       ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("gene.count"), "output file")
+      ("ambiguous,a", "count ambiguous readsd")
       ;
 
     boost::program_options::options_description gtfopt("GTF/GFF3 input file options");
@@ -441,6 +471,10 @@ namespace bamstats
       std::cout << visible_options << "\n";
       return 1;
     }
+
+    // Ambiguous read counting
+    if (vm.count("ambiguous")) c.ambiguous = true;
+    else c.ambiguous = false;
 
     // Check bam file
     if (!(boost::filesystem::exists(c.bamFile) && boost::filesystem::is_regular_file(c.bamFile) && boost::filesystem::file_size(c.bamFile))) {

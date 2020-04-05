@@ -213,7 +213,7 @@ namespace bamstats
     std::string gline;
     std::getline(instream, gline);
     bool gff = false;
-    if ((gline.size()) && (gline == "##gff-version 3")) gff = true;
+    if ((gline.size()>=5) && (gline.substr(0,5) == "##gff")) gff = true;
     file.close();
     return gff;
   }

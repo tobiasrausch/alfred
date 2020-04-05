@@ -58,6 +58,7 @@ namespace bamstats
 	      if (*kvTokensIt == "protein_coding") pCode = true;
 	    }
 	  }
+	  if (ival.empty()) ival = kval;
 	  pId[ival] = std::make_pair(kval, pCode);
 	}
 	// Make sure we also find grand-children
@@ -178,8 +179,8 @@ namespace bamstats
 	    Tokenizer kvTokens(keyval, sepKeyVal);
 	    Tokenizer::iterator kvTokensIt = kvTokens.begin();
 	    std::string key = *kvTokensIt++;
-	    if ((key == "ID") || (key == "Parent")) {
-	      std::string ivl = *kvTokensIt;         
+	    if ((key == "ID") || (key == "Parent") || (key == c.idname)) {
+	      std::string ivl = *kvTokensIt;
 	      if (pId.find(ivl) != pId.end()) {
 		std::string val = pId[ivl].first;
 		bool pCode = pId[ivl].second;
@@ -199,7 +200,7 @@ namespace bamstats
 		  std::cerr << "Feature start is greater than feature end!" << std::endl;
 		  return 0;
 		}
-		//std::cerr << geneIds[idval] << "\t" << start << "\t" << end << std::endl;
+		//std::cerr << geneIds[idval] << "\t" << start << "\t" << end << "\t(" << idval << "," << eid << ")" << std::endl;
 		_insertInterval(overlappingRegions[chrid], start - 1, end, strand, idval, eid++);
 	      }
 	    }
