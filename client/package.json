@@ -21,6 +21,6 @@
     "filepond": "^2.3.1",
     "lodash": "^4.17.15",
     "pako": "^1.0.10",
-    "papaparse": "^4.6.3"
+    "papaparse": "^5.2.0"
   }
 }
