@@ -7,7 +7,7 @@
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/alfred/badges/downloads.svg)](https://anaconda.org/bioconda/alfred)
 [![C/C++ CI](https://github.com/tobiasrausch/alfred/workflows/C/C++%20CI/badge.svg)](https://github.com/tobiasrausch/alfred/actions)
 [![Build Status](https://travis-ci.org/tobiasrausch/alfred.svg?branch=master)](https://travis-ci.org/tobiasrausch/alfred)
-[![Docker CI](https://github.com/tobiasrausch/alfred/workflows/Docker%20CI/badge.svg)](https://github.com/tobiasrausch/alfred/actions)
+[![Docker CI](https://github.com/tobiasrausch/alfred/workflows/Docker%20CI/badge.svg)](https://hub.docker.com/r/trausch/alfred/)
 [![GitHub license](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/tobiasrausch/alfred/blob/master/LICENSE)
 [![GitHub Releases](https://img.shields.io/github/release/tobiasrausch/alfred.svg)](https://github.com/tobiasrausch/alfred/releases)
 
