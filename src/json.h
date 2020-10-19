@@ -125,7 +125,7 @@ namespace bamstats
 	double delFrac = _homopolymerIndel(itRg->second.bc.delHomACGTN);
 
 	// Error rates
-	uint64_t alignedbases = itRg->second.bc.matchCount + itRg->second.bc.mismatchCount;
+	uint64_t alignedbases = itRg->second.bc.matchCount + itRg->second.bc.mismatchCount + itRg->second.bc.delCount + itRg->second.bc.insCount;
 	row.push_back(rf.referencebp);
 	row.push_back(rf.ncount);
 	row.push_back(alignedbases);
@@ -144,12 +144,12 @@ namespace bamstats
 	else row.push_back(nullptr);
 	row.push_back(insFrac);
 	row.push_back(itRg->second.bc.softClipCount);
-	if (alignedbases > 0) row.push_back((double) itRg->second.bc.softClipCount / (double) alignedbases);
+	if (alignedbases > 0) row.push_back((double) itRg->second.bc.softClipCount / (double) mappedCount);
 	else row.push_back(nullptr);
 	row.push_back(itRg->second.bc.hardClipCount);
-	if (alignedbases > 0) row.push_back((double) itRg->second.bc.hardClipCount / (double) alignedbases);
+	if (alignedbases > 0) row.push_back((double) itRg->second.bc.hardClipCount / (double) mappedCount);
 	else row.push_back(nullptr);
-	if (alignedbases > 0) row.push_back((double) (itRg->second.bc.mismatchCount + itRg->second.bc.delCount + itRg->second.bc.insCount + itRg->second.bc.softClipCount + itRg->second.bc.hardClipCount) / (double) alignedbases);
+	if (alignedbases > 0) row.push_back((double) (itRg->second.bc.mismatchCount + itRg->second.bc.delCount + itRg->second.bc.insCount) / (double) alignedbases);
 	else row.push_back(nullptr);
 	
 	// Median coverage, read length, standardized SD of genomic coverage, ...

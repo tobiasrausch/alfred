@@ -503,6 +503,8 @@ namespace bamstats
       // Parse the CIGAR
       uint32_t* cigar = bam_get_cigar(rec);
       bool spliced = false;
+      bool softClippedOnce = false;
+      bool hardClippedOnce = false;
       for (std::size_t i = 0; i < rec->core.n_cigar; ++i) {
 	if ((bam_cigar_op(cigar[i]) == BAM_CMATCH) || (bam_cigar_op(cigar[i]) == BAM_CEQUAL) || (bam_cigar_op(cigar[i]) == BAM_CDIFF)) {
 	  // match or mismatch
@@ -532,10 +534,16 @@ namespace bamstats
 	  else ++itRg->second.bc.insSize[itRg->second.bc.maxIndelSize];
 	  sp += bam_cigar_oplen(cigar[i]);
 	} else if (bam_cigar_op(cigar[i]) == BAM_CSOFT_CLIP) {
-	  ++itRg->second.bc.softClipCount;
+	  if (!softClippedOnce) {
+	    ++itRg->second.bc.softClipCount;
+	    softClippedOnce = true;
+	  }
 	  sp += bam_cigar_oplen(cigar[i]);
 	} else if(bam_cigar_op(cigar[i]) == BAM_CHARD_CLIP) {
-	  ++itRg->second.bc.hardClipCount;
+	  if (!hardClippedOnce) {
+	    ++itRg->second.bc.hardClipCount;
+	    hardClippedOnce = true;
+	  }
 	} else if (bam_cigar_op(cigar[i]) == BAM_CREF_SKIP) {
 	  if (!spliced) {
 	    ++itRg->second.rc.spliced;

@@ -89,6 +89,10 @@ namespace bamstats
     uint32_t assignedReadsH2 = 0;
     uint32_t unassignedReads = 0;
     uint32_t ambiguousReads = 0;
+    uint64_t assignedBasesH1 = 0;
+    uint64_t assignedBasesH2 = 0;
+    uint64_t unassignedBases = 0;
+    uint64_t ambiguousBases = 0;
     faidx_t* fai = fai_load(c.genome.string().c_str());
     for (int refIndex = 0; refIndex<hdr->n_targets; ++refIndex) {
       std::string chrName(hdr->target_name[refIndex]);
@@ -230,6 +234,7 @@ namespace bamstats
       hts_itr_t* itr = sam_itr_queryi(idx, refIndex, 0, hdr->target_len[refIndex]);
       bam1_t* r = bam_init1();
       while (sam_itr_next(samfile, itr, r) >= 0) {
+	int32_t slen = r->core.l_qseq;
 	bool h1Found = false;
 	bool h2Found = false;
 	if (r->core.flag & BAM_FREAD1) {
@@ -243,8 +248,10 @@ namespace bamstats
 	  // Inconsistent haplotype assignment for this pair
 	  //std::cout << "Read\t" << bam_get_qname(r) << "\t" <<  hdr->target_name[r->core.tid] << "\t" << r->core.pos << "\t" << hdr->target_name[r->core.mtid] << "\t" << r->core.mpos << std::endl;
 	  ++ambiguousReads;
+	  ambiguousBases += slen;
 	} else if ((!h1Found) && (!h2Found)) {
 	  ++unassignedReads;
+	  unassignedBases += slen;
 	  if (c.assign) {
 	    // Random assignment
 	    int32_t hrnd = dice();
@@ -272,6 +279,7 @@ namespace bamstats
 	} else if ((h1Found) && (!h2Found)) {
 	  int32_t hp = 1;
 	  ++assignedReadsH1;
+	  assignedBasesH1 += slen;
 	  bam_aux_append(r, "HP", 'i', 4, (uint8_t*)&hp);
 	  if (!sam_write1(h1bam, hdr, r)) {
 	    std::cerr << "Could not write to bam file!" << std::endl;
@@ -280,6 +288,7 @@ namespace bamstats
 	} else if ((!h1Found) && (h2Found)) {
 	  int32_t hp = 2;
 	  ++assignedReadsH2;
+	  assignedBasesH2 += slen;
 	  bam_aux_append(r, "HP", 'i', 4, (uint8_t*)&hp);
 	  if (!c.interleaved) {
 	    if (!sam_write1(h2bam, hdr, r)) {
@@ -325,6 +334,8 @@ namespace bamstats
     // Statistics
     uint64_t sumReads = assignedReadsH1 + assignedReadsH2 + unassignedReads + ambiguousReads;
     std::cout << "AssignedReadsH1=" << assignedReadsH1 << ", AssignedReadsH2=" << assignedReadsH2 << ", UnassignedReads=" << unassignedReads << ", AmbiguousReads=" << ambiguousReads << ", FractionReadsAssigned=" << (float) (assignedReadsH1 + assignedReadsH2) / (float) sumReads << ", FractionAmbiguousReads=" << (float) (ambiguousReads) / (float) (sumReads) << std::endl;
+    uint64_t sumBases = assignedBasesH1 + assignedBasesH2 + unassignedBases + ambiguousBases;
+    std::cout << "AssignedBasesH1=" << assignedBasesH1 << ", AssignedBasesH2=" << assignedBasesH2 << ", UnassignedBases=" << unassignedBases << ", AmbiguousBases=" << ambiguousBases << ", FractionBasesAssigned=" << (float) (assignedBasesH1 + assignedBasesH2) / (float) sumBases << ", FractionAmbiguousBases=" << (float) (ambiguousBases) / (float) (sumBases) << std::endl;
 
 #ifdef PROFILE
     ProfilerStop();
