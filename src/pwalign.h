@@ -31,6 +31,7 @@ struct PWAlignConsensus {
   bool seq1endsfree;
   bool seq2endsfree;
   bool localAlignment;
+  bool nonACGTN;
   int32_t gapopen;
   int32_t gapext;
   int32_t match;
@@ -55,6 +56,7 @@ int pwalign(int argc, char **argv) {
     ("endsfree1,p", "leading/trailing gaps free for seq1")
     ("endsfree2,q", "leading/trailing gaps free for seq2")
     ("local,l", "local alignment")
+    ("ambiguous,k", "allow IUPAC ambiguity codes")
     ;
 
   boost::program_options::options_description otp("Output options");
@@ -93,6 +95,8 @@ int pwalign(int argc, char **argv) {
   else c.seq2endsfree = false;
   if (vm.count("local")) c.localAlignment = true;
   else c.localAlignment = false;
+  if (vm.count("ambiguous")) c.nonACGTN = true;
+  else c.nonACGTN = false;
   
   // Check input files
   for(unsigned int file_c = 0; file_c < c.inputfiles.size(); ++file_c) {
@@ -112,13 +116,13 @@ int pwalign(int argc, char **argv) {
   // Load FASTA sequences
   std::string faname1;
   std::string seq1;
-  loadSingleFasta(c.inputfiles[0].string(), faname1, seq1);
+  if (!loadSingleFasta(c.inputfiles[0].string(), faname1, seq1, c.nonACGTN)) return 1;
   std::cout << "Sequence1: " << faname1 << ", Length: " << seq1.size() << std::endl;
   std::string faname2;
   std::string seq2;
-  loadSingleFasta(c.inputfiles[1].string(), faname2, seq2);
+  if (!loadSingleFasta(c.inputfiles[1].string(), faname2, seq2, c.nonACGTN)) return 1;
   std::cout << "Sequence2: " << faname2 << ", Length: " << seq2.size() << std::endl;
-
+  
   // Alignment
   typedef boost::multi_array<char, 2> TAlign;
   TAlign align;

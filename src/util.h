@@ -423,7 +423,7 @@ namespace bamstats
   }
 
   inline bool
-  loadSingleFasta(std::string const& filename, std::string& faname, std::string& seq) {
+  loadSingleFasta(std::string const& filename, std::string& faname, std::string& seq, bool nonACGTN) {
     faname = "";
     std::string tmpfasta = "";
     std::ifstream fafile(filename.c_str());
@@ -453,16 +453,18 @@ namespace bamstats
       fafile.close();
     }
     // Check FASTA
-    for(uint32_t k = 0; k < tmpfasta.size(); ++k)
-      if ((tmpfasta[k] == 'A') || (tmpfasta[k] == 'C') || (tmpfasta[k] == 'G') || (tmpfasta[k] == 'T') || (tmpfasta[k] == 'N')) seq += tmpfasta[k];
-    if (seq.size() != tmpfasta.size()) {
-      std::cerr << "FASTA file contains nucleotides != [ACGTN]." << std::endl;
-      return false;
+    for(uint32_t k = 0; k < tmpfasta.size(); ++k) {
+      if (nonACGTN) seq += tmpfasta[k];
+      else {
+	if ((tmpfasta[k] == 'A') || (tmpfasta[k] == 'C') || (tmpfasta[k] == 'G') || (tmpfasta[k] == 'T') || (tmpfasta[k] == 'N')) seq += tmpfasta[k];
+      }
     }
-
-    return true;
+    if (seq.size() != tmpfasta.size()) {
+      std::cerr << "FASTA file " << filename << " contains illegal nucleotides!" << std::endl;
+      return false;
+    } else return true;
   }
-    
+
 
 }
 
