@@ -525,8 +525,8 @@ namespace bamstats
 	// Get sample name
 	std::string sampleName;
 	if (!getSMTag(std::string(hdr->text), c.bamFile.stem().string(), sampleName)) {
-	  std::cerr << "Only one sample (@RG:SM) is allowed per input BAM file " << c.bamFile.string() << std::endl;
-	  return 1;
+	  std::cerr << "Warning: Multiple samples (@RG:SM) are present in this BAM file: " << c.bamFile.string() << std::endl;
+	  c.sampleName = "unknown";
 	} else c.sampleName = sampleName;
 	bam_hdr_destroy(hdr);
 	hts_idx_destroy(idx);
