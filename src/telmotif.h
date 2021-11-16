@@ -47,7 +47,7 @@ namespace bamstats {
 
     // Open file handles
     samFile* samfile = sam_open(c.bam.string().c_str(), "r");
-    hts_set_fai_filename(samfile, c.bam.string().c_str());
+    hts_set_fai_filename(samfile, c.genome.string().c_str());
     hts_idx_t* idx = sam_index_load(samfile, c.bam.string().c_str());
     bam_hdr_t* hdr = sam_hdr_read(samfile);
 
