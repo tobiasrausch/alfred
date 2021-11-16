@@ -27,6 +27,7 @@ p = ggplot(data=df, aes(x=GCcontent, y=value)) + geom_line(aes(color=variable))
 p = p + xlab("GC content")
 p = p + ylab("Sample to reference")
 p = p + ggtitle(paste0("SSE = ", sse))
+p = p + ylim(0, 2)
 p
 dev.off()
 
