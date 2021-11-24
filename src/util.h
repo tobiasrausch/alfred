@@ -239,11 +239,11 @@ namespace bamstats
   inline uint8_t
   layout(bam1_t const* rec) {
     if (!(rec->core.flag & BAM_FREVERSE)) {
-      if (!(rec->core.flag & BAM_FMREVERSE)) return (rec->core.pos < rec->core.mpos) ? 0 : 1;
+      if (!(rec->core.flag & BAM_FMREVERSE)) return 0;
       else return (rec->core.pos < rec->core.mpos) ? 2 : 3;
     } else {
       if (!(rec->core.flag & BAM_FMREVERSE)) return (rec->core.pos > rec->core.mpos) ? 2 : 3;
-      else return (rec->core.pos > rec->core.mpos) ? 0 : 1;
+      else return 1;
     }
   }
   
