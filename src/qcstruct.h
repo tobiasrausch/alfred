@@ -52,10 +52,10 @@ namespace bamstats
     typedef uint32_t TCountType;
     typedef std::vector<TCountType> TCoverageBp;
     
-    typedef uint16_t TMaxCoverage;
+    typedef COVTYPE TMaxCoverage;
     typedef std::vector<TMaxCoverage> TBpCoverage;
 
-    uint32_t maxCoverage;
+    TMaxCoverage maxCoverage;
     uint32_t maxIndelSize;
     uint64_t n1;
     uint64_t n2;
@@ -76,7 +76,7 @@ namespace bamstats
     BaseCounts() : maxCoverage(std::numeric_limits<TMaxCoverage>::max()), maxIndelSize(50), n1(0), n2(0), nd(0), matchCount(0), mismatchCount(0), delCount(0), insCount(0), softClipCount(0), hardClipCount(0) {
       delHomACGTN.resize(6, 0);
       insHomACGTN.resize(6, 0);
-      bpWithCoverage.resize(maxCoverage + 1, 0);
+      bpWithCoverage.resize(std::numeric_limits<uint16_t>::max() + 1, 0);
       delSize.resize(maxIndelSize + 1, 0);
       insSize.resize(maxIndelSize + 1, 0);
       cov.clear();

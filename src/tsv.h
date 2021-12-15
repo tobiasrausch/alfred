@@ -57,13 +57,12 @@ namespace bamstats
       if (vec[i] > 0) lastNonZeroIdx = i;
     return lastNonZeroIdx;
   }
-  
+
   template<typename TVector>
   inline uint32_t
   _lastNonZeroIdx(TVector const& vec) {
     return _lastNonZeroIdx(vec, vec.size());
   }
-
 
   template<typename TVector>
   inline float
@@ -71,6 +70,12 @@ namespace bamstats
     float cumsum = 0;
     for(uint32_t i = 0; i <= lastIdx; ++i) cumsum += vec[i];
     return ((float) (vec[lastIdx]) * 100.0) / cumsum;
+  }
+
+  template<typename TVector>
+  inline float
+  _lastPercentage(TVector const& vec) {
+    return _lastPercentage(vec, vec.size() - 1);
   }
 
   template<typename TVector>

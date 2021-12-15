@@ -211,7 +211,10 @@ namespace bamstats
 		if (itRg->second.bc.cov[i] == 1) ++itRg->second.bc.n1;
 		if (itRg->second.bc.cov[i] == 2) ++itRg->second.bc.n2;
 	      }
-	      if (!nrun[i]) ++itRg->second.bc.bpWithCoverage[itRg->second.bc.cov[i]];
+	      if (!nrun[i]) {
+		if (itRg->second.bc.cov[i] >= itRg->second.bc.bpWithCoverage.size()) itRg->second.bc.bpWithCoverage.resize(itRg->second.bc.cov[i] + 1, 0); 
+		++itRg->second.bc.bpWithCoverage[itRg->second.bc.cov[i]];
+	      }
 	    }
 	    itRg->second.bc.cov.clear();
 	  }
@@ -567,7 +570,10 @@ namespace bamstats
 	    if (itRg->second.bc.cov[i] == 1) ++itRg->second.bc.n1;
 	    if (itRg->second.bc.cov[i] == 2) ++itRg->second.bc.n2;
 	  }
-	  if (!nrun[i]) ++itRg->second.bc.bpWithCoverage[itRg->second.bc.cov[i]];
+	  if (!nrun[i]) {
+	    if (itRg->second.bc.cov[i] >= itRg->second.bc.bpWithCoverage.size()) itRg->second.bc.bpWithCoverage.resize(itRg->second.bc.cov[i] + 1, 0); 
+	    ++itRg->second.bc.bpWithCoverage[itRg->second.bc.cov[i]];
+	  }
 	}
 	itRg->second.bc.cov.clear();
       }

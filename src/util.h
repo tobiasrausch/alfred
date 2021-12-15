@@ -17,6 +17,10 @@
 namespace bamstats
 {
 
+  #ifndef COVTYPE
+  #define COVTYPE uint16_t
+  #endif
+
   struct Interval {
     int32_t start;
     int32_t end;

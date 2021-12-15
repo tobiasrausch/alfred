@@ -540,13 +540,14 @@ namespace bamstats
 
       // Coverage Histogram
       {
-	uint32_t lastValidCO = _lastNonZeroIdx(itRg->second.bc.bpWithCoverage, itRg->second.bc.maxCoverage);
-	float lastFrac = _lastPercentage(itRg->second.bc.bpWithCoverage, itRg->second.bc.maxCoverage);
+	// Ignore last bucket because it counts >= the max. coverage value
+	uint32_t lastValidCO = _lastNonZeroIdx(itRg->second.bc.bpWithCoverage, itRg->second.bc.bpWithCoverage.size() - 1);
+	float lastFrac = _lastPercentage(itRg->second.bc.bpWithCoverage);
 	nlohmann::json j;
 	j["id"] = "coverageHistogram";
 	j["title"] = "Coverage histogram";
 	if (lastFrac > 0) {
-	  std::string rlstr = boost::lexical_cast<std::string>(lastFrac) + "% of all bases with >= " + boost::lexical_cast<std::string>(itRg->second.bc.maxCoverage) + "x coverage";
+	  std::string rlstr = boost::lexical_cast<std::string>(lastFrac) + "% of all bases with >= " + boost::lexical_cast<std::string>(itRg->second.bc.bpWithCoverage.size() - 1) + "x coverage";
 	  j["subtitle"] = rlstr;
 	}
 	j["x"]["data"] = nlohmann::json::array();

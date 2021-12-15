@@ -33,7 +33,9 @@ endif
 ifeq (${EBROOTHTSLIB}, ${PWD}/src/htslib/)
 	SUBMODULES += .htslib
 endif
-
+ifdef COVTYPE
+	CXXFLAGS += -DCOVTYPE=${COVTYPE}
+endif
 
 # External sources
 HTSLIBSOURCES = $(wildcard src/htslib/*.c) $(wildcard src/htslib/*.h)
