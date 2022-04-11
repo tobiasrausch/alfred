@@ -70,7 +70,7 @@ namespace bamstats
     faidx_t* fai = fai_load(c.genome.string().c_str());
     bam1_t* rec = bam_init1();
     while (sam_read1(samfile, hdr, rec) >= 0) {
-      if (rec->core.flag & (BAM_FQCFAIL | BAM_FDUP | BAM_FUNMAP)) continue;
+      if (rec->core.flag & (BAM_FQCFAIL | BAM_FDUP | BAM_FUNMAP | BAM_FSECONDARY)) continue;
       if ((rec->core.qual < c.minMapQual) || (rec->core.tid<0)) continue;
 
       // New chromosome?
