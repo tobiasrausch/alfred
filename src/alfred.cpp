@@ -40,6 +40,7 @@
 #include "spaced.h"
 #include "repliseq.h"
 #include "telmotif.h"
+#include "barcode.h"
 
 using namespace bamstats;
 
@@ -75,6 +76,7 @@ displayUsage() {
   std::cout << "    ase          allele-specific expression" << std::endl;
   std::cout << "    replication  replication timing (Repli-Seq)" << std::endl;
   std::cout << "    telmotif     identify telomere motifs" << std::endl;
+  std::cout << "    barcode      subset barcodes by hamming distance" << std::endl;
   std::cout << std::endl;
   std::cout << std::endl;
 }
@@ -148,6 +150,9 @@ int main(int argc, char **argv) {
   }
   else if ((std::string(argv[1]) == "telmotif")) {
     return telmotif(argc-1,argv+1);
+  }
+  else if ((std::string(argv[1]) == "barcode")) {
+    return barcode(argc-1,argv+1);
   }
   std::cerr << "Unrecognized command " << std::string(argv[1]) << std::endl;
   return 1;
