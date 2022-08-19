@@ -25,7 +25,11 @@
 namespace bamstats {
 
   struct BarcodeConfig {
+    bool hasInput;
     uint32_t targetham;
+    uint32_t barlen;
+    uint32_t enumall;
+    float reqent;
     boost::filesystem::path outfile;
     boost::filesystem::path infile;
   };
@@ -39,45 +43,49 @@ namespace bamstats {
     return true;
   }
 
+  template<typename TConfig>
   inline uint32_t
-  hamming(std::string const& s1, std::string const& s2) {
+  hamming(TConfig const& c, std::string const& s1, std::string const& s2) {
     uint32_t ham = 0;
-    for(uint32_t i = 0; i < s1.size(); ++i) {
+    for(uint32_t i = 0; ((i < s1.size()) && (ham < c.targetham)); ++i) {
       if (s1[i] != s2[i]) ++ham;
     }
     return ham;
   }
 
 
-  inline uint32_t
-  medianHammingDist(std::vector<uint32_t> const& ham, uint32_t const nseq, uint32_t const idx) {
-    std::vector<uint32_t> dist;
-    for(uint32_t idx1 = 0; idx1 < idx; ++idx1) dist.push_back(ham[idx1 * nseq + idx]);
-    for(uint32_t idx1 = idx + 1; idx1 < nseq; ++idx1) dist.push_back(ham[idx * nseq + idx1]);
-    std::sort(dist.begin(), dist.end());
-    return dist[(int) dist.size()/2];
+  template<typename TConfig>
+  inline void
+  loadbarcodes(TConfig const& c, std::vector<std::string>& barcodes, std::vector<std::string>& names) {
+    faidx_t* fai = fai_load(c.infile.string().c_str());
+    int32_t nseq = faidx_nseq(fai);
+    names.resize(nseq);
+    barcodes.resize(nseq);
+    for(int32_t idx=0; idx < nseq; ++idx) {
+      names[idx] = faidx_iseq(fai, idx);
+      int32_t seqlen = -1;
+      char* seq = faidx_fetch_seq(fai, names[idx].c_str(), 0, faidx_seq_len(fai, names[idx].c_str()), &seqlen);
+      barcodes[idx] = boost::to_upper_copy(std::string(seq));
+      free(seq);
+    }
+    fai_destroy(fai);
   }
 
   template<typename TConfig>
   inline void
-  writebarcodes(TConfig const& c, std::vector<bool> const& bl) {
+  writebarcodes(TConfig const& c, std::vector<std::string> const& barcodes, std::vector<std::string> const& names, std::vector<bool> const& bl) {
     std::ofstream ofile(c.outfile.string().c_str());
-    faidx_t* fai = fai_load(c.infile.string().c_str());
-    int32_t nseq = faidx_nseq(fai);
-    for(int32_t idx=0; idx < nseq; ++idx) {
+    uint32_t count = 0;
+    for(uint32_t idx=0; idx < barcodes.size(); ++idx) {
       if (bl[idx]) continue;
-      std::string tname(faidx_iseq(fai, idx));
-      int32_t seqlen = -1;
-      char* seq = faidx_fetch_seq(fai, tname.c_str(), 0, faidx_seq_len(fai, tname.c_str()), &seqlen);
-      ofile << ">" << tname << std::endl;
-      ofile << seq << std::endl;
-      free(seq);
+      if (names.empty()) ofile << ">Barcode" << count << std::endl;
+      else ofile << ">" << names[idx] << std::endl;
+      ofile << barcodes[idx] << std::endl;
+      ++count;
     }
-    fai_destroy(fai);
     ofile.close();
   }
-  
-  
+    
   template<typename TConfig>
   inline int32_t
   runBarcode(TConfig& c) {
@@ -86,76 +94,76 @@ namespace bamstats {
     ProfilerStart("barcode.prof");
 #endif
 
-    // Rebuild index file
-    boost::filesystem::remove(c.infile.string() + ".fai");
-    
-    // Read barcodes
-    faidx_t* fai = fai_load(c.infile.string().c_str());
-    int32_t nseq = faidx_nseq(fai);
-    std::vector<uint32_t> ham(nseq*nseq, std::numeric_limits<uint32_t>::max());
-    std::vector<double> entr(nseq, 0);
-    for(int32_t idx1=0; idx1 < nseq; ++idx1) {
-      std::string tname1(faidx_iseq(fai, idx1));
-      int32_t seqlen1 = -1;
-      char* seq1 = faidx_fetch_seq(fai, tname1.c_str(), 0, faidx_seq_len(fai, tname1.c_str()), &seqlen1);
-      std::string s1 = boost::to_upper_copy(std::string(seq1));
-      if (!isDNA(s1)) {
-	std::cerr << "Nucleotide is not [A, C, G, T]!" << std::endl;
-	std::cerr << ">" << tname1 << std::endl;
-	std::cerr << s1 << std::endl;
-	return 1;
-      }
-      entr[idx1] = entropy(s1);
-      for(int32_t idx2 = idx1 + 1; idx2 < nseq; ++idx2) {
-	std::string tname2(faidx_iseq(fai, idx2));
-	int32_t seqlen2 = -1;
-	char* seq2 = faidx_fetch_seq(fai, tname2.c_str(), 0, faidx_seq_len(fai, tname2.c_str()), &seqlen2);
-	std::string s2 = boost::to_upper_copy(std::string(seq2));
-	if (!isDNA(s2)) {
-	  std::cerr << "Nucleotide is not [A, C, G, T]!" << std::endl;
-	  std::cerr << ">" << tname2 << std::endl;
-	  std::cerr << s2 << std::endl;
-	  return 1;
+    // Load or generate barcodes
+    std::vector<char> alphabet = {'A', 'C', 'G', 'T'};
+    std::vector<std::string> barcodes;
+    std::vector<std::string> names;
+    if (c.hasInput) loadbarcodes(c, barcodes, names);
+    else {
+      barcodes.push_back("A");
+      barcodes.push_back("C");
+      barcodes.push_back("G");
+      barcodes.push_back("T");
+      for(uint32_t i = 1; i < c.barlen; ++i) {
+	uint32_t elst = barcodes.size();
+	for(uint32_t k = 0; k < elst; ++k) {
+	  std::string prefix = barcodes[k];
+	  barcodes[k] += alphabet[i % 4];
+	  for(uint32_t m = 1; m < 4; ++m) {
+	    if (i <= c.enumall) barcodes.push_back(prefix + alphabet[(i + m) % 4]);
+	    else if (entropy(prefix + alphabet[(i + m) % 4]) >= c.reqent) {
+	      barcodes.push_back(prefix + alphabet[(i + m) % 4]);
+	      break;
+	    }
+	  }
 	}
-	if (seqlen1 != seqlen2) {
-	  std::cerr << "Barcodes have different length!" << std::endl;
-	  std::cerr << ">" << tname1 << std::endl;
-	  std::cerr << seq1 << std::endl;
-	  std::cerr << ">" << tname2 << std::endl;
-	  std::cerr << seq2 << std::endl;
-	  return 1;
-	}
-	//std::cerr << idx1 << ',' << idx2 << std::endl;
-	//std::cerr << s1 << std::endl;
-	//std::cerr << s2 << std::endl;
-	ham[idx1 * nseq + idx2] = hamming(s1, s2);
-	free(seq2);
+	//std::cerr << i << ',' << barcodes.size() << std::endl;
       }
-      free(seq1);
     }
-    fai_destroy(fai);
+    std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] Loaded/Generated " << barcodes.size() << " barcode candidates" << std::endl;
 
-    // Blacklist barcodes
-    std::vector<bool> bl(nseq, false);
+    // Calculate entropy
+    std::vector<float> entr(barcodes.size(), 0);
+    std::vector<bool> bl(barcodes.size(), false);
+    uint32_t blcount = 0;
+    for(uint32_t i = 0; i < barcodes.size(); ++i) {
+      entr[i] = entropy(barcodes[i]);
+      if (entr[i] < c.reqent) {
+	++blcount;
+	bl[i] = true;
+      }
+    }
+    std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] Removed " << blcount << " barcodes because of low entropy" << std::endl;
+
+    // Filter by hamming distance
     bool rewind = true;
+    uint32_t iter = 0;
+    std::vector<bool> validrow(barcodes.size(), false);
     while (rewind) {
-      for(int32_t idx1=0; (idx1 < nseq) && (rewind); ++idx1) {
-	if (bl[idx1]) continue;
-	for(int32_t idx2 = idx1 + 1; (idx2 < nseq) && (rewind); ++idx2) {
-	  if (bl[idx2]) continue;
-	  if (ham[idx1 * nseq + idx2] < c.targetham) {
+      for(uint32_t i1=0; i1 < barcodes.size(); ++i1) {
+	if ((validrow[i1]) || (bl[i1])) continue;
+	validrow[i1] = true;
+	for(uint32_t i2 = i1 + 1; i2 < barcodes.size(); ++i2) {
+	  if (bl[i2]) continue;
+	  if (hamming(c, barcodes[i1], barcodes[i2]) < c.targetham) {
 	    rewind = false;
-	    if (entr[idx1] < entr[idx2]) bl[idx1] = true;
-	    else bl[idx2] = true;
+	    if (entr[i1] < entr[i2]) bl[i1] = true;
+	    else bl[i2] = true;
+	    ++blcount;
+	    validrow[i1] = false;
+	    break;
 	  }
 	}
       }
       if (!rewind) rewind = true;
       else rewind = false;
-    }
+      ++iter;
 
+      std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] Iteration " << iter << ": Removed " << blcount << " because of low entropy or hamming distance" << std::endl;
+    }
+    
     // Output
-    writebarcodes(c, bl);
+    writebarcodes(c, barcodes, names, bl);
     
 #ifdef PROFILE
     ProfilerStop();
@@ -176,6 +184,9 @@ namespace bamstats {
     generic.add_options()
       ("help,?", "show help message")
       ("target,t", boost::program_options::value<uint32_t>(&c.targetham)->default_value(3), "min. hamming distance")
+      ("barlen,l", boost::program_options::value<uint32_t>(&c.barlen)->default_value(6), "barcode length")
+      ("enumall,a", boost::program_options::value<uint32_t>(&c.enumall)->default_value(8), "enumerate all possible barcodes until this length")
+      ("entropy,e", boost::program_options::value<float>(&c.reqent)->default_value(1.9), "min. barcode entropy")
       ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("bar.fa"), "output FASTA file")
       ;
     
@@ -196,11 +207,15 @@ namespace bamstats {
     boost::program_options::notify(vm);
     
     // Check command line arguments
-    if ((vm.count("help")) || (!vm.count("input-file"))) {
-      std::cout << "Usage: alfred " << argv[0] << " [OPTIONS] -o out.fasta <input.fasta>" << std::endl;
+    if (vm.count("help")) {
+      std::cout << "Usage: alfred " << argv[0] << " [OPTIONS]" << std::endl;
+      std::cout << "Usage: alfred " << argv[0] << " [OPTIONS] <barcodes.fasta>" << std::endl;
       std::cout << visible_options << "\n";
       return 1;
-    } 
+    }
+
+    if (vm.count("input-file")) c.hasInput = true;
+    else c.hasInput = false;
     
     // Show cmd
     std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] ";

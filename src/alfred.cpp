@@ -76,7 +76,7 @@ displayUsage() {
   std::cout << "    ase          allele-specific expression" << std::endl;
   std::cout << "    replication  replication timing (Repli-Seq)" << std::endl;
   std::cout << "    telmotif     identify telomere motifs" << std::endl;
-  std::cout << "    barcode      subset barcodes by hamming distance" << std::endl;
+  std::cout << "    barcode      heuristic barcode generator" << std::endl;
   std::cout << std::endl;
   std::cout << std::endl;
 }
