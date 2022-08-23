@@ -85,7 +85,23 @@ namespace bamstats {
     }
     ofile.close();
   }
-    
+
+  // Extend barcodes
+  template<typename TConfig>
+  inline void
+  extendbarcodes(TConfig const& c, std::vector<std::string> const& barcodes) {
+    std::ofstream ofile(c.outfile.string().c_str());
+    uint32_t count = 0;
+    for(uint32_t i1=0; i1 < barcodes.size(); ++i1) {
+      for(uint32_t i2=0; i2 < barcodes.size(); ++i2) {
+	ofile << ">Barcode" << count << std::endl;
+	ofile << barcodes[i1] + barcodes[i2] << std::endl;
+	++count;
+      }
+    }
+    ofile.close();
+  }
+  
   template<typename TConfig>
   inline int32_t
   runBarcode(TConfig& c) {
