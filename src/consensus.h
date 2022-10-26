@@ -278,7 +278,7 @@ int consensus(int argc, char **argv) {
   bamopt.add_options()
     ("mapqual,q", boost::program_options::value<uint16_t>(&c.minMapQual)->default_value(10), "min. mapping quality")
     ("position,p", boost::program_options::value<std::string>(&c.position)->default_value("chr4:500500"), "position to generate consensus")
-    ("window,w", boost::program_options::value<uint32_t>(&c.window)->default_value(5), "window around position to fetch reads")
+    ("window,w", boost::program_options::value<uint32_t>(&c.window), "window around pos that reads need to span")
     ("secondary,s", "consider secondary alignments")
     ("trimreads,r", "trim reads to window")
     ;
@@ -332,15 +332,16 @@ int consensus(int argc, char **argv) {
   // Set alignment score
   if (c.seqtype == "ill") {
     c.aliscore = DnaScore<int>(5, -4, -10, -1);
-    c.window = 5;
+    if (!vm.count("window")) c.window = 5;
   } else if (c.seqtype == "ont") {
     c.aliscore = DnaScore<int>(3, -2, -3, -1);
-    c.window = 250;
+    if (!vm.count("window")) c.window = 250;
   } else if (c.seqtype == "pacbio") {
     c.aliscore = DnaScore<int>(3, -2, -3, -1);
-    c.window = 250;
+    if (!vm.count("window")) c.window = 250;
   } else {
     c.aliscore = DnaScore<int32_t>(c.match, c.mismatch, c.gapopen, c.gapext);
+    if (!vm.count("window")) c.window = 5;
   }
 
   // Show cmd
