@@ -28,6 +28,7 @@ namespace bamstats {
 struct ConfigConsensus {
   bool secondary;
   bool trimreads;
+  bool hasGenome;
   uint16_t minMapQual;
   uint32_t window;
   int32_t gapopen;
@@ -41,6 +42,7 @@ struct ConfigConsensus {
   std::string outformat;
   DnaScore<int32_t> aliscore;
   boost::filesystem::path alignment;
+  boost::filesystem::path genome;
   boost::filesystem::path consensus;
   boost::filesystem::path inputfile;
 };
@@ -123,6 +125,7 @@ _loadBamReads(TConfig const& c, std::vector<std::string>& rs) {
     std::cerr << "Fail to open file " << c.inputfile.string() << std::endl;
     return false;
   }
+  if (c.hasGenome) hts_set_fai_filename(samfile, c.genome.string().c_str());
   hts_idx_t* idx = sam_index_load(samfile, c.inputfile.string().c_str());
   if (idx == NULL) {
     std::cerr << "Fail to open index for " << c.inputfile.string() << std::endl;
@@ -279,6 +282,7 @@ int consensus(int argc, char **argv) {
     ("mapqual,q", boost::program_options::value<uint16_t>(&c.minMapQual)->default_value(10), "min. mapping quality")
     ("position,p", boost::program_options::value<std::string>(&c.position)->default_value("chr4:500500"), "position to generate consensus")
     ("window,w", boost::program_options::value<uint32_t>(&c.window), "window around pos that reads need to span")
+    ("genome,z", boost::program_options::value<boost::filesystem::path>(&c.genome), "genome [req. for CRAM decoding]")
     ("secondary,s", "consider secondary alignments")
     ("trimreads,r", "trim reads to window")
     ;
@@ -324,6 +328,10 @@ int consensus(int argc, char **argv) {
   // Secondary alignments
   if (vm.count("secondary")) c.secondary = true;
   else c.secondary = false;
+
+  // Genome file
+  if (vm.count("genome")) c.hasGenome = true;
+  else c.hasGenome = false;
 
   // Trim reads?
   if (vm.count("trimreads")) c.trimreads = true;
