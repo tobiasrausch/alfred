@@ -18,7 +18,7 @@ LDFLAGS += -L${EBROOTHTSLIB} -lboost_iostreams -lboost_filesystem -lboost_system
 
 # Additional flags for release/debug
 ifeq (${STATIC}, 1)
-	LDFLAGS += -static -static-libgcc -pthread -lhts -lz -llzma -lbz2
+	LDFLAGS += -static -static-libgcc -pthread -lhts -lz -llzma -lbz2 -ldeflate
 else
 	LDFLAGS += -lhts -lz -llzma -lbz2 -Wl,-rpath,${EBROOTHTSLIB}
 endif
