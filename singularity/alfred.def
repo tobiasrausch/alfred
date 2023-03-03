@@ -1,6 +1,6 @@
 # Build image
 BootStrap: library
-From: ubuntu:16.04
+From: ubuntu:22.04
 Stage: build
 
 %post
