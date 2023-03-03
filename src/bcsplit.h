@@ -26,6 +26,7 @@ namespace bamstats {
 
   struct BcsplitConfig {
     uint32_t hamming;
+    uint32_t ncount;
     uint32_t umilen;
     uint32_t barlen;
     std::string outprefix;
@@ -69,6 +70,44 @@ namespace bamstats {
 	      }
 	    } else barcode_fmap.insert(std::make_pair(bar, it->second));
 	  }
+	}
+      }
+    }
+
+    // Debug
+    //for(typename TBarFileMap::const_iterator it = barcode_fmap.begin(); it != barcode_fmap.end(); ++it) std::cerr << it->first << '\t' << it->second << std::endl;
+
+    // All fine
+    return true;
+  }
+
+
+  template<typename TConfig>
+  inline bool
+  allowNs(TConfig const& c, std::map<std::string, uint32_t>& barcode_fmap) {
+    typedef typename std::map<std::string, uint32_t> TBarFileMap;
+
+    // Debug
+    //for(typename TBarFileMap::const_iterator it = barcode_fmap.begin(); it != barcode_fmap.end(); ++it) std::cerr << it->first << '\t' << it->second << std::endl;
+
+    // Extend barcode set
+    for(uint32_t i = 0; i < c.ncount; ++i) {
+      // Copy original barcodes
+      TBarFileMap copy;
+      for(typename TBarFileMap::const_iterator it = barcode_fmap.begin(); it != barcode_fmap.end(); ++it) copy.insert(std::make_pair(it->first, it->second));
+
+      // Mutate each barcode
+      for(typename TBarFileMap::const_iterator it = copy.begin(); it != copy.end(); ++it) {
+	for(uint32_t k = 0; k < it->first.size(); ++k) {
+	  std::string bar = it->first;
+	  bar[k] = 'N';
+	  if (barcode_fmap.find(bar) != barcode_fmap.end()) {
+	    if (barcode_fmap[bar] != it->second) {
+	      std::cerr << "N extension causes non-unique barcodes!" << std::endl;
+	      std::cerr << bar << '\t' << barcode_fmap[bar] << '\t' << it->second << std::endl;
+	      return false;
+	    }
+	  } else barcode_fmap.insert(std::make_pair(bar, it->second));
 	}
       }
     }
@@ -166,6 +205,9 @@ namespace bamstats {
 
     // Extend by hamming distance
     if (!hammingExt(c, barcode_fmap)) return -1;
+
+    // Extend using Ns
+    if (!allowNs(c, barcode_fmap)) return -1;
     
     // Open output files
     std::vector<boost::iostreams::filtering_ostream> dataOut(ids.size());
@@ -270,6 +312,7 @@ namespace bamstats {
     generic.add_options()
       ("help,?", "show help message")
       ("hamming,a", boost::program_options::value<uint32_t>(&c.hamming)->default_value(0), "max. hamming distance to barcode")
+      ("ncount,n", boost::program_options::value<uint32_t>(&c.ncount)->default_value(0), "max. number of Ns per barcode")
       ("barcodes,b", boost::program_options::value<boost::filesystem::path>(&c.barcodes), "barcode file [barcode, id]")
       ("idxfile,i", boost::program_options::value<boost::filesystem::path>(&c.idxfile), "input index FASTQ file")
       ("pattern,p", boost::program_options::value<std::string>(&c.pattern)->default_value("BBBBBBBBUUUUUU"), "index read pattern [U: UMI, B: Barcode, N: Ignore]")
