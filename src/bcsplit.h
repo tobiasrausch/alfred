@@ -291,6 +291,10 @@ namespace bamstats {
       dataOut[i].pop();
       dataOut[i].pop();
     }
+
+    // Statistics
+    double percass = 100 * (double) assigned / ((double) (assigned + unassigned));
+    std::cerr << "Assigned: " << assigned << ", Unassigned: " << unassigned << ", PercentageAssigned: " << percass << "%" << std::endl;
     
 #ifdef PROFILE
     ProfilerStop();
