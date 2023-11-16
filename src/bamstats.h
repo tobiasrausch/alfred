@@ -7,7 +7,6 @@
 #include <boost/unordered_map.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
-#include <boost/progress.hpp>
 #include <boost/iostreams/device/file.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/zlib.hpp>
@@ -165,7 +164,6 @@ namespace bamstats
     // Parse reference and BAM file
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "BAM file parsing" << std::endl;
-    boost::progress_display show_progress( hdr->n_targets );
 
     // GC- and N-content
     typedef boost::dynamic_bitset<> TBitSet;
@@ -199,7 +197,6 @@ namespace bamstats
     while (sam_read1(samfile, hdr, rec) >= 0) {
       // New chromosome?
       if ((!(rec->core.flag & BAM_FUNMAP)) && (rec->core.tid != refIndex)) {
-	++show_progress;
 	
 	// Summarize bp-level coverage
 	if (refIndex != -1) {

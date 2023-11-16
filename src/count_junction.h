@@ -8,7 +8,6 @@
 #include <boost/unordered_map.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
-#include <boost/progress.hpp>
 
 #include <htslib/sam.h>
 #include <htslib/faidx.h>
@@ -73,7 +72,6 @@ namespace bamstats
     // Parse BAM file
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "BAM file parsing" << std::endl;
-    boost::progress_display show_progress( hdr->n_targets );
 
     // Iterate chromosomes
     typedef std::set<SpGp> TSpGpSet;
@@ -81,7 +79,6 @@ namespace bamstats
     TClipReads clipReads;
     uint32_t minClipLength = 25;
     for(int32_t refIndex=0; refIndex < (int32_t) hdr->n_targets; ++refIndex) {
-      ++show_progress;
       if (gRegions[refIndex].empty()) continue;
 
       // Sort by position
@@ -264,11 +261,9 @@ namespace bamstats
     // Intra-gene table
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Output intra-gene splicing table" << std::endl;
-    boost::progress_display show_progress( c.nchr.size() );
     std::ofstream intrafile(c.outintra.string().c_str());
     intrafile << "gene\texonA\texonB\t" << c.sampleName << std::endl;
     for(int32_t refIndex=0; refIndex < (int32_t) c.nchr.size(); ++refIndex) {
-      ++show_progress;
       if (gRegions[refIndex].empty()) continue;
 
       // Output intra-gene exon-exon junction support
@@ -315,11 +310,9 @@ namespace bamstats
     // Inter-gene table
     now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Output inter-gene splicing table" << std::endl;
-    boost::progress_display spr( c.nchr.size() );
     std::ofstream interfile(c.outinter.string().c_str());
     interfile << "geneA\texonA\tgeneB\texonB\t" << c.sampleName << std::endl;
     for(int32_t refIndex=0; refIndex < (int32_t) c.nchr.size(); ++refIndex) {
-      ++spr;
       for(typename TExonJctCount::const_iterator itE = ejct[refIndex].begin(); itE != ejct[refIndex].end(); ++itE) {
 	int32_t e1 = itE->first.first;
 	int32_t e2 = itE->first.second;
@@ -357,11 +350,9 @@ namespace bamstats
       // Novel intra-chromosomal splice junctions
       now = boost::posix_time::second_clock::local_time();
       std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Output novel splicing table" << std::endl;
-      boost::progress_display sprgr( c.nchr.size() );
       std::ofstream novelfile(c.outnovel.string().c_str());
       novelfile << "geneA\tpositionA\tgeneB\tpositionB\t" << c.sampleName << std::endl;
       for(int32_t refIndex=0; refIndex < (int32_t) c.nchr.size(); ++refIndex) {
-	++sprgr;
 	for(typename TExonJctCount::const_iterator itN = njct[refIndex].begin(); itN != njct[refIndex].end(); ++itN) {
 	  int32_t p1 = itN->first.first;
 	  std::string geneA = "NA";

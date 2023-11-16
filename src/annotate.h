@@ -8,7 +8,6 @@
 #include <boost/unordered_map.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
-#include <boost/progress.hpp>
 
 #include <htslib/sam.h>
 #include <htslib/faidx.h>
@@ -53,7 +52,6 @@ namespace bamstats
     // Parse BED file
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "BED file parsing" << std::endl;
-    boost::progress_display show_progress(c.nchr.size());
 
     // Distance vector
     std::vector<int32_t> dist(geneIds.size(), 0);
@@ -72,7 +70,6 @@ namespace bamstats
     
     // Iterate chromosomese
     for(int32_t refIndex=0; refIndex < (int32_t) c.nchr.size(); ++refIndex) {
-      ++show_progress;
 
       // Sort by position
       std::sort(gRegions[refIndex].begin(), gRegions[refIndex].end(), SortIntervalStart<IntervalLabel>());

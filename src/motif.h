@@ -8,7 +8,6 @@
 #include <boost/unordered_map.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
-#include <boost/progress.hpp>
 #include <boost/iostreams/device/file.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/zlib.hpp>
@@ -310,7 +309,6 @@ namespace bamstats
     // Motif search
     now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Motif search" << std::endl;
-    boost::progress_display show_progress(c.nchr.size());
 
     // Output motif positions
     boost::iostreams::filtering_ostream dataOut;
@@ -324,7 +322,6 @@ namespace bamstats
     faidx_t* fai = fai_load(c.genome.string().c_str());
     char* seq = NULL;
     for(int32_t refIndex=0; refIndex < (int32_t) c.nchr.size(); ++refIndex) {
-      ++show_progress;
 
       // Chromosome name and length
       std::string tname = "NA";

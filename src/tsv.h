@@ -1,7 +1,6 @@
 #ifndef TSV_H
 #define TSV_H
 
-#include <boost/progress.hpp>
 #include <boost/iostreams/filtering_streambuf.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/copy.hpp>

@@ -22,7 +22,6 @@
 #include <boost/generator_iterator.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/progress.hpp>
 #include <htslib/faidx.h>
 #include <htslib/sam.h>
 #include <htslib/vcf.h>
@@ -66,7 +65,6 @@ namespace bamstats {
     
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Assign reads to haplotypes" << std::endl;
-    boost::progress_display show_progress(hdr->n_targets);
 
     // Allele support file
     boost::iostreams::filtering_ostream dataOut;
@@ -78,7 +76,6 @@ namespace bamstats {
     faidx_t* fai = fai_load(c.genome.string().c_str());
     for (int refIndex = 0; refIndex<hdr->n_targets; ++refIndex) {
       std::string chrName(hdr->target_name[refIndex]);
-      ++show_progress;
 
       // Load het. markers
       typedef std::vector<BiallelicVariant> TPhasedVariants;

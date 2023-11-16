@@ -21,7 +21,6 @@
 #include <boost/generator_iterator.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/progress.hpp>
 
 #include <htslib/faidx.h>
 #include <htslib/sam.h>
@@ -62,7 +61,6 @@ namespace bamstats
     
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Extract matches" << std::endl;
-    boost::progress_display show_progress(hdr->n_targets);
 
     // Parse BAM alignments
     int32_t refIndex = -1;
@@ -75,7 +73,6 @@ namespace bamstats
 
       // New chromosome?
       if (rec->core.tid != refIndex) {
-	++show_progress;
 	if (refIndex != -1) {
 	  if (seq != NULL) free(seq);
 	}

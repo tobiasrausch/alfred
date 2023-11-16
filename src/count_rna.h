@@ -8,7 +8,6 @@
 #include <boost/unordered_map.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
-#include <boost/progress.hpp>
 
 #include <htslib/sam.h>
 #include <htslib/faidx.h>
@@ -48,11 +47,9 @@ namespace bamstats
     // Parse BED file
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "BED file parsing" << std::endl;
-    boost::progress_display show_progress(c.nchr.size());
 
     // Iterate chromosomese
     for(int32_t refIndex=0; refIndex < (int32_t) c.nchr.size(); ++refIndex) {
-      ++show_progress;
       if (gRegions[refIndex].empty()) continue;
 
       // Sort by position
@@ -159,7 +156,6 @@ namespace bamstats
     // Parse BAM file
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "BAM file parsing" << std::endl;
-    boost::progress_display show_progress( hdr->n_targets );
 
     // Pair qualities and features
     typedef boost::unordered_map<std::size_t, int32_t> TFeatures;
@@ -171,7 +167,6 @@ namespace bamstats
 
     // Iterate chromosomes
     for(int32_t refIndex=0; refIndex < (int32_t) hdr->n_targets; ++refIndex) {
-      ++show_progress;
       if (gRegions[refIndex].empty()) continue;
 
       // Sort by position

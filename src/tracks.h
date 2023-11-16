@@ -8,7 +8,6 @@
 #include <boost/unordered_map.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
-#include <boost/progress.hpp>
 
 #include <htslib/sam.h>
 
@@ -56,10 +55,7 @@ namespace bamstats
       uint64_t totalPairs = 0;
       boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
       std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Total read count normalization" << std::endl;
-      boost::progress_display show_progress( hdr->n_targets );
       for(int32_t refIndex=0; refIndex < (int32_t) hdr->n_targets; ++refIndex) {
-	++show_progress;
-
 	hts_itr_t* iter = sam_itr_queryi(idx, refIndex, 0, hdr->target_len[refIndex]);
 	bam1_t* rec = bam_init1();
 	int32_t lastAlignedPos = 0;
@@ -139,9 +135,7 @@ namespace bamstats
     // Iterate chromosomes
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "BAM file parsing" << std::endl;
-    boost::progress_display show_progress( hdr->n_targets );
     for(int32_t refIndex=0; refIndex < (int32_t) hdr->n_targets; ++refIndex) {
-      ++show_progress;
       if (c.wiggleFormat) dataOut << "fixedStep chrom=" << hdr->target_name[refIndex] << " start=1 step=1" << std::endl;
 
       // Find valid pairs

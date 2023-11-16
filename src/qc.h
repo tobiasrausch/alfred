@@ -13,7 +13,6 @@
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/tokenizer.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/progress.hpp>
 
 #include <htslib/sam.h>
 #include <htslib/faidx.h>

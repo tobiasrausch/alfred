@@ -7,7 +7,6 @@
 #include <boost/unordered_map.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
-#include <boost/progress.hpp>
 
 #include <htslib/sam.h>
 #include <htslib/faidx.h>
@@ -42,12 +41,10 @@ namespace bamstats
     // Parse reference and BAM file
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "BAM file parsing" << std::endl;
-    boost::progress_display show_progress( hdr->n_targets );
 
     // Parse genome
     faidx_t* fai = fai_load(c.genome.string().c_str());
     for(int32_t refIndex = 0; refIndex < hdr->n_targets; ++refIndex) {
-      ++show_progress;
 
       // Fetch sequence
       char* seq = NULL;
