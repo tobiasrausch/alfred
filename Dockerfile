@@ -47,7 +47,7 @@ COPY --from=0 /opt/alfred/bin/alfred .
 # Workdir
 WORKDIR /home
 
-# Add Alfred to PATH
+# Add alfred to PATH
 ENV PATH="/opt/alfred/bin:${PATH}"
 
 # by default /bin/sh is executed
