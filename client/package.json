@@ -15,7 +15,7 @@
     "rimraf": "^2.7.1"
   },
   "dependencies": {
-    "axios": "^0.21.2",
+    "axios": "^1.6.0",
     "choices.js": "^3.0.4",
     "file-saver": "^1.3.8",
     "filepond": "^2.3.1",
