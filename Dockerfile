@@ -39,15 +39,16 @@ RUN cd /opt \
 
 # Multi-stage build
 FROM alpine:latest
+RUN apk add --no-cache bash
 RUN mkdir -p /opt/alfred/bin
 WORKDIR /opt/alfred/bin
 COPY --from=0 /opt/alfred/bin/alfred .
 
 # Workdir
-WORKDIR /root/
+WORKDIR /home
 
 # Add Alfred to PATH
 ENV PATH="/opt/alfred/bin:${PATH}"
 
 # by default /bin/sh is executed
-CMD ["/bin/sh"]
+CMD ["/bin/bash"]
