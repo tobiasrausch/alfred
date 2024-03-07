@@ -31,3 +31,7 @@ Bioinformatics. 2019 Jul 15;35(14):2489-2491.
 License
 -------
 Alfred is distributed under the BSD 3-Clause license. Consult the accompanying [LICENSE](https://github.com/tobiasrausch/alfred/blob/master/LICENSE) file for more details.
+
+## Credits
+
+[HTSlib](https://github.com/samtools/htslib) is heavily used for all alignment and VCF/BCF processing. [Boost](https://www.boost.org/) for various data structures and algorithms and [Edlib](https://github.com/Martinsos/edlib) for pairwise alignments using edit distance.
