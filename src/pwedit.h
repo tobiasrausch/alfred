@@ -138,7 +138,7 @@ namespace bamstats {
 
   template<typename TConfig>
   inline void
-  printAlignmentVertical(TConfig const& c, std::string const& seqI, std::string const& tname, std::string const& seqJ, std::string const& qname, EdlibAlignMode const modeCode, EdlibAlignResult& cigar) {
+  printAlignmentVertical(TConfig const& c, std::string const& seqI, std::string const& seqJ, EdlibAlignMode const modeCode, EdlibAlignResult& cigar) {
     std::string qa;
     std::string ta;
     
@@ -287,7 +287,7 @@ namespace bamstats {
     if (c.format == "h") {
       printAlignmentHorizontal(c, query, qname, target, tname, alnMode, aln);
     } else {
-      printAlignmentVertical(c, query, qname, target, tname, alnMode, aln);
+      printAlignmentVertical(c, query, target, alnMode, aln);
     }
 
     // Clean-up
