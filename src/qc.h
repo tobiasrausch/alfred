@@ -163,8 +163,8 @@ int qc(int argc, char **argv) {
   fai_destroy(fai);
   if (!vm.count("name")) {
     if (!getSMTag(std::string(hdr->text), c.bamFile.stem().string(), sampleName)) {
-      std::cerr << "Only one sample (@RG:SM) is allowed per input BAM file " << c.bamFile.string() << std::endl;
-      return 1;
+      c.sampleName = c.bamFile.stem().string();
+      std::cerr << "Warning: Multiple read-groups (@RG). Sample name is set to " << c.sampleName << std::endl;
     } else c.sampleName = sampleName;
   } else {
     if (sampleName.size()) c.sampleName = sampleName;
