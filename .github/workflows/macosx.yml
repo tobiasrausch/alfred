@@ -14,4 +14,5 @@ jobs:
     - name: make
       run: |
         brew install boost htslib
+        xcode-select --install
         make
