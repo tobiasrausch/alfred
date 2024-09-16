@@ -82,7 +82,7 @@ namespace bamstats
       if (gRegions[refIndex].empty()) continue;
 
       // Sort by position
-      std::sort(gRegions[refIndex].begin(), gRegions[refIndex].end(), SortIntervalStart<IntervalLabelId>());
+      std::sort(gRegions[refIndex].begin(), gRegions[refIndex].end());
       int32_t maxExonLength = 0;
       for(uint32_t i = 0; i < gRegions[refIndex].size(); ++i) {
 	if ((gRegions[refIndex][i].end - gRegions[refIndex][i].start) > maxExonLength) {
@@ -132,7 +132,7 @@ namespace bamstats
 	    gp += bam_cigar_oplen(cigar[i]);
 	    int32_t gpEnd = gp;
 	    if ((featureBitMap[gpStart]) && (featureBitMap[gpEnd])) {
-	      typename TChromosomeRegions::const_iterator vIt = std::lower_bound(gRegions[refIndex].begin(), gRegions[refIndex].end(), IntervalLabelId(std::max(0, gpStart - maxExonLength)), SortIntervalStart<IntervalLabelId>());
+	      auto vIt = std::lower_bound(gRegions[refIndex].begin(), gRegions[refIndex].end(), IntervalLabelId(std::max(0, gpStart - maxExonLength)));
 	      for(; vIt != gRegions[refIndex].end(); ++vIt) {
 		if (vIt->end < gpStart) continue;
 		if (vIt->start > gpStart) break; // Sorted intervals so we can stop searching
@@ -345,7 +345,7 @@ namespace bamstats
       }
 
       // Sort by start position
-      std::sort(geneReg.begin(), geneReg.end(), SortIntervalStart<IntervalLabel>());
+      std::sort(geneReg.begin(), geneReg.end());
 
       // Novel intra-chromosomal splice junctions
       now = boost::posix_time::second_clock::local_time();
@@ -356,7 +356,7 @@ namespace bamstats
 	for(typename TExonJctCount::const_iterator itN = njct[refIndex].begin(); itN != njct[refIndex].end(); ++itN) {
 	  int32_t p1 = itN->first.first;
 	  std::string geneA = "NA";
-	  typename TGeneRegions::const_iterator gIt1 = std::lower_bound(geneReg.begin(), geneReg.end(), IntervalLabel(std::max(0, p1 - maxGeneLength)), SortIntervalStart<IntervalLabel>());
+	  typename TGeneRegions::const_iterator gIt1 = std::lower_bound(geneReg.begin(), geneReg.end(), IntervalLabel(std::max(0, p1 - maxGeneLength)));
 	  for(; gIt1 != geneReg.end(); ++gIt1) {
 	    if (gIt1->end < p1) continue;
 	    if (gIt1->start > p1) break; // Sorted intervals so we can stop searching
@@ -367,7 +367,7 @@ namespace bamstats
 	  }
 	  int32_t p2 = itN->first.second;
 	  std::string geneB = "NA";
-	  typename TGeneRegions::const_iterator gIt2 = std::lower_bound(geneReg.begin(), geneReg.end(), IntervalLabel(std::max(0, p2 - maxGeneLength)), SortIntervalStart<IntervalLabel>());
+	  typename TGeneRegions::const_iterator gIt2 = std::lower_bound(geneReg.begin(), geneReg.end(), IntervalLabel(std::max(0, p2 - maxGeneLength)));
 	  for(; gIt2 != geneReg.end(); ++gIt2) {
 	    if (gIt2->end < p2) continue;
 	    if (gIt2->start > p2) break; // Sorted intervals so we can stop searching

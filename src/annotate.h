@@ -72,7 +72,7 @@ namespace bamstats
     for(int32_t refIndex=0; refIndex < (int32_t) c.nchr.size(); ++refIndex) {
 
       // Sort by position
-      std::sort(gRegions[refIndex].begin(), gRegions[refIndex].end(), SortIntervalStart<IntervalLabel>());
+      std::sort(gRegions[refIndex].begin(), gRegions[refIndex].end());
 
       // Flag feature positions
       typedef boost::dynamic_bitset<> TBitSet;

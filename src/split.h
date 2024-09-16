@@ -102,7 +102,7 @@ namespace bamstats
       if (pv.empty()) continue;
       
       // Sort variants
-      std::sort(pv.begin(), pv.end(), SortVariants<BiallelicVariant>());
+      std::sort(pv.begin(), pv.end());
 
       // Load reference
       int32_t seqlen = -1;
@@ -120,8 +120,8 @@ namespace bamstats
 	if ((rec->core.flag & BAM_FPAIRED) && (rec->core.flag & BAM_FMUNMAP)) continue;
 	uint32_t hp1votes = 0;
 	uint32_t hp2votes = 0;
-	TPhasedVariants::const_iterator vIt = std::lower_bound(pv.begin(), pv.end(), BiallelicVariant(rec->core.pos), SortVariants<BiallelicVariant>());
-	TPhasedVariants::const_iterator vItEnd = std::upper_bound(pv.begin(), pv.end(), BiallelicVariant(lastAlignedPosition(rec)), SortVariants<BiallelicVariant>());
+	TPhasedVariants::const_iterator vIt = std::lower_bound(pv.begin(), pv.end(), BiallelicVariant(rec->core.pos));
+	TPhasedVariants::const_iterator vItEnd = std::upper_bound(pv.begin(), pv.end(), BiallelicVariant(lastAlignedPosition(rec)));
 	if (vIt != vItEnd) {
 	  // Get read sequence
 	  std::string sequence;

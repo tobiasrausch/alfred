@@ -53,7 +53,7 @@ namespace bamstats
       if (gRegions[refIndex].empty()) continue;
 
       // Sort by position
-      std::sort(gRegions[refIndex].begin(), gRegions[refIndex].end(), SortIntervalStart<IntervalLabel>());
+      std::sort(gRegions[refIndex].begin(), gRegions[refIndex].end());
 
       // Flag feature positions
       typedef boost::dynamic_bitset<> TBitSet;
@@ -170,7 +170,7 @@ namespace bamstats
       if (gRegions[refIndex].empty()) continue;
 
       // Sort by position
-      std::sort(gRegions[refIndex].begin(), gRegions[refIndex].end(), SortIntervalStart<IntervalLabel>());
+      std::sort(gRegions[refIndex].begin(), gRegions[refIndex].end());
       int32_t maxFeatureLength = 0;
       for(uint32_t i = 0; i < gRegions[refIndex].size(); ++i) {
 	if ((gRegions[refIndex][i].end - gRegions[refIndex][i].start) > maxFeatureLength) {
@@ -237,7 +237,7 @@ namespace bamstats
 	if (!featurepos.empty()) {
 	  int32_t fpfirst = featurepos[0];
 	  int32_t fplast = featurepos[featurepos.size()-1];
-	  typename TChromosomeRegions::const_iterator vIt = std::lower_bound(gRegions[refIndex].begin(), gRegions[refIndex].end(), IntervalLabel(std::max(0, fpfirst - maxFeatureLength)), SortIntervalStart<IntervalLabel>());
+	  typename TChromosomeRegions::const_iterator vIt = std::lower_bound(gRegions[refIndex].begin(), gRegions[refIndex].end(), IntervalLabel(std::max(0, fpfirst - maxFeatureLength)));
 	  for(; vIt != gRegions[refIndex].end(); ++vIt) {
 	    if (vIt->end <= fpfirst) continue;
 	    if (vIt->start > fplast) break; // Sorted intervals so we can stop searching

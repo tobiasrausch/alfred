@@ -4,7 +4,7 @@
 namespace bamstats
 {
 
-  std::string alfredVersionNumber = "0.3.1";
+  std::string alfredVersionNumber = "0.3.2";
 
   inline 
     void printTitle(std::string const& title) 

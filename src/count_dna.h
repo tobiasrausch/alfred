@@ -38,6 +38,10 @@ namespace bamstats
     int32_t start;
     int32_t end;
     std::string id;
+
+    bool operator<(const ItvChr& other) const {
+      return (start < other.start);
+    }
   };
 
   template<typename TConfig>  
@@ -247,7 +251,7 @@ namespace bamstats
 	std::cerr << "Interval parsing failed!" << std::endl;
 	return 1;
       }
-      std::sort(itv.begin(), itv.end(), SortIntervalStart<ItvChr>());
+      std::sort(itv.begin(), itv.end());
       for(uint32_t i = 0; i < itv.size(); ++i) {
 	uint64_t covsum = 0;
 	for(int32_t k = itv[i].start; k < itv[i].end; ++k) covsum += cov[k];

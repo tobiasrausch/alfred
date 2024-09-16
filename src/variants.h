@@ -17,15 +17,12 @@ namespace bamstats
 
     explicit BiallelicVariant(int32_t p) : pos(p), ref(""), alt(""), hap(0) {}
     BiallelicVariant(int32_t p, std::string const& r, std::string  const& a, bool h) : pos(p), ref(r), alt(a), hap(h) {}
-  };
 
-
-  template<typename TRecord>
-  struct SortVariants : public std::binary_function<TRecord, TRecord, bool> {
-    inline bool operator()(TRecord const& s1, TRecord const& s2) const {
-      return s1.pos < s2.pos;
+    bool operator<(const BiallelicVariant& s2) const {
+      return pos < s2.pos;
     }
   };
+
 
   template<typename TVariants>
   inline bool

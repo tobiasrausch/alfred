@@ -26,6 +26,10 @@ namespace bamstats
     int32_t end;
     
     Interval(int32_t s, int32_t e) : start(s), end(e) {}
+
+    bool operator<(const Interval& s2) const {
+      return start < s2.start;
+    }
   };
 
 
@@ -61,6 +65,10 @@ namespace bamstats
 
     explicit IntervalLabel(int32_t s) : start(s), end(s+1), strand('*'), lid(-1) {}
     IntervalLabel(int32_t s, int32_t e, char t, int32_t l) : start(s), end(e), strand(t), lid(l) {}
+
+    bool operator<(const IntervalLabel& s2) const {
+      return start < s2.start;
+    }
   };
 
   struct IntervalLabelId {
@@ -72,24 +80,19 @@ namespace bamstats
 
     explicit IntervalLabelId(int32_t s) : start(s), end(s+1), strand('*'), lid(-1), eid(-1) {}
     IntervalLabelId(int32_t s, int32_t e, char t, int32_t l, int32_t i) : start(s), end(e), strand(t), lid(l), eid(i) {}
+
+    bool operator<(const IntervalLabelId& s2) const {
+      return start < s2.start;
+    }
   };
 
-  
   template<typename TRecord>
-  struct SortIntervalLabel : public std::binary_function<TRecord, TRecord, bool> {
+  struct SortIntervalLabel {
     inline bool operator()(TRecord const& s1, TRecord const& s2) const {
       return s1.lid < s2.lid;
     }
   };
-
-  template<typename TRecord>
-  struct SortIntervalStart : public std::binary_function<TRecord, TRecord, bool> {
-    inline bool operator()(TRecord const& s1, TRecord const& s2) const {
-      return s1.start < s2.start;
-    }
-  };
-
-
+  
   inline void
   _insertInterval(std::vector<IntervalLabel>& cr, int32_t s, int32_t e, char strand, int32_t lid, int32_t) {
     // Uniqueness not necessary because we flatten the interval map

@@ -13,7 +13,7 @@ bindir ?= $(exec_prefix)/bin
 
 # Flags
 CXX=g++
-CXXFLAGS += -std=c++11 -isystem ${JLIB} -isystem ${EBROOTHTSLIB} -pedantic -W -Wall
+CXXFLAGS += -std=c++17 -isystem ${JLIB} -isystem ${EBROOTHTSLIB} -pedantic -W -Wall
 LDFLAGS += -L${EBROOTHTSLIB} -lboost_iostreams -lboost_filesystem -lboost_system -lboost_program_options -lboost_date_time 
 
 # Additional flags for release/debug
