@@ -23,28 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const selectExamples = Select(document.getElementById('select-examples'))
   const selectToc = Select(document.getElementById('select-toc'))
 
-  // Defensive: log missing elements
-  [
-    ['resultLink', resultLink],
-    ['submitButton', submitButton],
-    ['inputFile', inputFile],
-    ['chartsContainer', chartsContainer],
-    ['resultContainer', resultContainer],
-    ['resultInfo', resultInfo],
-    ['resultError', resultError],
-    ['summaryTab', summaryTab]
-  ].forEach(([name, el]) => {
-    if (!el) {
-      console.warn(`Element '${name}' is missing from DOM!`);
-    }
-  });
-
-  // Only continue if all main elements exist
-  if (!submitButton || !resultLink || !inputFile || !chartsContainer || !resultContainer || !resultInfo || !resultError || !summaryTab) {
-    console.error('Missing one or more required elements. Aborting initialization.');
-    return;
-  }
-
   $('#mainTab a').on('click', function(e) {
     e.preventDefault()
     $(this).tab('show')
