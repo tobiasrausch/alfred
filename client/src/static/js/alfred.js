@@ -23,11 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const selectExamples = Select(document.getElementById('select-examples'))
   const selectToc = Select(document.getElementById('select-toc'))
 
-  $('#mainTab a').on('click', function(e) {
-    e.preventDefault()
-    $(this).tab('show')
-  })
-
   $('[data-toggle="tooltip"]').tooltip()
 
   submitButton.addEventListener('click', function() {
