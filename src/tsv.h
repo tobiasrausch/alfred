@@ -225,7 +225,11 @@ namespace bamstats
 
       if (itRg->second.pc.paired) rcfile << medianFromHistogram(itRg->second.rc.lRc[0]) << ":" << medianFromHistogram(itRg->second.rc.lRc[1]);
       else rcfile << medianFromHistogram(itRg->second.rc.lRc[0]);
-      rcfile << "\t" << deflayout << "\t" << medISize << "\t" << medianFromHistogram(itRg->second.bc.bpWithCoverage) << "\t" << ssdcov << "\t" << itRg->second.bc.nd << "\t" << fraccovbp << "\t" << pbc1 << "\t" << pbc2 << "\t" << medianFromHistogram(itRg->second.qc.qcount);
+      // or mean coverage: meanFromHistogram()
+      rcfile << "\t" << deflayout << "\t" << medISize << "\t";
+      if (c.meanCoverage) rcfile << meanFromHistogram(itRg->second.bc.bpWithCoverage) << "\t";
+      else rcfile << medianFromHistogram(itRg->second.bc.bpWithCoverage) << "\t";
+      rcfile << ssdcov << "\t" << itRg->second.bc.nd << "\t" << fraccovbp << "\t" << pbc1 << "\t" << pbc2 << "\t" << medianFromHistogram(itRg->second.qc.qcount);
       
       // Bed metrics
       if (c.hasRegionFile) {

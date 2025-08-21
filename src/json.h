@@ -163,7 +163,8 @@ namespace bamstats
 	  row.push_back(nullptr);
 	  row.push_back(nullptr);
 	}
-	row.push_back(medianFromHistogram(itRg->second.bc.bpWithCoverage));
+	if (c.meanCoverage) row.push_back(meanFromHistogram(itRg->second.bc.bpWithCoverage));
+	else row.push_back(medianFromHistogram(itRg->second.bc.bpWithCoverage));
 	if (mappedCount > 0) row.push_back((double) (1000.0 * sdFromHistogram(itRg->second.bc.bpWithCoverage) / std::sqrt((double) mappedCount)));
 	else row.push_back(nullptr);
 	row.push_back(itRg->second.bc.nd);

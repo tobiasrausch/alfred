@@ -34,6 +34,7 @@ struct ConfigQC {
   bool isMitagged;
   bool secondary;
   bool supplementary;
+  bool meanCoverage;
   float nXChrLen;
   uint32_t minChrLen;
   std::string rgname;
@@ -62,6 +63,7 @@ int qc(int argc, char **argv) {
     ("name,a", boost::program_options::value<std::string>(&sampleName), "sample name (optional, otherwise SM tag is used)")
     ("jsonout,j", boost::program_options::value<boost::filesystem::path>(&c.jsonout), "gzipped json output file")
     ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile), "gzipped tsv output file")
+    ("meancov,m", "report mean coverage as float instead of median integer coverage")
     ("secondary,s", "evaluate secondary alignments")
     ("supplementary,u", "evaluate supplementary alignments") 
     ;
@@ -111,6 +113,10 @@ int qc(int argc, char **argv) {
   if (vm.count("secondary")) c.secondary = true;
   else c.secondary = false;
 
+  // Mean coverage
+  if (vm.count("meancov")) c.meanCoverage = true;
+  else c.meanCoverage = false;
+  
   // Supplementary alignments
   if (vm.count("supplementary")) c.supplementary = true;
   else c.supplementary = false;
