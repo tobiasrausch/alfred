@@ -20,6 +20,7 @@ namespace bamstats
 
   struct CountDNAConfig {
     bool fragments;
+    bool ignoreRG;
     uint32_t fraglow;
     uint32_t fraghigh;    
     uint32_t window_size;
@@ -305,6 +306,7 @@ namespace bamstats
       ("map-qual,m", boost::program_options::value<uint16_t>(&c.minQual)->default_value(10), "min. mapping quality")
       ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("cov.gz"), "coverage output file")
       ("fragments,f", boost::program_options::value<std::string>(&fragmentString), "count illumina PE fragments using lower and upper bound on insert size, i.e. -f 0,10000")
+      ("ignore,g", "ignore read-groups")
       ;
 
     boost::program_options::options_description window("Window options");
@@ -341,6 +343,10 @@ namespace bamstats
       std::cout << visible_options << "\n";
       return 1;
     }
+
+    // Ignore read groups
+    if (vm.count("ignore")) c.ignoreRG = true;
+    else c.ignoreRG = false;
 
     // Fragment midpoint counting
     if (vm.count("fragments")) {
@@ -389,8 +395,12 @@ namespace bamstats
       // Get sample name
       std::string sampleName;
       if (!getSMTag(std::string(hdr->text), c.bamFile.stem().string(), sampleName)) {
-	std::cerr << "Only one sample (@RG:SM) is allowed per input BAM file " << c.bamFile.string() << std::endl;
-	return 1;
+	if (c.ignoreRG) {
+	  c.sampleName = c.bamFile.stem().string();
+	} else { 
+	  std::cerr << "Only one sample (@RG:SM) is allowed per input BAM file " << c.bamFile.string() << std::endl;
+	  return 1;
+	}
       } else c.sampleName = sampleName;
 
       // Check input intervals (if present)
