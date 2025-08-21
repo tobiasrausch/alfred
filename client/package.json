@@ -4,15 +4,16 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "build": "rimraf dist && mkdir -p dist/examples && cp -r src/static/examples dist/ && parcel build src/index.html --no-cache --no-source-maps --public-url ./",
+    "build": "npx rimraf dist && mkdir -p dist/examples && cp -r src/static/examples dist/ && parcel build src/index.html --no-cache --no-source-maps --public-url ./",
     "dev": "mkdir -p dist/examples && cp -r src/static/examples dist/ && parcel src/index.html --no-cache --open"
   },
   "keywords": [],
   "author": "",
   "license": "",
   "devDependencies": {
-    "parcel-bundler": "^1.12.4",
-    "rimraf": "^2.7.1"
+    "buffer": "^6.0.3",
+    "parcel": "^2.15.4",
+    "rimraf": "^6.0.1"
   },
   "dependencies": {
     "axios": "^1.8.2",

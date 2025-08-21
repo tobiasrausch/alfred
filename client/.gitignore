@@ -2,3 +2,4 @@
 /.cache/
 /dist/
 /.env.production
+/.parcel-cache/
