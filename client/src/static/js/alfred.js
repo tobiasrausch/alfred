@@ -23,6 +23,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const selectExamples = Select(document.getElementById('select-examples'))
   const selectToc = Select(document.getElementById('select-toc'))
 
+  // Ensure result-container is hidden on page load
+  if (resultContainer) hideElement(resultContainer)
+  if (resultError) hideElement(resultError)
+  if (resultInfo) hideElement(resultInfo)
+  if (summaryTab) summaryTab.innerHTML = ''
+
   $('[data-toggle="tooltip"]').tooltip()
 
   submitButton.addEventListener('click', function() {
