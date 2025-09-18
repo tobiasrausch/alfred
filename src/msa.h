@@ -171,8 +171,7 @@ namespace bamstats {
 
     // Calculate coverage
     typedef boost::multi_array<bool, 2> TFlag;
-    TFlag fl;
-    fl.resize(boost::extents[align.shape()[0]][align.shape()[1]]);
+    TFlag fl(boost::extents[align.shape()[0]][align.shape()[1]]);
     typedef std::vector<int32_t> TCoverage;
     TCoverage cov;
     cov.resize(align.shape()[1], 0);

@@ -20,7 +20,7 @@
 #include "util.h"
 #include "align.h"
 #include "msa.h"
-
+#include "consedlib.h"
 
 namespace bamstats {
 
@@ -38,6 +38,7 @@ namespace bamstats {
     float fractionCalled;
     std::string position;
     std::string seqtype;
+    std::string consmode;
     std::string outformat;
     DnaScore<int32_t> aliscore;
     boost::filesystem::path alignment;
@@ -296,6 +297,7 @@ namespace bamstats {
       ("help,?", "show help message")
       ("called,d", boost::program_options::value<float>(&c.fractionCalled)->default_value(0.5), "fraction of reads required for consensus")
       ("seqtype,t", boost::program_options::value<std::string>(&c.seqtype)->default_value("ill"), "seq. type [ill|ont|pacbio|custom]")
+      ("mode,b", boost::program_options::value<std::string>(&c.consmode)->default_value("dp"), "msa algorithm [dp|ed], dp: dynamic programming (slow), ed: edit distance (fast)")
       ;
     
     boost::program_options::options_description bamopt("BAM input options");
@@ -380,11 +382,6 @@ namespace bamstats {
     for(int i=0; i<argc; ++i) { std::cout << argv[i] << ' '; }
     std::cout << std::endl;
 
-    // Some status information
-    std::cout << "Sequencing type: " << c.seqtype << std::endl;
-    std::cout << "Alignment scoring (match: " << c.aliscore.match << ", mismatch: " << c.aliscore.mismatch << ", gapopen: " << c.aliscore.go << ", gapext: " << c.aliscore.ge << ")" << std::endl;
-    std::cout << "Window: " << c.window << std::endl;
-
     // Load reads for consensus
     typedef std::vector<std::string> TReads;
     TReads rs;
@@ -409,7 +406,8 @@ namespace bamstats {
 
     // Generate Consensus
     std::string consensus;
-    msa(c, rs, consensus);
+    if (c.consmode == "dp") msa(c, rs, consensus);
+    else msaEdlib(c, rs, consensus);
     
     // Output consensus
     boost::iostreams::filtering_ostream rcfile;
