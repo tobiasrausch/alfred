@@ -225,7 +225,6 @@ namespace bamstats
     return gff;
   }
     
-  
   inline bool is_gz(boost::filesystem::path const& f) {
     std::ifstream bfile(f.string().c_str(), std::ios_base::binary | std::ios::ate);
     bfile.seekg(0, std::ios::beg);
@@ -237,7 +236,22 @@ namespace bamstats
     if ((byte1 == '\x1F') && (byte2 == '\x8B')) return true;
     else return false;
   }
-    
+
+  inline int32_t
+  inputType(std::string const& path) {
+    htsFile *hts_fp = hts_open(path.c_str(), "r");
+    if (hts_fp == NULL) return -1;
+    else {
+      std::string ext = std::string(hts_format_file_extension(hts_get_format(hts_fp)));
+      hts_close(hts_fp);
+      if ((ext == "bam") || (ext == "cram")) return 0;
+      else if (ext == "fa") return 1;
+      else if (ext == "fq") return 2;
+      else {
+        return -1;
+      }
+    }
+  }
 
   // F+ 0
   // F- 1

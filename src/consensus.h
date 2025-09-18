@@ -37,7 +37,6 @@ namespace bamstats {
     int32_t mismatch;
     float fractionCalled;
     std::string position;
-    std::string format;
     std::string seqtype;
     std::string outformat;
     DnaScore<int32_t> aliscore;
@@ -295,7 +294,6 @@ namespace bamstats {
     boost::program_options::options_description generic("Generic options");
     generic.add_options()
       ("help,?", "show help message")
-      ("format,f", boost::program_options::value<std::string>(&c.format)->default_value("bam"), "input format [bam|fasta]")
       ("called,d", boost::program_options::value<float>(&c.fractionCalled)->default_value(0.5), "fraction of reads required for consensus")
       ("seqtype,t", boost::program_options::value<std::string>(&c.seqtype)->default_value("ill"), "seq. type [ill|ont|pacbio|custom]")
       ;
@@ -383,7 +381,6 @@ namespace bamstats {
     std::cout << std::endl;
 
     // Some status information
-    std::cout << "Input format: " << c.format << std::endl;
     std::cout << "Sequencing type: " << c.seqtype << std::endl;
     std::cout << "Alignment scoring (match: " << c.aliscore.match << ", mismatch: " << c.aliscore.mismatch << ", gapopen: " << c.aliscore.go << ", gapext: " << c.aliscore.ge << ")" << std::endl;
     std::cout << "Window: " << c.window << std::endl;
@@ -392,11 +389,15 @@ namespace bamstats {
     typedef std::vector<std::string> TReads;
     TReads rs;
     if (vm.count("input-file")) {
-      if (c.format == "fasta") {
-	_loadFastaReads(c, rs);
-      } else {
+      int32_t iftype = inputType(c.inputfile.string());
+      if (iftype == 0) { // BAM
 	bool rtval = _loadBamReads(c, rs);
 	if (!rtval) return 1;
+      } else if ((iftype == 1) || (iftype == 2)) { // FASTA or FASTQ
+	_loadFastaReads(c, rs);
+      } else {
+	std::cerr << "Unknown input file format! " << c.inputfile.string() << std::endl;
+	return 1;
       }
     }
 
