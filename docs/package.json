@@ -7,7 +7,7 @@
     "build": "vuepress build"
   },
   "devDependencies": {
-    "@vuepress/bundler-vite": "^2.0.0-rc.7",
+    "@vuepress/bundler-vite": "^2.0.0-rc.25",
     "@vuepress/cli": "^2.0.0-rc.2",
     "@vuepress/theme-default": "^1.9.10"
   }
