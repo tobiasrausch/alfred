@@ -10,6 +10,7 @@
     "@vuepress/bundler-vite": "^2.0.0-rc.2",
     "@vuepress/cli": "^2.0.0-rc.2",
     "@vuepress/theme-default": "^2.0.0-rc.2",
+    "sass-embedded": "^1.92.1",
     "vite": "^7.1.6"
   }
 }
