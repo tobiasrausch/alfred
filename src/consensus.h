@@ -53,17 +53,17 @@ namespace bamstats {
   _loadFastaReads(TConfig const& c, std::vector<std::string>& rs) {
     // Load FASTA/FASTQ
     rs.clear();
-    htsFile* fp = hts_open(c.inputfile.string().c_str(), "r");
+    gzFile fp = gzopen(c.inputfile.string().c_str(), "r");
     if (fp) {
-      kseq_t* kseq = kseq_init(fp->fp.bgzf);
+      kseq_t* kseq = kseq_init(fp);
       int l;
       while((l = kseq_read(kseq)) >= 0) {
 	//kseq->qual.s are the qualities
 	rs.push_back(kseq->seq.s);
-	std::cout << "Read name: " << kseq->name.s << ", Length: " << rs[rs.size()-1].size() << std::endl;	  
+	std::cout << "Read name: " << kseq->name.s << ", Length: " << rs.back().size() << std::endl;
       }
       kseq_destroy(kseq);
-      hts_close(fp);
+      gzclose(fp);
     }
   }
 
