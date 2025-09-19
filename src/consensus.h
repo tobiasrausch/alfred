@@ -53,39 +53,18 @@ namespace bamstats {
   _loadFastaReads(TConfig const& c, std::vector<std::string>& rs) {
     // Load FASTA/FASTQ
     rs.clear();
-    std::ifstream fqfile;
-    boost::iostreams::filtering_streambuf<boost::iostreams::input> dataIn;
-    if (is_gz(c.inputfile)) {
-      fqfile.open(c.inputfile.string().c_str(), std::ios_base::in | std::ios_base::binary);
-      dataIn.push(boost::iostreams::gzip_decompressor(), 16*1024);
-    } else fqfile.open(c.inputfile.string().c_str(), std::ios_base::in);
-    dataIn.push(fqfile);
-    std::istream instream(&dataIn);
-    std::string gline;
-    uint64_t lnum = 0;
-    std::string qname;
-    bool validRec = true;
-    while(std::getline(instream, gline)) {
-      if (lnum % 2 == 0) {
-	// FASTA or FASTQ
-        if ((gline[0] == '>') || (gline[0] == '@')) {
-          validRec = true;
-          qname = gline.substr(1);
-          qname = qname.substr(0, qname.find(' '));
-          qname = qname.substr(0, qname.find('\t'));
-        } else validRec = false;
-      } else if (lnum % 2 == 1) {
-        if (validRec) {
-	  std::cout << "Read name: " << qname << ", Length: " << gline.size() << std::endl;	  
-	  rs.push_back(gline);
-        }
+    htsFile* fp = hts_open(c.inputfile.string().c_str(), "r");
+    if (fp) {
+      kseq_t* kseq = kseq_init(fp->fp.bgzf);
+      int l;
+      while((l = kseq_read(kseq)) >= 0) {
+	//kseq->qual.s are the qualities
+	rs.push_back(kseq->seq.s);
+	std::cout << "Read name: " << kseq->name.s << ", Length: " << rs[rs.size()-1].size() << std::endl;	  
       }
-      ++lnum;
+      kseq_destroy(kseq);
+      hts_close(fp);
     }
-    // Clean-up
-    dataIn.pop();
-    if (is_gz(c.inputfile)) dataIn.pop();
-    fqfile.close();
   }
 
   inline bool

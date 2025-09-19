@@ -11,7 +11,12 @@
 #include <boost/iostreams/device/file.hpp>
 #include <boost/math/distributions/binomial.hpp>
 
+#include <htslib/hts.h>
+#include <htslib/bgzf.h>
+#include <htslib/kseq.h>
 #include <htslib/sam.h>
+
+KSEQ_INIT(BGZF*, bgzf_read) // only ONCE in project
 
 
 namespace bamstats
