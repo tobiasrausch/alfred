@@ -238,6 +238,37 @@ namespace bamstats {
     consensus(c, align, gapped, cs);
   }
 
+  template<typename TConfig, typename TAlign>
+  inline void
+  msaAlignOut(TConfig const& c, TAlign const& align, std::string const& gapped) {
+    boost::iostreams::filtering_ostream rcfile;
+    rcfile.push(boost::iostreams::gzip_compressor());
+    rcfile.push(boost::iostreams::file_sink(c.alignment.c_str(), std::ios_base::out | std::ios_base::binary));
+    typedef typename TAlign::index TAIndex;
+
+    // Output vertical/horizontal alignment
+    if (c.outformat == "h") {
+      for(TAIndex i = 0; i < (TAIndex) align.shape()[0]; ++i) {
+	rcfile << ">Read" << i << std::endl;
+	for(TAIndex j = 0; j < (TAIndex) align.shape()[1]; ++j) {
+	  rcfile << align[i][j];
+	}
+	rcfile << std::endl;
+      }
+    } else {
+      for(TAIndex j = 0; j < (TAIndex) align.shape()[1]; ++j) {
+	for(TAIndex i = 0; i < (TAIndex) align.shape()[0]; ++i) {
+	  rcfile << align[i][j];
+	}
+	rcfile << '|' << gapped[j] << std::endl;
+      }
+    }
+
+    // Close files
+    rcfile.pop();
+    rcfile.pop();
+  }
+
   template<typename TConfig, typename TSplitReadSet>
   inline int
   msa(TConfig const& c, TSplitReadSet const& sps, std::string& cs) {
@@ -282,38 +313,11 @@ namespace bamstats {
     // Consensus calling
     std::string gapped;
     consensus(c, align, gapped, cs);
-    
-    // Output vertical/horizontal alignment
-    if (c.outformat == "h") {
-      boost::iostreams::filtering_ostream rcfile;
-      rcfile.push(boost::iostreams::gzip_compressor());
-      rcfile.push(boost::iostreams::file_sink(c.alignment.c_str(), std::ios_base::out | std::ios_base::binary));
-      typedef typename TAlign::index TAIndex;
-      for(TAIndex i = 0; i < (TAIndex) align.shape()[0]; ++i) {
-	rcfile << ">Read" << i << std::endl;
-	for(TAIndex j = 0; j < (TAIndex) align.shape()[1]; ++j) {
-	  rcfile << align[i][j];
-	}
-	rcfile << std::endl;
-      }
-      rcfile.pop();
-    } else {
-      // Vertical alignment
-      boost::iostreams::filtering_ostream rcfile;
-      rcfile.push(boost::iostreams::gzip_compressor());
-      rcfile.push(boost::iostreams::file_sink(c.alignment.c_str(), std::ios_base::out | std::ios_base::binary));
-      typedef typename TAlign::index TAIndex;
-      for(TAIndex j = 0; j < (TAIndex) align.shape()[1]; ++j) {
-	for(TAIndex i = 0; i < (TAIndex) align.shape()[0]; ++i) {
-	  rcfile << align[i][j];
-	}
-	rcfile << '|' << gapped[j] << std::endl;
-      }
-      rcfile.pop();
-    }
-
     //std::cerr << cs << std::endl;
     //std::cerr << std::endl;
+
+    // Output alignment
+    msaAlignOut(c, align, gapped);
     
     // Return split-read support
     return align.shape()[0];

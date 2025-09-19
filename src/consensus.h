@@ -297,7 +297,6 @@ namespace bamstats {
       ("help,?", "show help message")
       ("called,d", boost::program_options::value<float>(&c.fractionCalled)->default_value(0.5), "fraction of reads required for consensus")
       ("seqtype,t", boost::program_options::value<std::string>(&c.seqtype)->default_value("ill"), "seq. type [ill|ont|pacbio|custom]")
-      ("mode,b", boost::program_options::value<std::string>(&c.consmode)->default_value("dp"), "msa algorithm [dp|ed], dp: dynamic programming (slow), ed: edit distance (fast)")
       ;
     
     boost::program_options::options_description bamopt("BAM input options");
@@ -327,6 +326,7 @@ namespace bamstats {
     
     boost::program_options::options_description hidden("Hidden options");
     hidden.add_options()
+      ("mode,b", boost::program_options::value<std::string>(&c.consmode)->default_value("dp"), "msa algorithm [dp|ed], dp: dynamic programming (slow), ed: edit distance (fast)")
       ("input-file", boost::program_options::value<boost::filesystem::path>(&c.inputfile), "input bam/fasta file")
       ;
     
