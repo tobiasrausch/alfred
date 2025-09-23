@@ -233,7 +233,6 @@ namespace bamstats
   inline int
   msaEdlib(TConfig const& c, TSplitReadSet& sps, std::string& cs) {
     float pidth = 0.05; // Expected percent mis-identity threshold
-    int32_t minOverLen = 250;
     std::vector<float> edit(sps.size() * sps.size(), 1);
     for(uint32_t i = 0; i < sps.size(); ++i) {
       int32_t iSize = sps[i].size();
@@ -247,76 +246,20 @@ namespace bamstats
 	    if (iSize < jSize) {
 	      EdlibAlignResult align = edlibAlign(sps[i].c_str(), iSize, sps[j].c_str(), jSize, edlibNewAlignConfig((int) (pidth * iSize), EDLIB_MODE_HW, EDLIB_TASK_DISTANCE, NULL, 0));
 	      if (align.editDistance >= 0) edit[i * sps.size() + j] = (float) align.editDistance / (float) iSize;
-	      else {
-		// Front overlap alignment
-		std::string iFront = sps[i].substr(0, std::max(minOverLen, (int32_t) (iSize * 0.25)));
-		EdlibAlignResult front = edlibAlign(iFront.c_str(), iFront.size(), sps[j].c_str(), jSize, edlibNewAlignConfig((int) (pidth * iFront.size()), EDLIB_MODE_HW, EDLIB_TASK_DISTANCE, NULL, 0));
-		if (front.editDistance >= 0) edit[i * sps.size() + j] = (float) front.editDistance / (float) iFront.size();
-		else {
-		  // Back overlap alignment
-		  std::string iBack = sps[i].substr(std::min(iSize - minOverLen, (int32_t) (iSize * 0.75)));
-		  EdlibAlignResult back = edlibAlign(iBack.c_str(), iBack.size(), sps[j].c_str(), jSize, edlibNewAlignConfig((int) (pidth * iBack.size()), EDLIB_MODE_HW, EDLIB_TASK_DISTANCE, NULL, 0));
-		  if (back.editDistance >= 0) edit[i * sps.size() + j] = (float) back.editDistance / (float) iBack.size();
-		  edlibFreeAlignResult(back);
-		}
-		edlibFreeAlignResult(front);
-	      }
 	      edlibFreeAlignResult(align);
 	    } else {
 	      EdlibAlignResult align = edlibAlign(sps[j].c_str(), jSize, sps[i].c_str(), iSize, edlibNewAlignConfig((int) (pidth * jSize), EDLIB_MODE_HW, EDLIB_TASK_DISTANCE, NULL, 0));
 	      if (align.editDistance >= 0) edit[i * sps.size() + j] = (float) align.editDistance / (float) jSize;
-	      else {
-		// Front overlap alignment
-		std::string jFront = sps[j].substr(0, std::max(minOverLen, (int32_t) (jSize * 0.25)));
-		EdlibAlignResult front = edlibAlign(jFront.c_str(), jFront.size(), sps[i].c_str(), iSize, edlibNewAlignConfig((int) (pidth * jFront.size()), EDLIB_MODE_HW, EDLIB_TASK_DISTANCE, NULL, 0));
-		if (front.editDistance >= 0) edit[i * sps.size() + j] = (float) front.editDistance / (float) jFront.size();
-		else {
-		  // Back overlap alignment
-		  std::string jBack = sps[j].substr(std::min(jSize - minOverLen, (int32_t) (jSize * 0.75)));
-		  EdlibAlignResult back = edlibAlign(jBack.c_str(), jBack.size(), sps[i].c_str(), iSize, edlibNewAlignConfig((int) (pidth * jBack.size()), EDLIB_MODE_HW, EDLIB_TASK_DISTANCE, NULL, 0));
-		  if (back.editDistance >= 0) edit[i * sps.size() + j] = (float) back.editDistance / (float) jBack.size();
-		  edlibFreeAlignResult(back);
-		}
-		edlibFreeAlignResult(front);
-	      }
 	      edlibFreeAlignResult(align);
 	    }
 	  } else { // Reverse-Forward
 	    if (iSize < jSize) {
 	      EdlibAlignResult align = edlibAlign(iRev.c_str(), iSize, sps[j].c_str(), jSize, edlibNewAlignConfig((int) (pidth * iSize), EDLIB_MODE_HW, EDLIB_TASK_DISTANCE, NULL, 0));
 	      if (align.editDistance >= 0) edit[i * sps.size() + j] = (float) align.editDistance / (float) iSize;
-	      else {
-		// Front overlap alignment
-		std::string iFront = iRev.substr(0, std::max(minOverLen, (int32_t) (iSize * 0.25)));
-		EdlibAlignResult front = edlibAlign(iFront.c_str(), iFront.size(), sps[j].c_str(), jSize, edlibNewAlignConfig((int) (pidth * iFront.size()), EDLIB_MODE_HW, EDLIB_TASK_DISTANCE, NULL, 0));
-		if (front.editDistance >= 0) edit[i * sps.size() + j] = (float) front.editDistance / (float) iFront.size();
-		else {
-		  // Back overlap alignment
-		  std::string iBack = iRev.substr(std::min(iSize - minOverLen, (int32_t) (iSize * 0.75)));
-		  EdlibAlignResult back = edlibAlign(iBack.c_str(), iBack.size(), sps[j].c_str(), jSize, edlibNewAlignConfig((int) (pidth * iBack.size()), EDLIB_MODE_HW, EDLIB_TASK_DISTANCE, NULL, 0));
-		  if (back.editDistance >= 0) edit[i * sps.size() + j] = (float) back.editDistance / (float) iBack.size();
-		  edlibFreeAlignResult(back);
-		}
-		edlibFreeAlignResult(front);
-	      }
 	      edlibFreeAlignResult(align);
 	    } else {
 	      EdlibAlignResult align = edlibAlign(sps[j].c_str(), jSize, iRev.c_str(), iSize, edlibNewAlignConfig((int) (pidth * jSize), EDLIB_MODE_HW, EDLIB_TASK_DISTANCE, NULL, 0));
 	      if (align.editDistance >= 0) edit[i * sps.size() + j] = (float) align.editDistance / (float) jSize;
-	      else {
-		// Front overlap alignment
-		std::string jFront = sps[j].substr(0, std::max(minOverLen, (int32_t) (jSize * 0.25)));
-		EdlibAlignResult front = edlibAlign(jFront.c_str(), jFront.size(), iRev.c_str(), iSize, edlibNewAlignConfig((int) (pidth * jFront.size()), EDLIB_MODE_HW, EDLIB_TASK_DISTANCE, NULL, 0));
-		if (front.editDistance >= 0) edit[i * sps.size() + j] = (float) front.editDistance / (float) jFront.size();
-		else {
-		  // Back overlap alignment
-		  std::string jBack = sps[j].substr(std::min(jSize - minOverLen, (int32_t) (jSize * 0.75)));
-		  EdlibAlignResult back = edlibAlign(jBack.c_str(), jBack.size(), iRev.c_str(), iSize, edlibNewAlignConfig((int) (pidth * jBack.size()), EDLIB_MODE_HW, EDLIB_TASK_DISTANCE, NULL, 0));
-		  if (back.editDistance >= 0) edit[i * sps.size() + j] = (float) back.editDistance / (float) jBack.size();
-		  edlibFreeAlignResult(back);
-		}
-		edlibFreeAlignResult(front);
-	      }
 	      edlibFreeAlignResult(align);
 	    }
 	  }
