@@ -228,12 +228,13 @@ namespace bamstats
     }
   }
 
-
+  
   template<typename TConfig, typename TSplitReadSet>
   inline int
   msaEdlib(TConfig const& c, TSplitReadSet& sps, std::string& cs) {
     float pidth = 0.05; // Expected percent mis-identity threshold
     std::vector<float> edit(sps.size() * sps.size(), 1);
+    /*
     for(uint32_t i = 0; i < sps.size(); ++i) {
       int32_t iSize = sps[i].size();
       std::string iRev = sps[i];
@@ -266,10 +267,34 @@ namespace bamstats
 	}
       }
     }
+    */
+    int32_t minOverlap = 250;
+    for(uint32_t i = 0; i < sps.size(); ++i) {
+      int32_t iSize = sps[i].size();
+      for(uint32_t j = 0; j < sps.size(); ++j) {
+	int32_t jSize = sps[j].size();
+	if (edit[i * sps.size() + j] == 1) {
+	  for(int32_t osize = std::min(iSize, jSize); osize >= minOverlap; osize -= minOverlap) {
+	    std::string suffix = sps[i].substr(iSize - osize);
+	    std::string prefix = sps[j].substr(0, osize);
+	    EdlibAlignResult align = edlibAlign(suffix.c_str(), osize, prefix.c_str(), osize, edlibNewAlignConfig((int) (pidth * osize), EDLIB_MODE_NW, EDLIB_TASK_DISTANCE, NULL, 0));
+	    if (align.editDistance >= 0) {
+	      edit[i * sps.size() + j] = (float) align.editDistance / (float) osize;
+	      std::cerr << i << ',' << j << ',' << osize << ',' << edit[i * sps.size() + j] << ',' << align.editDistance << std::endl;
+	      edlibFreeAlignResult(align);
+	      break;
+	    }
+	    edlibFreeAlignResult(align);
+	  }
+	} 
+      }
+    }
+	  
 
     // Debug
     std::cerr << "Containment percent identity" << std::endl;
     for(uint32_t i = 0; i < sps.size(); ++i) {
+      
       for(uint32_t j = 0; j < sps.size(); ++j) {
 	std::cerr << edit[i * sps.size() + j] << ',';
       }

@@ -15,12 +15,7 @@ export default defineUserConfig({
       { text: "Web App", link: "/webapp/" },
       { text: "FAQ", link: "/faq/" }
     ],
-    sidebar: [
-      { text: "Installation", link: "/installation/" },
-      { text: "Usage", link: "/cli/" },	
-      { text: "Web App", link: "/webapp/" },
-      { text: "FAQ", link: "/faq/" }
-    ]
+    sidebar: false
   }),
   bundler: viteBundler({})
 })

@@ -5,7 +5,7 @@ Alfred's quality control JSON files can be interactively browsed with the
 All charts support panning and zooming and can be downloaded as PNG images.
 The summary QC table can be downloaded as a CSV file.
 
-To generate a quality control file in JSON format run [Alfred's command-line tool](/cli/) as follows:
+To generate a quality control file in JSON format run Alfred's command-line tool as follows:
 
 ```bash
 alfred qc -r <ref.fa> -f json -o qc.json.gz <align.bam>
