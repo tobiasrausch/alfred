@@ -233,106 +233,182 @@ namespace bamstats
   inline int
   msaEdlib(TConfig const& c, TSplitReadSet& sps, std::string& cs) {
     float pidth = 0.05; // Expected percent mis-identity threshold
-    std::vector<float> edit(sps.size() * sps.size(), 1);
-    /*
+    int32_t minOverlap = 50;   // Min. overlap length
+
+    // Overlap matrices
+    std::vector<float> edit(sps.size() * sps.size(), 1);  //1: no overlap (n), <1: overlap, i<j: fwd-fwd (ff), i>j: fwd-rev (fr)
+    std::vector<int32_t> loc(sps.size() * sps.size(), 0);  //negative: prefix (p), positive: suffix (s), 0: containment (c)
+    
+    // Compute overlap matrix
     for(uint32_t i = 0; i < sps.size(); ++i) {
       int32_t iSize = sps[i].size();
       std::string iRev = sps[i];
       reverseComplement(iRev);
       for(uint32_t j = 0; j < sps.size(); ++j) {
-	if (i == j) edit[i * sps.size() + j] = 0;
-	else {
-	  int32_t jSize = sps[j].size();
-	  if (i < j) { // Forward-Forward
+	if (i == j) {
+	  edit[i * sps.size() + j] = 0;
+	  loc[i * sps.size() + j] = 'i';
+	}
+	int32_t jSize = sps[j].size();
+	// Forward - Forward cases
+	if (i < j) {
+	  // Containment
+	  // --------->
+	  //    -->
+	  if (edit[i * sps.size() + j] == 1) {
 	    if (iSize < jSize) {
 	      EdlibAlignResult align = edlibAlign(sps[i].c_str(), iSize, sps[j].c_str(), jSize, edlibNewAlignConfig((int) (pidth * iSize), EDLIB_MODE_HW, EDLIB_TASK_DISTANCE, NULL, 0));
-	      if (align.editDistance >= 0) edit[i * sps.size() + j] = (float) align.editDistance / (float) iSize;
+	      if (align.editDistance >= 0) {
+		edit[i * sps.size() + j] = (float) align.editDistance / (float) iSize;
+		loc[i * sps.size() + j] = 0;
+	      }
 	      edlibFreeAlignResult(align);
 	    } else {
 	      EdlibAlignResult align = edlibAlign(sps[j].c_str(), jSize, sps[i].c_str(), iSize, edlibNewAlignConfig((int) (pidth * jSize), EDLIB_MODE_HW, EDLIB_TASK_DISTANCE, NULL, 0));
-	      if (align.editDistance >= 0) edit[i * sps.size() + j] = (float) align.editDistance / (float) jSize;
+	      if (align.editDistance >= 0) {
+		edit[i * sps.size() + j] = (float) align.editDistance / (float) jSize;
+		loc[i * sps.size() + j] = 0;
+	      }
 	      edlibFreeAlignResult(align);
 	    }
-	  } else { // Reverse-Forward
-	    if (iSize < jSize) {
-	      EdlibAlignResult align = edlibAlign(iRev.c_str(), iSize, sps[j].c_str(), jSize, edlibNewAlignConfig((int) (pidth * iSize), EDLIB_MODE_HW, EDLIB_TASK_DISTANCE, NULL, 0));
-	      if (align.editDistance >= 0) edit[i * sps.size() + j] = (float) align.editDistance / (float) iSize;
+	  }
+	  // Suffix
+	  //  ----->
+	  //     ----->
+	  if (edit[i * sps.size() + j] == 1) {
+	    for(int32_t osize = std::min(iSize, jSize); osize >= minOverlap; osize -= minOverlap) {
+	      std::string suffix = sps[i].substr(iSize - osize);
+	      std::string prefix = sps[j].substr(0, osize);
+	      EdlibAlignResult align = edlibAlign(suffix.c_str(), osize, prefix.c_str(), osize, edlibNewAlignConfig((int) (pidth * osize), EDLIB_MODE_NW, EDLIB_TASK_DISTANCE, NULL, 0));
+	      if (align.editDistance >= 0) {
+		edit[i * sps.size() + j] = (float) align.editDistance / (float) osize;
+		loc[i * sps.size() + j] = osize;
+		edlibFreeAlignResult(align);
+		break;
+	      }
 	      edlibFreeAlignResult(align);
-	    } else {
-	      EdlibAlignResult align = edlibAlign(sps[j].c_str(), jSize, iRev.c_str(), iSize, edlibNewAlignConfig((int) (pidth * jSize), EDLIB_MODE_HW, EDLIB_TASK_DISTANCE, NULL, 0));
-	      if (align.editDistance >= 0) edit[i * sps.size() + j] = (float) align.editDistance / (float) jSize;
+	    }
+	  }
+	  // Prefix
+	  //    ----->
+	  // ----->
+	  if (edit[i * sps.size() + j] == 1) {
+	    for(int32_t osize = std::min(iSize, jSize); osize >= minOverlap; osize -= minOverlap) {
+	      std::string prefix = sps[i].substr(0, osize);
+	      std::string suffix = sps[j].substr(jSize - osize);
+	      EdlibAlignResult align = edlibAlign(prefix.c_str(), osize, suffix.c_str(), osize, edlibNewAlignConfig((int) (pidth * osize), EDLIB_MODE_NW, EDLIB_TASK_DISTANCE, NULL, 0));
+	      if (align.editDistance >= 0) {
+		edit[i * sps.size() + j] = (float) align.editDistance / (float) osize;
+		loc[i * sps.size() + j] = -1 * osize;
+		edlibFreeAlignResult(align);
+		break;
+	      }
+	      edlibFreeAlignResult(align);
+	    }
+	  }
+	} else { // Forward-Reverse cases
+	  // --------->
+	  //    <--
+	  if (iSize < jSize) {
+	    EdlibAlignResult align = edlibAlign(iRev.c_str(), iSize, sps[j].c_str(), jSize, edlibNewAlignConfig((int) (pidth * iSize), EDLIB_MODE_HW, EDLIB_TASK_DISTANCE, NULL, 0));
+	    if (align.editDistance >= 0) {
+	      edit[i * sps.size() + j] = (float) align.editDistance / (float) iSize;
+	      loc[i * sps.size() + j] = 0;
+	    }
+	    edlibFreeAlignResult(align);
+	  } else {
+	    EdlibAlignResult align = edlibAlign(sps[j].c_str(), jSize, iRev.c_str(), iSize, edlibNewAlignConfig((int) (pidth * jSize), EDLIB_MODE_HW, EDLIB_TASK_DISTANCE, NULL, 0));
+	    if (align.editDistance >= 0) {
+	      edit[i * sps.size() + j] = (float) align.editDistance / (float) jSize;
+	      loc[i * sps.size() + j] = 0;
+	    }
+	    edlibFreeAlignResult(align);
+	  }
+	  //  <-----
+	  //     ----->
+	  if (edit[i * sps.size() + j] == 1) {
+	    for(int32_t osize = std::min(iSize, jSize); osize >= minOverlap; osize -= minOverlap) {
+	      std::string suffix = iRev.substr(iSize - osize);
+	      std::string prefix = sps[j].substr(0, osize);
+	      EdlibAlignResult align = edlibAlign(suffix.c_str(), osize, prefix.c_str(), osize, edlibNewAlignConfig((int) (pidth * osize), EDLIB_MODE_NW, EDLIB_TASK_DISTANCE, NULL, 0));
+	      if (align.editDistance >= 0) {
+		edit[i * sps.size() + j] = (float) align.editDistance / (float) osize;
+		loc[i * sps.size() + j] = osize;
+		edlibFreeAlignResult(align);
+		break;
+	      }
+	      edlibFreeAlignResult(align);
+	    }
+	  }
+	  //    <-----
+	  // ----->
+	  if (edit[i * sps.size() + j] == 1) {
+	    for(int32_t osize = std::min(iSize, jSize); osize >= minOverlap; osize -= minOverlap) {
+	      std::string prefix = iRev.substr(0, osize);
+	      std::string suffix = sps[j].substr(jSize - osize);
+	      EdlibAlignResult align = edlibAlign(prefix.c_str(), osize, suffix.c_str(), osize, edlibNewAlignConfig((int) (pidth * osize), EDLIB_MODE_NW, EDLIB_TASK_DISTANCE, NULL, 0));
+	      if (align.editDistance >= 0) {
+		edit[i * sps.size() + j] = (float) align.editDistance / (float) osize;
+		loc[i * sps.size() + j] = -1 * osize;
+		edlibFreeAlignResult(align);
+		break;
+	      }
 	      edlibFreeAlignResult(align);
 	    }
 	  }
 	}
       }
     }
-    */
-    int32_t minOverlap = 250;
-    for(uint32_t i = 0; i < sps.size(); ++i) {
-      int32_t iSize = sps[i].size();
-      for(uint32_t j = 0; j < sps.size(); ++j) {
-	int32_t jSize = sps[j].size();
-	if (edit[i * sps.size() + j] == 1) {
-	  for(int32_t osize = std::min(iSize, jSize); osize >= minOverlap; osize -= minOverlap) {
-	    std::string suffix = sps[i].substr(iSize - osize);
-	    std::string prefix = sps[j].substr(0, osize);
-	    EdlibAlignResult align = edlibAlign(suffix.c_str(), osize, prefix.c_str(), osize, edlibNewAlignConfig((int) (pidth * osize), EDLIB_MODE_NW, EDLIB_TASK_DISTANCE, NULL, 0));
-	    if (align.editDistance >= 0) {
-	      edit[i * sps.size() + j] = (float) align.editDistance / (float) osize;
-	      std::cerr << i << ',' << j << ',' << osize << ',' << edit[i * sps.size() + j] << ',' << align.editDistance << std::endl;
-	      edlibFreeAlignResult(align);
-	      break;
-	    }
-	    edlibFreeAlignResult(align);
-	  }
-	} 
-      }
-    }
-	  
-
     // Debug
     std::cerr << "Containment percent identity" << std::endl;
-    for(uint32_t i = 0; i < sps.size(); ++i) {
-      
+    for(uint32_t i = 0; i < sps.size(); ++i) {      
       for(uint32_t j = 0; j < sps.size(); ++j) {
-	std::cerr << edit[i * sps.size() + j] << ',';
+	if (j != 0) std::cerr << "\t";
+	if (i == j) std::cerr << edit[i * sps.size() + j] << " (ff,i," <<  sps[i].size() << ')' << '\t';
+	else {
+	  std::string adir = "fr";
+	  if (i < j) adir = "ff";
+	  if (edit[i * sps.size() + j] == 1) std::cerr << edit[i * sps.size() + j] << " (" << adir << ",n,0)";
+	  else {
+	    if (loc[i * sps.size() + j] == 0) std::cerr << edit[i * sps.size() + j] << " (" << adir << ",c," << std::min(sps[i].size(), sps[j].size()) << ')';
+	    else if (loc[i * sps.size() + j] < 0) std::cerr << edit[i * sps.size() + j] << " (" << adir << ",p," << -1 * loc[i * sps.size() + j] << ')';
+	    else std::cerr << edit[i * sps.size() + j] << " (" << adir << ",s," << loc[i * sps.size() + j] << ')';
+	  }
+	}
       }
       std::cerr << std::endl;
     }
-    exit(-1);
 
     // Find best sequence to start alignment
     uint32_t bestIdx = 0;
-    int32_t bestVal = sps[0].size();
+    float bestVal = sps[0].size();
     for(uint32_t i = 0; i < sps.size(); ++i) {
-      std::vector<int32_t> dist(sps.size());
+      std::vector<float> dist(sps.size());
       for(uint32_t j = 0; j < sps.size(); ++j) dist[j] = std::min(edit[i * sps.size() + j], edit[j * sps.size() + i]);
       std::sort(dist.begin(), dist.end());
+      if (dist[1] >= 1) std::cerr << "Sequence index " << i << " has no alignment!" << std::endl;
       if (dist[sps.size()/2] < bestVal) {
 	bestVal = dist[sps.size()/2];
 	bestIdx = i;
       }
     }
     
-    // Align to best sequence
-    std::vector<std::pair<int32_t, int32_t> > qscores;
-    qscores.push_back(std::make_pair(0, bestIdx));
-    std::string revc = sps[bestIdx];
-    reverseComplement(revc);
-    for(uint32_t j = 0; j < sps.size(); ++j) {
-      if (j != bestIdx) {
-	EdlibAlignResult align = edlibAlign(revc.c_str(), revc.size(), sps[j].c_str(), sps[j].size(), edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_DISTANCE, NULL, 0));
-	if (align.editDistance < std::min(edit[bestIdx * sps.size() + j], edit[j * sps.size() + bestIdx])) {
-	  reverseComplement(sps[j]);
-	  qscores.push_back(std::make_pair(align.editDistance, j));
-	} else qscores.push_back(std::make_pair(std::min(edit[bestIdx * sps.size() + j], edit[j * sps.size() + bestIdx]), j));
-	edlibFreeAlignResult(align);
+    // Order according to best sequence
+    std::vector<uint32_t> selectedIdx;
+    if (selectedIdx.empty()) {
+      std::vector<std::pair<float, int32_t> > qscores;
+      qscores.push_back(std::make_pair(0, bestIdx));
+      for(uint32_t j = 0; j < sps.size(); ++j) {
+	if (j != bestIdx) qscores.push_back(std::make_pair(std::min(edit[bestIdx * sps.size() + j], edit[j * sps.size() + bestIdx]), j));
+      }
+      std::sort(qscores.begin(), qscores.end());    
+      for(uint32_t i = 0; i < qscores.size(); ++i) {
+	// Debug
+	std::cerr << qscores[i].first << ',' << qscores[i].second << std::endl;
+	selectedIdx.push_back(qscores[i].second);
       }
     }
-    std::sort(qscores.begin(), qscores.end());    
-    std::vector<uint32_t> selectedIdx;
-    for(uint32_t i = 0; i < qscores.size(); ++i) selectedIdx.push_back(qscores[i].second);
+    exit(-1);
     
     // Extended IUPAC code
     EdlibEqualityPair additionalEqualities[20] = {{'M', 'A'}, {'M', 'C'}, {'R', 'A'}, {'R', 'G'}, {'W', 'A'}, {'W', 'T'}, {'B', 'A'}, {'B', '-'}, {'S', 'C'}, {'S', 'G'}, {'Y', 'C'}, {'Y', 'T'}, {'D', 'C'}, {'D', '-'}, {'K', 'G'}, {'K', 'T'}, {'E', 'G'}, {'E', '-'}, {'F', 'T'}, {'F', '-'}};
