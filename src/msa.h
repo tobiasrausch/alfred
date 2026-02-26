@@ -243,7 +243,7 @@ namespace bamstats {
   msaAlignOut(TConfig const& c, TAlign const& align, std::string const& gapped) {
     boost::iostreams::filtering_ostream rcfile;
     rcfile.push(boost::iostreams::gzip_compressor());
-    rcfile.push(boost::iostreams::file_sink(c.alignment.c_str(), std::ios_base::out | std::ios_base::binary));
+    rcfile.push(boost::iostreams::file_sink(c.alignment.string(), std::ios_base::out | std::ios_base::binary));
     typedef typename TAlign::index TAIndex;
 
     // Output vertical/horizontal alignment

@@ -56,7 +56,7 @@ namespace bamstats
     // Data out
     boost::iostreams::filtering_ostream dataOut;
     dataOut.push(boost::iostreams::gzip_compressor());
-    dataOut.push(boost::iostreams::file_sink(c.outfile.string().c_str(), std::ios_base::out | std::ios_base::binary));
+    dataOut.push(boost::iostreams::file_sink(c.outfile.string(), std::ios_base::out | std::ios_base::binary));
     dataOut << "chr\trefstart\trefend\tread\treadstart\treadend\tdirection" << std::endl;
     
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();

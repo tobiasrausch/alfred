@@ -213,7 +213,7 @@ namespace bamstats {
     for(uint32_t i = 0; i < dataOut.size(); ++i) {
       dataOut[i].push(boost::iostreams::gzip_compressor());
       std::string filename = c.outprefix + "." + ids[i] + ".fq.gz";
-      dataOut[i].push(boost::iostreams::file_sink(filename.c_str(), std::ios_base::out | std::ios_base::binary));
+      dataOut[i].push(boost::iostreams::file_sink(filename, std::ios_base::out | std::ios_base::binary));
     }
     
     // Open index file

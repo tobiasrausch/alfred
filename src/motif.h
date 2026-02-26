@@ -314,7 +314,7 @@ namespace bamstats
     boost::iostreams::filtering_ostream dataOut;
     if (c.motifPosOut) {
       dataOut.push(boost::iostreams::gzip_compressor());
-      dataOut.push(boost::iostreams::file_sink(c.outpos.string().c_str(), std::ios_base::out | std::ios_base::binary));
+      dataOut.push(boost::iostreams::file_sink(c.outpos.string(), std::ios_base::out | std::ios_base::binary));
       dataOut << "chr\tstart\tend\tid\tstrand\tquantile" << std::endl;
     }
     

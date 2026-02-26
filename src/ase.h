@@ -69,7 +69,7 @@ namespace bamstats {
     // Allele support file
     boost::iostreams::filtering_ostream dataOut;
     dataOut.push(boost::iostreams::gzip_compressor());
-    dataOut.push(boost::iostreams::file_sink(c.as.string().c_str(), std::ios_base::out | std::ios_base::binary));
+    dataOut.push(boost::iostreams::file_sink(c.as.string(), std::ios_base::out | std::ios_base::binary));
     dataOut << "chr\tpos\tid\tref\talt\tdepth\trefsupport\taltsupport\tgt\taf\tpvalue" << std::endl;
   
     // Assign reads to SNPs

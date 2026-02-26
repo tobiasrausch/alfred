@@ -45,7 +45,6 @@ jobs:
       shell: msys2 {0}
       run: |
         set -euo pipefail
-        sed -i 's/-ldl//g' Makefile
         sed -i 's/^CXXFLAGS += /CXXFLAGS += -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0601 -Wno-use-after-free /' Makefile
         sed -i 's/-lboost_iostreams/-lboost_iostreams-mt/g' Makefile
         sed -i 's/-lboost_filesystem/-lboost_filesystem-mt/g' Makefile

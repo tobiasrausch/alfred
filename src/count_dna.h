@@ -169,7 +169,7 @@ namespace bamstats
     // Open output file
     boost::iostreams::filtering_ostream dataOut;
     dataOut.push(boost::iostreams::gzip_compressor());
-    dataOut.push(boost::iostreams::file_sink(c.outfile.string().c_str(), std::ios_base::out | std::ios_base::binary));
+    dataOut.push(boost::iostreams::file_sink(c.outfile.string(), std::ios_base::out | std::ios_base::binary));
     dataOut << "chr\tstart\tend\tid\t" << c.sampleName << std::endl;
     
     // Iterate chromosomes

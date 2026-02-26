@@ -156,7 +156,7 @@ int pwalign(int argc, char **argv) {
   if (c.format == "h") {
     boost::iostreams::filtering_ostream rcfile;
     rcfile.push(boost::iostreams::gzip_compressor());
-    rcfile.push(boost::iostreams::file_sink(c.alignment.c_str(), std::ios_base::out | std::ios_base::binary));
+    rcfile.push(boost::iostreams::file_sink(c.alignment.string(), std::ios_base::out | std::ios_base::binary));
     typedef typename TAlign::index TAIndex;
     for(TAIndex i = 0; i < (TAIndex) align.shape()[0]; ++i) {
       if (i == 0) rcfile << ">" << faname1 << std::endl;
@@ -170,7 +170,7 @@ int pwalign(int argc, char **argv) {
   } else {
     boost::iostreams::filtering_ostream rcfile;
     rcfile.push(boost::iostreams::gzip_compressor());
-    rcfile.push(boost::iostreams::file_sink(c.alignment.c_str(), std::ios_base::out | std::ios_base::binary));
+    rcfile.push(boost::iostreams::file_sink(c.alignment.string(), std::ios_base::out | std::ios_base::binary));
     typedef typename TAlign::index TAIndex;
     for(TAIndex j = 0; j < (TAIndex) align.shape()[1]; ++j) {
       for(TAIndex i = 0; i < (TAIndex) align.shape()[0]; ++i) {

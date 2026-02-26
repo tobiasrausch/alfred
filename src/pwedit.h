@@ -78,7 +78,7 @@ namespace bamstats {
   printAlignmentHorizontal(TConfig const& c, std::string const& seqI, std::string const& tname, std::string const& seqJ, std::string const& qname, EdlibAlignMode const modeCode, EdlibAlignResult& cigar) {
     boost::iostreams::filtering_ostream rcfile;
     rcfile.push(boost::iostreams::gzip_compressor());
-    rcfile.push(boost::iostreams::file_sink(c.alignment.c_str(), std::ios_base::out | std::ios_base::binary));
+    rcfile.push(boost::iostreams::file_sink(c.alignment.string(), std::ios_base::out | std::ios_base::binary));
     rcfile << ">" << tname << std::endl;
       
     int32_t tIdx = -1;
@@ -193,7 +193,7 @@ namespace bamstats {
     // Output
     boost::iostreams::filtering_ostream rcfile;
     rcfile.push(boost::iostreams::gzip_compressor());
-    rcfile.push(boost::iostreams::file_sink(c.alignment.c_str(), std::ios_base::out | std::ios_base::binary));
+    rcfile.push(boost::iostreams::file_sink(c.alignment.string(), std::ios_base::out | std::ios_base::binary));
     for(uint32_t i = 0; (i < qa.size()) && (i < ta.size()); ++i) {
       rcfile << qa[i] << ta[i] << std::endl;
     }

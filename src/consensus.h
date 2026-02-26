@@ -391,7 +391,7 @@ namespace bamstats {
     // Output consensus
     boost::iostreams::filtering_ostream rcfile;
     rcfile.push(boost::iostreams::gzip_compressor());
-    rcfile.push(boost::iostreams::file_sink(c.consensus.c_str(), std::ios_base::out | std::ios_base::binary));
+    rcfile.push(boost::iostreams::file_sink(c.consensus.string(), std::ios_base::out | std::ios_base::binary));
     rcfile << ">Consensus" << std::endl;
     rcfile << consensus << std::endl;
     rcfile.pop();

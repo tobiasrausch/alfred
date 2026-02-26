@@ -20,7 +20,7 @@ namespace bamstats
   qcJsonOut(TConfig const& c, bam_hdr_t const* hdr, TRGMap const& rgMap, BedCounts const& be, ReferenceFeatures const& rf) {
     boost::iostreams::filtering_ostream rfile;
     rfile.push(boost::iostreams::gzip_compressor());
-    rfile.push(boost::iostreams::file_sink(c.jsonout.string().c_str(), std::ios_base::out | std::ios_base::binary));
+    rfile.push(boost::iostreams::file_sink(c.jsonout.string(), std::ios_base::out | std::ios_base::binary));
 
     // Sample information
     rfile << '{';
