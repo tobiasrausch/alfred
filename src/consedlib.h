@@ -2,6 +2,12 @@
 #define CONSEDLIB_H
 
 #include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <numeric>
+#include <cmath>
+#include <limits>
 
 #include "util.h"
 #include "msa.h"
@@ -10,97 +16,30 @@
 namespace bamstats
 {
 
-  inline void
-  printAlignmentPretty(std::string const& query, std::string const& target, EdlibAlignMode const modeCode, EdlibAlignResult const& align) {
-    int32_t tIdx = -1;
-    int32_t qIdx = -1;
-    if (modeCode == EDLIB_MODE_HW) {
-        tIdx = align.endLocations[0];
-        for (int32_t i = 0; i < align.alignmentLength; i++) {
-            if (align.alignment[i] != EDLIB_EDOP_INSERT) tIdx--;
-        }
-    }
-    std::cerr << std::endl;
-    for (int start = 0; start < align.alignmentLength; start += 50) {
-      std::cerr << "T: ";
-      int32_t startTIdx = -1;
-      for (int32_t j = start; ((j < start + 50) && (j < align.alignmentLength)); ++j) {
-	if (align.alignment[j] == EDLIB_EDOP_INSERT) std::cerr << "-";
-	else std::cerr << target[++tIdx];
-	if (j == start) startTIdx = tIdx;
-      }
-      std::cerr << " (" << std::max(startTIdx, 0) << " - " << tIdx << ")" << std::endl;
+#ifndef DELLY_KMER
+#define DELLY_KMER 7
+#endif
 
-      // match / mismatch
-      std::cerr << ("   ");
-      for (int32_t j = start; j < start + 50 && j < align.alignmentLength; j++) {
-	if (align.alignment[j] == EDLIB_EDOP_MATCH) std::cerr <<  "|";
-	else std::cerr << " ";
-      }
-      std::cerr << std::endl;
+#ifndef DELLY_DUPLICATE
+#define DELLY_DUPLICATE std::numeric_limits<uint32_t>::max()
+#endif
 
-      // query
-      std::cerr << "Q: ";
-      int32_t startQIdx = qIdx;
-      for (int32_t j = start; j < start + 50 && j < align.alignmentLength; j++) {
-	if (align.alignment[j] == EDLIB_EDOP_DELETE) std::cerr << "-";
-	else std::cerr << query[++qIdx];
-	if (j == start) startQIdx = qIdx;
-      }
-      std::cerr << " ("<< std::max(startQIdx, 0) << " - " << qIdx << ")" << std::endl;
-      std::cerr << std::endl;
+  inline uint32_t
+  infixStart(EdlibAlignResult const& cigar) {
+    int32_t tIdx = cigar.endLocations[0];
+    for (int32_t i = 0; i < cigar.alignmentLength; i++) {
+      if (cigar.alignment[i] != EDLIB_EDOP_INSERT) tIdx--;
     }
+    if (tIdx >= 0) return tIdx + 1;
+    else return 0;
   }
 
-  inline void
-  printAlignment(std::string const& seqI, std::string const& seqJ, EdlibAlignMode const modeCode, EdlibAlignResult const& cigar) {
-    int32_t tIdx = -1;
-    int32_t qIdx = -1;
-    uint32_t missingEnd = 0;
-    uint32_t missingStart = 0;
-    if ((modeCode == EDLIB_MODE_HW) || (modeCode == EDLIB_MODE_SHW)) {
-      tIdx = cigar.endLocations[0];
-      if (tIdx < (int32_t) seqJ.size()) missingEnd = seqJ.size() - tIdx - 1;
-      for (int32_t i = 0; i < cigar.alignmentLength; i++) {
-	if (cigar.alignment[i] != EDLIB_EDOP_INSERT) tIdx--;
-      }
-      if (tIdx >= 0) missingStart = tIdx + 1;
-      if (missingStart) {
-	for (uint32_t j = 0; j < missingStart; ++j) std::cerr << '-';
-      }
-    }
-    // seqI
-    for (int32_t j = 0; j < cigar.alignmentLength; ++j) {
-      if (cigar.alignment[j] == EDLIB_EDOP_DELETE) std::cerr << '-';
-      else std::cerr << seqI[++qIdx];
-    }
-    // infix alignment, fix end
-    if ((modeCode == EDLIB_MODE_HW) || (modeCode == EDLIB_MODE_SHW)) {
-      if (missingEnd) {
-	for (uint32_t j = 0; j < missingEnd; ++j) std::cerr << '-';
-      }
-    }
-    std::cerr << std::endl;
-    // infix alignment, fix start
-    if ((modeCode == EDLIB_MODE_HW) || (modeCode == EDLIB_MODE_SHW)) {
-      if (missingStart) {
-	for (uint32_t j = 0; j < missingStart; ++j) std::cerr << seqJ[j];
-      }
-    }
-    // seqJ
-    for (int32_t j = 0; j < cigar.alignmentLength; ++j) {
-      if (cigar.alignment[j] == EDLIB_EDOP_INSERT) std::cerr << '-';
-      else std::cerr << seqJ[++tIdx];
-    }
-    // infix alignment, fix end
-    if ((modeCode == EDLIB_MODE_HW) || (modeCode == EDLIB_MODE_SHW)) {
-      if (missingEnd) {
-	for (uint32_t j = 0; j < missingEnd; ++j) std::cerr << seqJ[++tIdx];
-      }
-    }
-    std::cerr << std::endl;
+  inline uint32_t
+  infixEnd(EdlibAlignResult const& cigar) {
+    return cigar.endLocations[0];
   }
 
+  // delly edlib consensus
   template<typename TAlign>
   inline void
   convertAlignment(std::string const& query, TAlign& align, EdlibAlignMode const modeCode, EdlibAlignResult const& cigar) {
@@ -167,6 +106,116 @@ namespace bamstats
     }
   }
 
+  inline void
+  buildSuperstring(std::string const& seqI, std::string const& seqJ, std::string& outStr, EdlibAlignResult const& cigar, uint32_t const preI, uint32_t const postI, uint32_t const preJ, uint32_t const postJ) {
+    int32_t iIdx = 0;
+    int32_t jIdx = 0;
+    // prefix
+    bool firstSeq = false;
+    if (preI > preJ) {
+      firstSeq = true;
+      for(uint32_t j = 0; j < preI; ++j) outStr += seqI[iIdx++];
+      for(uint32_t j = 0; j < preJ; ++j) ++jIdx;
+    } else {
+      for(uint32_t j = 0; j < preI; ++j) ++iIdx;
+      for(uint32_t j = 0; j < preJ; ++j) outStr += seqJ[jIdx++];  
+    }
+    //outStr += '#';
+
+    // parse alignment
+    int32_t bp = cigar.alignmentLength/2;
+    for (int32_t j = 0; j < cigar.alignmentLength; ++j) {
+      if (bp == j) {
+	firstSeq = !firstSeq;
+	//outStr += "#";
+      }
+      if (cigar.alignment[j] == EDLIB_EDOP_DELETE) {
+	if (!firstSeq) outStr += seqJ[jIdx];
+	++jIdx;
+      } else if (cigar.alignment[j] == EDLIB_EDOP_INSERT) {
+	if (firstSeq) outStr += seqI[iIdx];
+	++iIdx;
+      } else {
+	if (firstSeq) outStr += seqI[iIdx];
+	else outStr += seqJ[jIdx];
+	++iIdx;
+	++jIdx;
+      }
+    }
+
+    // Post sequence
+    if (postI > postJ) {
+      for(uint32_t j = 0; j < postI; ++j) outStr += seqI[iIdx++];
+    } else {
+      for(uint32_t j = 0; j < postJ; ++j) outStr += seqJ[jIdx++];
+    }
+  }
+
+  
+  template<typename TAlign>
+  inline void
+  convertAlignment(std::string const& query, TAlign& align, EdlibAlignMode const modeCode, EdlibAlignResult const& cigar, uint32_t const preI, uint32_t const postI, uint32_t const preJ, uint32_t const postJ) {
+    // Input alignment
+    TAlign alignIn;
+    alignIn.resize(boost::extents[align.shape()[0]][align.shape()[1]]);
+    for(uint32_t i = 0; i < align.shape()[0]; ++i) {
+      for(uint32_t j = 0; j < align.shape()[1]; ++j) {
+	alignIn[i][j] = align[i][j];
+      }
+    }
+	
+    // Create new alignment
+    uint32_t seqPos = alignIn.shape()[0];
+    int32_t tIdx = 0;
+    int32_t qIdx = 0;
+    align.resize(boost::extents[alignIn.shape()[0]+1][cigar.alignmentLength + preI + postI + preJ + postJ]);
+    if (preI) {
+      for(uint32_t j = 0; j < preI; ++j) {
+	for(uint32_t seqIdx = 0; seqIdx < seqPos; ++seqIdx) align[seqIdx][j] = alignIn[seqIdx][tIdx];
+	++tIdx;
+	align[seqPos][j] = '-';
+      }
+    }
+    if (preJ) {
+      for(uint32_t j = 0; j < preJ; ++j) {
+	for(uint32_t seqIdx = 0; seqIdx < seqPos; ++seqIdx) align[seqIdx][j+preI] = '-';
+	align[seqPos][j+preI] = query[qIdx++];
+      }
+    }
+
+    // target
+    for (int32_t j = 0; j < cigar.alignmentLength; ++j) {
+      if (cigar.alignment[j] == EDLIB_EDOP_DELETE) {
+	for(uint32_t seqIdx = 0; seqIdx < seqPos; ++seqIdx) align[seqIdx][j+preI+preJ] = '-';
+      } else {
+	for(uint32_t seqIdx = 0; seqIdx < seqPos; ++seqIdx) align[seqIdx][j+preI+preJ] = alignIn[seqIdx][tIdx];
+	++tIdx;
+      }
+    }
+
+    // query
+    for (int32_t j = 0; j < cigar.alignmentLength; ++j) {
+      if (cigar.alignment[j] == EDLIB_EDOP_INSERT) align[seqPos][j+preI+preJ] = '-';
+      else align[seqPos][j+preI+preJ] = query[qIdx++];
+    }
+
+    // Post sequence
+    if (postI) {
+      for(uint32_t j = 0; j < postI; ++j) {
+	for(uint32_t seqIdx = 0; seqIdx < seqPos; ++seqIdx) align[seqIdx][j+preI+preJ+cigar.alignmentLength] = alignIn[seqIdx][tIdx];
+	tIdx++;
+	align[seqPos][j+preI+preJ+cigar.alignmentLength] = '-';
+      }
+    }
+    if (postJ) {
+      for(uint32_t j = 0; j < postJ; ++j) {
+	for(uint32_t seqIdx = 0; seqIdx < seqPos; ++seqIdx) align[seqIdx][j+preI+preJ+cigar.alignmentLength+postI] = '-';
+	align[seqPos][j+preI+preJ+cigar.alignmentLength+postI] = query[qIdx++];
+      }
+    }
+  }
+
+  
   template<typename TAlign>
   inline void
   consensusEdlib(TAlign const& align, std::string& cons) {
@@ -228,187 +277,168 @@ namespace bamstats
     }
   }
 
-  
-  template<typename TConfig, typename TSplitReadSet>
-  inline int
-  msaEdlib(TConfig const& c, TSplitReadSet& sps, std::string& cs) {
-    float pidth = 0.05; // Expected percent mis-identity threshold
-    int32_t minOverlap = 50;   // Min. overlap length
 
-    // Overlap matrices
-    std::vector<float> edit(sps.size() * sps.size(), 1);  //1: no overlap (n), <1: overlap, i<j: fwd-fwd (ff), i>j: fwd-rev (fr)
-    std::vector<int32_t> loc(sps.size() * sps.size(), 0);  //negative: prefix (p), positive: suffix (s), 0: containment (c)
-    
-    // Compute overlap matrix
-    for(uint32_t i = 0; i < sps.size(); ++i) {
-      int32_t iSize = sps[i].size();
-      std::string iRev = sps[i];
-      reverseComplement(iRev);
-      for(uint32_t j = 0; j < sps.size(); ++j) {
-	if (i == j) {
-	  edit[i * sps.size() + j] = 0;
-	  loc[i * sps.size() + j] = 'i';
-	}
-	int32_t jSize = sps[j].size();
-	// Forward - Forward cases
-	if (i < j) {
-	  // Containment
-	  // --------->
-	  //    -->
-	  if (edit[i * sps.size() + j] == 1) {
-	    if (iSize < jSize) {
-	      EdlibAlignResult align = edlibAlign(sps[i].c_str(), iSize, sps[j].c_str(), jSize, edlibNewAlignConfig((int) (pidth * iSize), EDLIB_MODE_HW, EDLIB_TASK_DISTANCE, NULL, 0));
-	      if (align.editDistance >= 0) {
-		edit[i * sps.size() + j] = (float) align.editDistance / (float) iSize;
-		loc[i * sps.size() + j] = 0;
-	      }
-	      edlibFreeAlignResult(align);
-	    } else {
-	      EdlibAlignResult align = edlibAlign(sps[j].c_str(), jSize, sps[i].c_str(), iSize, edlibNewAlignConfig((int) (pidth * jSize), EDLIB_MODE_HW, EDLIB_TASK_DISTANCE, NULL, 0));
-	      if (align.editDistance >= 0) {
-		edit[i * sps.size() + j] = (float) align.editDistance / (float) jSize;
-		loc[i * sps.size() + j] = 0;
-	      }
-	      edlibFreeAlignResult(align);
-	    }
-	  }
-	  // Suffix
-	  //  ----->
-	  //     ----->
-	  if (edit[i * sps.size() + j] == 1) {
-	    for(int32_t osize = std::min(iSize, jSize); osize >= minOverlap; osize -= minOverlap) {
-	      std::string suffix = sps[i].substr(iSize - osize);
-	      std::string prefix = sps[j].substr(0, osize);
-	      EdlibAlignResult align = edlibAlign(suffix.c_str(), osize, prefix.c_str(), osize, edlibNewAlignConfig((int) (pidth * osize), EDLIB_MODE_NW, EDLIB_TASK_DISTANCE, NULL, 0));
-	      if (align.editDistance >= 0) {
-		edit[i * sps.size() + j] = (float) align.editDistance / (float) osize;
-		loc[i * sps.size() + j] = osize;
-		edlibFreeAlignResult(align);
-		break;
-	      }
-	      edlibFreeAlignResult(align);
-	    }
-	  }
-	  // Prefix
-	  //    ----->
-	  // ----->
-	  if (edit[i * sps.size() + j] == 1) {
-	    for(int32_t osize = std::min(iSize, jSize); osize >= minOverlap; osize -= minOverlap) {
-	      std::string prefix = sps[i].substr(0, osize);
-	      std::string suffix = sps[j].substr(jSize - osize);
-	      EdlibAlignResult align = edlibAlign(prefix.c_str(), osize, suffix.c_str(), osize, edlibNewAlignConfig((int) (pidth * osize), EDLIB_MODE_NW, EDLIB_TASK_DISTANCE, NULL, 0));
-	      if (align.editDistance >= 0) {
-		edit[i * sps.size() + j] = (float) align.editDistance / (float) osize;
-		loc[i * sps.size() + j] = -1 * osize;
-		edlibFreeAlignResult(align);
-		break;
-	      }
-	      edlibFreeAlignResult(align);
-	    }
-	  }
-	} else { // Forward-Reverse cases
-	  // --------->
-	  //    <--
-	  if (iSize < jSize) {
-	    EdlibAlignResult align = edlibAlign(iRev.c_str(), iSize, sps[j].c_str(), jSize, edlibNewAlignConfig((int) (pidth * iSize), EDLIB_MODE_HW, EDLIB_TASK_DISTANCE, NULL, 0));
-	    if (align.editDistance >= 0) {
-	      edit[i * sps.size() + j] = (float) align.editDistance / (float) iSize;
-	      loc[i * sps.size() + j] = 0;
-	    }
-	    edlibFreeAlignResult(align);
-	  } else {
-	    EdlibAlignResult align = edlibAlign(sps[j].c_str(), jSize, iRev.c_str(), iSize, edlibNewAlignConfig((int) (pidth * jSize), EDLIB_MODE_HW, EDLIB_TASK_DISTANCE, NULL, 0));
-	    if (align.editDistance >= 0) {
-	      edit[i * sps.size() + j] = (float) align.editDistance / (float) jSize;
-	      loc[i * sps.size() + j] = 0;
-	    }
-	    edlibFreeAlignResult(align);
-	  }
-	  //  <-----
-	  //     ----->
-	  if (edit[i * sps.size() + j] == 1) {
-	    for(int32_t osize = std::min(iSize, jSize); osize >= minOverlap; osize -= minOverlap) {
-	      std::string suffix = iRev.substr(iSize - osize);
-	      std::string prefix = sps[j].substr(0, osize);
-	      EdlibAlignResult align = edlibAlign(suffix.c_str(), osize, prefix.c_str(), osize, edlibNewAlignConfig((int) (pidth * osize), EDLIB_MODE_NW, EDLIB_TASK_DISTANCE, NULL, 0));
-	      if (align.editDistance >= 0) {
-		edit[i * sps.size() + j] = (float) align.editDistance / (float) osize;
-		loc[i * sps.size() + j] = osize;
-		edlibFreeAlignResult(align);
-		break;
-	      }
-	      edlibFreeAlignResult(align);
-	    }
-	  }
-	  //    <-----
-	  // ----->
-	  if (edit[i * sps.size() + j] == 1) {
-	    for(int32_t osize = std::min(iSize, jSize); osize >= minOverlap; osize -= minOverlap) {
-	      std::string prefix = iRev.substr(0, osize);
-	      std::string suffix = sps[j].substr(jSize - osize);
-	      EdlibAlignResult align = edlibAlign(prefix.c_str(), osize, suffix.c_str(), osize, edlibNewAlignConfig((int) (pidth * osize), EDLIB_MODE_NW, EDLIB_TASK_DISTANCE, NULL, 0));
-	      if (align.editDistance >= 0) {
-		edit[i * sps.size() + j] = (float) align.editDistance / (float) osize;
-		loc[i * sps.size() + j] = -1 * osize;
-		edlibFreeAlignResult(align);
-		break;
-	      }
-	      edlibFreeAlignResult(align);
-	    }
-	  }
+  template<typename TAlign>
+  inline void
+  consensusWfa(TAlign const& align, std::string& cons) {
+    typedef typename TAlign::index TAIndex;
+
+    // Read positions
+    std::vector<uint32_t> readStart(align.shape()[0], align.shape()[1]);
+    std::vector<uint32_t> readEnd(align.shape()[0], 0);
+    for(TAIndex i = 0; i < (TAIndex) align.shape()[0]; ++i) {
+      for(TAIndex j = 0; j < (TAIndex) align.shape()[1]; ++j) {
+	if (align[i][j] != '-') {
+	  if (j < readStart[i]) readStart[i] = j;
+	  if (j > readEnd[i]) readEnd[i] = j;
 	}
       }
     }
-    // Debug
-    std::cerr << "Containment percent identity" << std::endl;
-    for(uint32_t i = 0; i < sps.size(); ++i) {      
-      for(uint32_t j = 0; j < sps.size(); ++j) {
-	if (j != 0) std::cerr << "\t";
-	if (i == j) std::cerr << edit[i * sps.size() + j] << " (ff,i," <<  sps[i].size() << ')' << '\t';
-	else {
-	  std::string adir = "fr";
-	  if (i < j) adir = "ff";
-	  if (edit[i * sps.size() + j] == 1) std::cerr << edit[i * sps.size() + j] << " (" << adir << ",n,0)";
-	  else {
-	    if (loc[i * sps.size() + j] == 0) std::cerr << edit[i * sps.size() + j] << " (" << adir << ",c," << std::min(sps[i].size(), sps[j].size()) << ')';
-	    else if (loc[i * sps.size() + j] < 0) std::cerr << edit[i * sps.size() + j] << " (" << adir << ",p," << -1 * loc[i * sps.size() + j] << ')';
-	    else std::cerr << edit[i * sps.size() + j] << " (" << adir << ",s," << loc[i * sps.size() + j] << ')';
-	  }
+
+    // Consensus
+    cons.resize(align.shape()[1]);
+    for(TAIndex j = 0; j < (TAIndex) align.shape()[1]; ++j) {
+      std::vector<int32_t> count(5, 0); // ACGT-
+      for(TAIndex i = 0; i < (TAIndex) align.shape()[0]; ++i) {
+	if ((j >= readStart[i]) && (j <= readEnd[i])) {
+	  if ((align[i][j] == 'A') || (align[i][j] == 'a')) ++count[0];
+	  else if ((align[i][j] == 'C') || (align[i][j] == 'c')) ++count[1];
+	  else if ((align[i][j] == 'G') || (align[i][j] == 'g')) ++count[2];
+	  else if ((align[i][j] == 'T') || (align[i][j] == 't')) ++count[3];
+	  else ++count[4];
 	}
       }
-      std::cerr << std::endl;
+      uint32_t maxIdx = 0;
+      uint32_t sndIdx = 1;
+      if (count[maxIdx] < count[sndIdx]) {
+	maxIdx = 1;
+	sndIdx = 0;
+      }
+      for(uint32_t i = 2; i<5; ++i) {
+	if (count[i] > count[maxIdx]) {
+	  sndIdx = maxIdx;
+	  maxIdx = i;
+	}
+	else if (count[i] > count[sndIdx]) {
+	  sndIdx = i;
+	}
+      }
+      if (2 * count[sndIdx] < count[maxIdx]) {
+	switch (maxIdx) {
+	case 0: cons[j] = 'A'; break;
+	case 1: cons[j] = 'C'; break;
+	case 2: cons[j] = 'G'; break;
+	case 3: cons[j] = 'T'; break;
+	default: cons[j] = '-'; break;
+	}
+      } else {
+	uint32_t k1 = maxIdx;
+	uint32_t k2 = sndIdx;
+	if (k1 > k2) {
+	  k1 = sndIdx;
+	  k2 = maxIdx;
+	}
+	// ACGT-
+	if ((k1 == 0) && (k2 == 1)) cons[j] = 'M';
+	else if ((k1 == 0) && (k2 == 2)) cons[j] = 'R';
+	else if ((k1 == 0) && (k2 == 3)) cons[j] = 'W';
+	else if ((k1 == 0) && (k2 == 4)) cons[j] = 'B';
+	else if ((k1 == 1) && (k2 == 2)) cons[j] = 'S';
+	else if ((k1 == 1) && (k2 == 3)) cons[j] = 'Y';
+	else if ((k1 == 1) && (k2 == 4)) cons[j] = 'D';
+	else if ((k1 == 2) && (k2 == 3)) cons[j] = 'K';
+	else if ((k1 == 2) && (k2 == 4)) cons[j] = 'E';
+	else if ((k1 == 3) && (k2 == 4)) cons[j] = 'F';
+	else cons[j] = '-';
+      }
+    }
+  }
+
+  inline void
+  _trimConsensus(std::string const& prefix, std::string const& suffix, std::string& cs) {
+    std::string prefixRev = prefix;
+    reverseComplement(prefixRev);
+    EdlibAlignResult cigarFwd = edlibAlign(prefix.c_str(), prefix.size(), cs.c_str(), cs.size(), edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_DISTANCE, NULL, 0));
+    int32_t scoreFwd = cigarFwd.editDistance;
+    edlibFreeAlignResult(cigarFwd);
+    EdlibAlignResult cigarRev = edlibAlign(prefixRev.c_str(), prefixRev.size(), cs.c_str(), cs.size(), edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_DISTANCE, NULL, 0));
+    int32_t scoreRev = cigarRev.editDistance;
+    edlibFreeAlignResult(cigarRev);
+    if (scoreFwd > scoreRev) reverseComplement(cs);
+    
+    // Anchor reference probes
+    EdlibAlignResult cigarPrefix = edlibAlign(prefix.c_str(), prefix.size(), cs.c_str(), cs.size(), edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
+    uint32_t csStart = infixStart(cigarPrefix);
+    //std::cerr << "Prefix alignment: " << cigarPrefix.editDistance << std::endl;
+    //printAlignment(prefix, cs, EDLIB_MODE_HW, cigarPrefix);
+    edlibFreeAlignResult(cigarPrefix);
+    EdlibAlignResult cigarSuffix = edlibAlign(suffix.c_str(), suffix.size(), cs.c_str(), cs.size(), edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
+    uint32_t csEnd = infixEnd(cigarSuffix);
+    //std::cerr << "Suffix alignment: " << cigarSuffix.editDistance << std::endl;
+    //printAlignment(suffix, cs, EDLIB_MODE_HW, cigarSuffix);
+    edlibFreeAlignResult(cigarSuffix);
+    //std::cerr << "Trimming: " << csStart << ',' << csEnd << '(' << cs.size() << ')' << std::endl;
+    
+    // Trim consensus
+    if ((csStart < csEnd) && (csEnd < cs.size())) cs = cs.substr(csStart, (csEnd - csStart));
+  }
+  
+    
+  // Select the best-spanning reads
+  template<typename TSequences, typename TScores>
+  inline void
+  selectBestReads(TSequences& seqs, TScores& scores, int32_t maxReads) {
+    if ((int32_t)seqs.size() <= maxReads) return;
+    std::vector<uint32_t> idx(seqs.size());
+    std::iota(idx.begin(), idx.end(), 0);
+    std::sort(idx.begin(), idx.end(), [&](uint32_t a, uint32_t b) { return scores[a] > scores[b]; });
+    TSequences sel;
+    sel.reserve(maxReads);
+    for (int32_t k = 0; k < maxReads; ++k) sel.push_back(std::move(seqs[idx[k]]));
+    seqs = std::move(sel);
+    scores.clear();
+  }
+
+  template<typename TConfig, typename TSplitReadSet>
+  inline int
+  msaEdlib(TConfig const& c, TSplitReadSet& sps, std::string& cs) {
+    // Pairwise scores
+    std::vector<int32_t> edit(sps.size() * sps.size(), 0);
+    for(uint32_t i = 0; i < sps.size(); ++i) {
+      for(uint32_t j = i + 1; j < sps.size(); ++j) {
+	EdlibAlignResult align = edlibAlign(sps[i].c_str(), sps[i].size(), sps[j].c_str(), sps[j].size(), edlibNewAlignConfig(-1, EDLIB_MODE_NW, EDLIB_TASK_DISTANCE, NULL, 0));
+	edit[i * sps.size() + j] = align.editDistance;
+	edit[j * sps.size() + i] = align.editDistance;
+	edlibFreeAlignResult(align);
+      }
     }
 
     // Find best sequence to start alignment
     uint32_t bestIdx = 0;
-    float bestVal = sps[0].size();
+    int32_t bestVal = sps[0].size();
     for(uint32_t i = 0; i < sps.size(); ++i) {
-      std::vector<float> dist(sps.size());
-      for(uint32_t j = 0; j < sps.size(); ++j) dist[j] = std::min(edit[i * sps.size() + j], edit[j * sps.size() + i]);
+      std::vector<int32_t> dist(sps.size());
+      for(uint32_t j = 0; j < sps.size(); ++j) dist[j] = edit[i * sps.size() + j];
       std::sort(dist.begin(), dist.end());
-      if (dist[1] >= 1) std::cerr << "Sequence index " << i << " has no alignment!" << std::endl;
       if (dist[sps.size()/2] < bestVal) {
 	bestVal = dist[sps.size()/2];
 	bestIdx = i;
       }
     }
-    
-    // Order according to best sequence
-    std::vector<uint32_t> selectedIdx;
-    if (selectedIdx.empty()) {
-      std::vector<std::pair<float, int32_t> > qscores;
-      qscores.push_back(std::make_pair(0, bestIdx));
-      for(uint32_t j = 0; j < sps.size(); ++j) {
-	if (j != bestIdx) qscores.push_back(std::make_pair(std::min(edit[bestIdx * sps.size() + j], edit[j * sps.size() + bestIdx]), j));
-      }
-      std::sort(qscores.begin(), qscores.end());    
-      for(uint32_t i = 0; i < qscores.size(); ++i) {
-	// Debug
-	std::cerr << qscores[i].first << ',' << qscores[i].second << std::endl;
-	selectedIdx.push_back(qscores[i].second);
-      }
+
+    // Align to best sequence
+    std::vector<std::pair<int32_t, int32_t> > qscores;
+    qscores.push_back(std::make_pair(0, bestIdx));
+    for(uint32_t j = 0; j < sps.size(); ++j) {
+      if (j != bestIdx) qscores.push_back(std::make_pair(edit[bestIdx * sps.size() + j], j));
     }
-    exit(-1);
+    std::sort(qscores.begin(), qscores.end());
+
+    // Drop poorest 20% and order by centroid
+    std::vector<uint32_t> selectedIdx;
+    uint32_t lastIdx = (uint32_t) (0.8 * qscores.size());
+    if (lastIdx < 3) lastIdx = 3;
+    for(uint32_t i = 0; ((i < qscores.size()) && (i < lastIdx)); ++i) selectedIdx.push_back(qscores[i].second);
     
     // Extended IUPAC code
     EdlibEqualityPair additionalEqualities[20] = {{'M', 'A'}, {'M', 'C'}, {'R', 'A'}, {'R', 'G'}, {'W', 'A'}, {'W', 'T'}, {'B', 'A'}, {'B', '-'}, {'S', 'C'}, {'S', 'G'}, {'Y', 'C'}, {'Y', 'T'}, {'D', 'C'}, {'D', '-'}, {'K', 'G'}, {'K', 'T'}, {'E', 'G'}, {'E', '-'}, {'F', 'T'}, {'F', '-'}};
@@ -423,6 +453,255 @@ namespace bamstats
       // Convert to consensus
       std::string alignStr;
       consensusEdlib(align, alignStr);
+      // Debug MSA
+      //std::cerr << "Progressive MSA: " << i << '(' << align.shape()[0] << ':' << align.shape()[1] << ')' << std::endl;
+      //for(uint32_t i = 0; i<align.shape()[0]; ++i) {
+      //for(uint32_t j = 0; j<align.shape()[1]; ++j) std::cerr << align[i][j];
+      //std::cerr << std::endl;
+      //}
+      //std::cerr << "Consensus: " << std::endl;
+      //std::cerr << alignStr << std::endl;
+      //std::cerr << "ToBeAligned: " << sps[selectedIdx[i]] << std::endl;
+      // Compute alignment
+      EdlibAlignResult cigar = edlibAlign(sps[selectedIdx[i]].c_str(), sps[selectedIdx[i]].size(), alignStr.c_str(), alignStr.size(), edlibNewAlignConfig(-1, EDLIB_MODE_NW, EDLIB_TASK_PATH, additionalEqualities, 20));
+      convertAlignment(sps[selectedIdx[i]], align, EDLIB_MODE_NW, cigar);
+      edlibFreeAlignResult(cigar);
+    }
+    
+    // Debug MSA
+    //std::cerr << "Output MSA " << '(' << align.shape()[0] << ':' << align.shape()[1] << ')' << std::endl;
+    //for(uint32_t i = 0; i<align.shape()[0]; ++i) {
+    //for(uint32_t j = 0; j<align.shape()[1]; ++j) std::cerr << align[i][j];
+    //std::cerr << std::endl;
+    //}
+
+    // Consensus
+    std::string gapped;
+    consensus(c, align, gapped, cs);
+    //std::cerr << "Consensus:" << std::endl;
+    //std::cerr << gapped << std::endl;
+
+    // Output alignment (al.fa.gz)
+    msaAlignOut(c, align, gapped);
+
+    // Trim off 10% from either end
+    int32_t trim = (int32_t) (0.05 * cs.size());
+    if (trim > 50) trim = 50;
+    int32_t len = (int32_t) (cs.size()) - 2 * trim;
+    if (len > 100) cs = cs.substr(trim, len);
+    
+    // Return split-read support
+    return align.shape()[0];
+  }
+
+  inline uint32_t
+  charToInt(char c) {
+    switch(c)
+      {
+      case 'A':
+	return 0;
+      case 'C':
+	return 1;
+      case 'G':
+	return 2;
+      case 'T':
+	return 3;
+      case 'B':
+	return 0;
+      case 'D':
+	return 1;
+      case 'E':
+	return 2;
+      case 'F':
+	return 3;
+      }
+    return 0;
+  }
+
+
+  
+  inline void
+  fillKmerTable(std::string const& s, std::vector<uint32_t>& kmerpos) {
+    uint32_t len = s.size();
+    kmerpos.resize(std::pow(4, DELLY_KMER + 1));
+    std::fill(kmerpos.begin(), kmerpos.end(), 0);
+    uint32_t hash = 0;
+    for(uint32_t ki = 0; ((ki < len) && (ki < DELLY_KMER)); ++ki) {
+	hash *= 4;
+	hash += charToInt(s[ki]);
+    }
+    for(uint32_t ki = DELLY_KMER; ki < len; ++ki) {
+      if (kmerpos[hash]) kmerpos[hash] = DELLY_DUPLICATE;
+      else kmerpos[hash] = (ki - DELLY_KMER + 1);
+      hash -= (charToInt(s[ki - DELLY_KMER]) * 4 * 4 * 4 * 4 * 4 * 4);
+      hash *= 4;
+      hash += charToInt(s[ki]);
+    }
+    if (kmerpos[hash]) kmerpos[hash] = DELLY_DUPLICATE;
+    else kmerpos[hash] = (len - DELLY_KMER + 1);
+  }
+
+  inline int32_t
+  bestDiagonal(std::vector<uint32_t> const& kmerHitI, std::vector<uint32_t> const& kmerHitJ, uint32_t const lenI, uint32_t const lenJ) {
+    // Shared unique kmers
+    std::vector<uint32_t> diag(lenI + lenJ, 0);
+    for(uint32_t k = 0; k < std::pow(4, DELLY_KMER + 1); ++k) {
+      if ((kmerHitI[k]) && (kmerHitJ[k]) && (kmerHitI[k] != DELLY_DUPLICATE) && (kmerHitJ[k] != DELLY_DUPLICATE)) ++diag[lenJ + kmerHitI[k] - kmerHitJ[k]];
+    }
+
+    // Find best diagonal
+    uint32_t window = 20;
+    uint32_t windowVal = 0;
+    for(uint32_t d = 0; ((d < diag.size()) && (d < window)); ++d) windowVal += diag[d];
+    uint32_t bestDiag = window / 2;
+    uint32_t bestWindowVal = windowVal;
+    for(uint32_t d = window; d < diag.size(); ++d) {
+      windowVal -= diag[d - window];
+      windowVal += diag[d];
+      if (windowVal > bestWindowVal) {
+	bestWindowVal = windowVal;
+	bestDiag = d - window / 2;
+      }
+    }
+    return ((int) (bestDiag) - (int) (lenJ));
+  }
+    
+  template<typename TConfig, typename TSplitReadSet>
+  inline int
+  msaWfa(TConfig const& c, TSplitReadSet& sps, std::string& cs, std::string const& prefix, std::string const& suffix) {
+    // Pairwise scores
+    std::vector<int32_t> edit(sps.size() * sps.size(), 0);
+    std::vector<uint32_t> kmerHitI;
+    std::vector<uint32_t> kmerHitJ;
+    for(uint32_t i = 0; i < sps.size(); ++i) {
+      uint32_t lenI = sps[i].size();
+      fillKmerTable(sps[i], kmerHitI);
+      for(uint32_t j = i + 1; j < sps.size(); ++j) {
+	uint32_t lenJ = sps[j].size();
+	fillKmerTable(sps[j], kmerHitJ);
+	int32_t bestDiag = bestDiagonal(kmerHitI, kmerHitJ, lenI, lenJ);
+	std::string seqI;
+	std::string seqJ;
+	if (bestDiag >= 0) {
+	  uint32_t seqlen = std::min(lenI - bestDiag, lenJ);
+	  seqI = sps[i].substr(bestDiag, seqlen);
+	  seqJ = sps[j].substr(0, seqlen);
+	} else {
+	  uint32_t seqlen = std::min(lenJ + bestDiag, lenI);
+	  seqI = sps[i].substr(0, seqlen);
+	  seqJ = sps[j].substr(-1 * bestDiag, seqlen);
+	}
+	EdlibAlignResult align = edlibAlign(seqI.c_str(), seqI.size(), seqJ.c_str(), seqJ.size(), edlibNewAlignConfig(-1, EDLIB_MODE_NW, EDLIB_TASK_DISTANCE, NULL, 0));
+	int32_t score = (align.editDistance * 1000) / std::max(seqI.size(), seqJ.size());
+	edit[i * sps.size() + j] = score;
+	edit[j * sps.size() + i] = score;
+	//std::cerr << "Diagonal: " << bestDiag << ", Score: " << score << std::endl;
+	edlibFreeAlignResult(align);
+      }
+    }
+
+    // Find best sequence to start alignment
+    uint32_t bestIdx = 0;
+    int32_t bestVal = sps[0].size();
+    for(uint32_t i = 0; i < sps.size(); ++i) {
+      std::vector<int32_t> dist(sps.size());
+      for(uint32_t j = 0; j < sps.size(); ++j) dist[j] = edit[i * sps.size() + j];
+      std::sort(dist.begin(), dist.end());
+      if (dist[sps.size()/2] < bestVal) {
+	bestVal = dist[sps.size()/2];
+	bestIdx = i;
+      }
+    }
+
+    // Align to best sequence
+    std::vector<std::pair<int32_t, int32_t> > qscores;
+    qscores.push_back(std::make_pair(0, bestIdx));
+    for(uint32_t j = 0; j < sps.size(); ++j) {
+      if (j != bestIdx) qscores.push_back(std::make_pair(edit[bestIdx * sps.size() + j], j));
+    }
+    std::sort(qscores.begin(), qscores.end());
+
+    // Drop poorest 20% and order by centroid
+    std::vector<uint32_t> selectedIdx;
+    uint32_t lastIdx = (uint32_t) (0.8 * qscores.size());
+    if (lastIdx < 3) lastIdx = 3;
+    for(uint32_t i = 0; ((i < qscores.size()) && (i < lastIdx)); ++i) selectedIdx.push_back(qscores[i].second);
+
+    // Build superstring
+    std::string superStr = sps[selectedIdx[0]];
+    for(uint32_t i = 1; i < selectedIdx.size(); ++i) {
+      // Find alignment diagonal
+      uint32_t lenI = superStr.size();
+      fillKmerTable(superStr, kmerHitI);
+      uint32_t lenJ = sps[selectedIdx[i]].size();
+      fillKmerTable(sps[selectedIdx[i]], kmerHitJ);
+      int32_t bestDiag = bestDiagonal(kmerHitI, kmerHitJ, lenI, lenJ);
+      std::string seqI;
+      std::string seqJ;
+      uint32_t preI = 0;
+      uint32_t postI = 0;
+      uint32_t preJ = 0;
+      uint32_t postJ = 0;
+      uint32_t seqlen = 0;
+      if (bestDiag >= 0) {
+	seqlen = std::min(lenI - bestDiag, lenJ);
+	preI = bestDiag;
+	postI = lenI - (bestDiag + seqlen);
+	preJ = 0;
+	postJ = lenJ - seqlen;
+      } else {
+	seqlen = std::min(lenJ + bestDiag, lenI);
+	preI = 0;
+	postI = lenI - seqlen;
+	preJ = -1 * bestDiag;
+	postJ = lenJ - (-1 * bestDiag + seqlen);
+      }
+      
+      // Can the superstring be extended?
+      //std::cerr << "Superstring clips: (" << preI << ',' << postI << ',' << preJ << ',' << postJ << ')' << std::endl;
+      if ((preI > preJ)  && (postI > postJ)) {
+	// Nested alignment
+      } else if ((preJ > preI) && (postJ > postI)) {
+	// Nested alignment, new sequence longer
+	superStr = sps[selectedIdx[i]];
+      } else {
+	// Extend superstring
+	if (bestDiag >= 0) {
+	  seqI = superStr.substr(bestDiag, seqlen);
+	  seqJ = sps[selectedIdx[i]].substr(0, seqlen);
+	} else {
+	  seqI = superStr.substr(0, seqlen);
+	  seqJ = sps[selectedIdx[i]].substr(-1 * bestDiag, seqlen);
+	}
+      
+	// Compute alignment
+	EdlibAlignResult cigar = edlibAlign(seqI.c_str(), seqI.size(), seqJ.c_str(), seqJ.size(), edlibNewAlignConfig(-1, EDLIB_MODE_NW, EDLIB_TASK_PATH, NULL, 0));
+	//printAlignment(seqI, seqJ, EDLIB_MODE_NW, cigar);
+	//std::cerr << std::endl;
+	//std::cerr << superStr << std::endl;
+	//std::cerr << sps[selectedIdx[i]] << std::endl;
+	std::string outStr;
+	buildSuperstring(superStr, sps[selectedIdx[i]], outStr, cigar, preI, postI, preJ, postJ);
+	edlibFreeAlignResult(cigar);
+
+	// Next iteration
+	superStr = outStr;
+      }
+    }
+
+    // Extended IUPAC code
+    EdlibEqualityPair additionalEqualities[20] = {{'M', 'A'}, {'M', 'C'}, {'R', 'A'}, {'R', 'G'}, {'W', 'A'}, {'W', 'T'}, {'B', 'A'}, {'B', '-'}, {'S', 'C'}, {'S', 'G'}, {'Y', 'C'}, {'Y', 'T'}, {'D', 'C'}, {'D', '-'}, {'K', 'G'}, {'K', 'T'}, {'E', 'G'}, {'E', '-'}, {'F', 'T'}, {'F', '-'}};
+
+    // Incrementally align sequences    
+    typedef boost::multi_array<char, 2> TAlign;
+    TAlign align;
+    align.resize(boost::extents[1][superStr.size()]);
+    uint32_t ind = 0;
+    for(typename std::string::const_iterator str = superStr.begin(); str != superStr.end(); ++str) align[0][ind++] = *str;
+    for(uint32_t i = 0; i < selectedIdx.size(); ++i) {
+      // Convert to consensus
+      std::string alignStr;
+      consensusWfa(align, alignStr);
       // Debug MSA
       //std::cerr << "Progressive MSA: " << i << '(' << align.shape()[0] << ':' << align.shape()[1] << ')' << std::endl;
       //for(uint32_t i = 0; i<align.shape()[0]; ++i) {
@@ -450,14 +729,32 @@ namespace bamstats
     consensus(c, align, gapped, cs);
     //std::cerr << "Consensus:" << std::endl;
     //std::cerr << gapped << std::endl;
+    //std::cerr << cs << std::endl;
 
-    // OutputAlignment
+    // Output alignment (al.fa.gz)
     msaAlignOut(c, align, gapped);
+
+    // Fix consensus orientation and trim to prefix & suffix
+    if ((!prefix.empty()) && (!suffix.empty())) {
+      _trimConsensus(prefix, suffix, cs);
+    } else {
+      // Trim off 10% from either end
+      int32_t trim = (int32_t) (0.05 * cs.size());
+      if (trim > 50) trim = 50;
+      int32_t len = (int32_t) (cs.size()) - 2 * trim;
+      if (len > 100) cs = cs.substr(trim, len);
+    }
     
     // Return split-read support
-    return align.shape()[0];
+    return selectedIdx.size();
   }
 
+
+  template<typename TConfig, typename TSplitReadSet>
+  inline int
+  msaWfa(TConfig const& c, TSplitReadSet& sps, std::string& cs) {
+    return msaWfa(c, sps, cs, "", "");
+  }
 
 }
 
