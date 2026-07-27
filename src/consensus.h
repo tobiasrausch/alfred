@@ -367,7 +367,7 @@ namespace bamstats {
     boost::program_options::options_description anchored("Anchored mode options");
     anchored.add_options()
       ("inswindow", boost::program_options::value<int32_t>(&c.insWindow)->default_value(50), "window to cluster insertions/soft-clips")
-      ("mininsclip", boost::program_options::value<int32_t>(&c.minInsForClip)->default_value(30), "min. insertion length")
+      ("mininsclip", boost::program_options::value<int32_t>(&c.minInsForClip)->default_value(10), "min. insertion length")
       ("minclip", boost::program_options::value<int32_t>(&c.minClip)->default_value(20), "min. soft-clip length")
       ("clipsupport", boost::program_options::value<int32_t>(&c.minClipSupport)->default_value(2), "min. clipped reads")
       ("clipcap", boost::program_options::value<int32_t>(&c.clipCap)->default_value(8000), "max. soft-clip length")
