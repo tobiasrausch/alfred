@@ -47,6 +47,7 @@ namespace bamstats {
     int32_t clipCap;
     int32_t nAlleles;
     int32_t minAlleleSupport;
+    int32_t alleleWindow;
     float alleleDist;
     std::string position;
     std::string seqtype;
@@ -373,6 +374,7 @@ namespace bamstats {
       ("clipcap", boost::program_options::value<int32_t>(&c.clipCap)->default_value(8000), "max. soft-clip length")
       ("chimdist", boost::program_options::value<int32_t>(&c.chimDist)->default_value(50000), "chimera SA distance")
       ("alleles", boost::program_options::value<int32_t>(&c.nAlleles)->default_value(0), "max. number of alleles (0=auto)")
+      ("allelewindow", boost::program_options::value<int32_t>(&c.alleleWindow)->default_value(200), "window for local allele calling")
       ("allelesupport", boost::program_options::value<int32_t>(&c.minAlleleSupport)->default_value(2), "min. reads per allele")
       ("alleledist", boost::program_options::value<float>(&c.alleleDist)->default_value(0.2), "max. relative insertion-length difference")
       ;

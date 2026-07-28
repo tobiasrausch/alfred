@@ -37,6 +37,13 @@ namespace bamstats {
     explicit AlignedRead(std::string const& s) : anchored(false), rev(false), distantSA(false), mapq(0), refStart(-1), leftClip(0), rightClip(0), seq(s) {}
   };
 
+  // Candidate allele
+  struct AlleleCand {
+    std::vector<int32_t> rows;
+    int32_t indel;
+    bool isRef;
+  };
+  
   typedef std::map<int32_t, std::map<int32_t, std::string> > TInsClusters;
 
   // Extract plain sequence
@@ -552,6 +559,124 @@ namespace bamstats {
     return insLen - delLen;
   }
 
+  // Group reads into alleles
+  template<typename TConfig>
+  inline void
+  alleleGroupsAt(TConfig const& c, std::vector<AlignedRead const*> const& reads, TInsClusters const& clusters, int32_t refMin, int32_t lo, int32_t hi, std::vector<AlleleCand>& cands) {
+    cands.clear();
+    const int32_t insThresh = c.minInsForClip;
+    int32_t mid = (lo + hi) / 2;
+
+    // Classify reads
+    std::vector<int32_t> carrierIdx;
+    std::vector<int32_t> carrierNet;
+    std::vector<int32_t> refReads;
+    for(uint32_t i = 0; i < reads.size(); ++i) {
+      int32_t rs = reads[i]->refStart;
+      int32_t re = rs + cigarRefLength(reads[i]->cigar);
+      if (!((rs <= mid) && (re > mid))) continue;
+      int32_t net = netIndelAt(clusters, refMin, reads[i], (int32_t) i, lo, hi);
+      if (std::abs(net) >= insThresh) {
+        carrierIdx.push_back((int32_t) i);
+        carrierNet.push_back(net);
+      }
+      else refReads.push_back((int32_t) i);
+    }
+
+    // Single-linkage clusters
+    int nn = (int) carrierNet.size();
+    std::vector<int> uf(nn);
+    for(int i = 0; i < nn; ++i) uf[i] = i;
+    for(int i = 0; i < nn; ++i)
+      for(int j = i + 1; j < nn; ++j) {
+        int32_t mx = std::max(std::abs(carrierNet[i]), std::abs(carrierNet[j]));
+        if (std::abs(carrierNet[i] - carrierNet[j]) <= (int32_t)(c.alleleDist * mx)) uf[ufFind(uf, i)] = ufFind(uf, j);
+      }
+    std::map<int, std::vector<int> > groups;
+    for(int i = 0; i < nn; ++i) groups[ufFind(uf, i)].push_back(i);
+
+    // Emit groups and drop singletons
+    for(std::map<int, std::vector<int> >::const_iterator g = groups.begin(); g != groups.end(); ++g) {
+      if ((int32_t) g->second.size() < c.minAlleleSupport) continue;
+      AlleleCand cd; cd.isRef = false;
+      std::vector<int32_t> nets;
+      for(uint32_t t = 0; t < g->second.size(); ++t) {
+        cd.rows.push_back(carrierIdx[g->second[t]]);
+        nets.push_back(carrierNet[g->second[t]]);
+      }
+      std::sort(nets.begin(), nets.end());
+      cd.indel = nets[nets.size() / 2];
+      cands.push_back(cd);
+    }
+    if ((int32_t) refReads.size() >= c.minAlleleSupport) {
+      AlleleCand cd;
+      cd.isRef = true;
+      cd.indel = 0;
+      cd.rows = refReads;
+      cands.push_back(cd);
+    }
+  }
+
+  // Reference position of InDel
+  template<typename TConfig>
+  inline int32_t
+  locusTruePos(TConfig const& c, std::vector<AlignedRead const*> const& reads, TInsClusters const& clusters, int32_t refMin, int32_t lo, int32_t hi) {
+    const int32_t insThresh = c.minInsForClip;
+    int32_t aLo = lo - refMin;
+    int32_t aHi = hi - refMin;
+    std::vector<int32_t> positions;
+    for(TInsClusters::const_iterator it = clusters.begin(); it != clusters.end(); ++it) {
+      if ((it->first < aLo) || (it->first > aHi)) continue;
+      for(std::map<int32_t, std::string>::const_iterator jt = it->second.begin(); jt != it->second.end(); ++jt) {
+        int32_t tlen = (int32_t) jt->second.size();
+        if (tlen < insThresh) continue;
+        AlignedRead const* rd = reads[jt->first];
+        int32_t rp = rd->refStart, best = -1, bestd = std::numeric_limits<int32_t>::max();
+        for(uint32_t k = 0; k < rd->cigar.size(); ++k) {
+          int op = bam_cigar_op(rd->cigar[k]);
+          int ol = bam_cigar_oplen(rd->cigar[k]);
+          if ((op == BAM_CMATCH) || (op == BAM_CEQUAL) || (op == BAM_CDIFF)) rp += ol;
+          else if ((op == BAM_CDEL) || (op == BAM_CREF_SKIP)) rp += ol;
+          else if (op == BAM_CINS) {
+            if (ol >= insThresh) {
+	      int d = std::abs(ol - tlen);
+	      if (d < bestd) {
+		bestd = d;
+		best = rp;
+	      }
+	    }
+          }
+        }
+        if (best >= 0) positions.push_back(best);
+      }
+    }
+    for(uint32_t i = 0; i < reads.size(); ++i) {
+      int32_t rp = reads[i]->refStart;
+      for(uint32_t k = 0; k < reads[i]->cigar.size(); ++k) {
+        int op = bam_cigar_op(reads[i]->cigar[k]);
+        int ol = bam_cigar_oplen(reads[i]->cigar[k]);
+        if ((op == BAM_CMATCH) || (op == BAM_CEQUAL) || (op == BAM_CDIFF)) rp += ol;
+        else if ((op == BAM_CDEL) || (op == BAM_CREF_SKIP)) {
+	  if ((ol >= insThresh) && (rp >= lo) && (rp <= hi)) positions.push_back(rp);
+	  rp += ol;
+	}
+      }
+    }
+    if (positions.empty()) return (lo + hi) / 2;
+    std::sort(positions.begin(), positions.end());
+    return positions[positions.size() / 2];
+  }
+
+  // Target position
+  inline int32_t
+  parseTargetPos(std::string const& position) {
+    std::size_t colon = position.find_last_of(':');
+    if (colon == std::string::npos) return -1;
+    std::string ps = position.substr(colon + 1);
+    if (ps.empty() || (ps.find_first_not_of("0123456789") != std::string::npos)) return -1;
+    return (int32_t) std::atol(ps.c_str());
+  }
+
   // Split reads into N alleles
   template<typename TConfig>
   inline void
@@ -608,91 +733,53 @@ namespace bamstats {
       a = b;
     }
 
-    // Primary locus to split alleles
-    int32_t primLo = -1;
-    int32_t primHi = -1;
-    int32_t primSupport = 0;
+    // Target position
+    int32_t targetPos = parseTargetPos(c.position);
+
+    // Find primary InDel locus
+    bool primFound = false;
+    int32_t primScore = 0;
+    int32_t primCarriers = 0;
+    int32_t primDist = std::numeric_limits<int32_t>::max();
+    int32_t primTruePos = -1;
+    std::vector<AlleleCand> primCands;
     for(size_t L = 0; L < loci.size(); ++L) {
+      int32_t truePos = locusTruePos(c, reads, clusters, refMin, loci[L].first, loci[L].second);
+      if ((targetPos >= 0) && (std::abs(truePos - targetPos) > c.alleleWindow)) continue;
+      std::vector<AlleleCand> cands;
+      alleleGroupsAt(c, reads, clusters, refMin, loci[L].first, loci[L].second, cands);
+      int32_t score = (int32_t) cands.size();
+      if (score < 1) continue;
       int32_t carriers = 0;
-      for(uint32_t i = 0; i < reads.size(); ++i) {
-        if (std::abs(netIndelAt(clusters, refMin, reads[i], (int32_t) i, loci[L].first, loci[L].second)) >= insThresh) ++carriers;
-      }
-      if ((carriers >= c.minAlleleSupport) && (carriers > primSupport)) {
-	primSupport = carriers;
-	primLo = loci[L].first;
-	primHi = loci[L].second;
+      for(uint32_t t = 0; t < cands.size(); ++t) if (!cands[t].isRef) carriers += (int32_t) cands[t].rows.size();
+      int32_t dist = (targetPos >= 0) ? std::abs(truePos - targetPos) : 0;
+      bool better = (score > primScore) || ((score == primScore) && ((dist < primDist) || ((dist == primDist) && (carriers > primCarriers))));
+      if (better) {
+	primFound = true;
+	primScore = score;
+	primDist = dist;
+	primCarriers = carriers;
+	primTruePos = truePos;
+	primCands.swap(cands);
       }
     }
 
-    // No substantial indel
-    if (primLo < 0) {
+    // No indel found
+    if (!primFound) {
       std::string gapped, cs;
       consensus(c, align, gapped, cs);
       AlleleConsensus a;
       a.name = "Allele0_ref_n" + std::to_string(reads.size());
-      a.cons = cs; a.support = (int32_t) reads.size(); a.indel = 0;
+      a.cons = cs;
+      a.support = (int32_t) reads.size();
+      a.indel = 0;
       out.push_back(a);
       return;
     }
-    int32_t mid = (primLo + primHi) / 2;
-
-    // Classify reads spanning the locus
-    std::vector<int32_t> carrierIdx;
-    std::vector<int32_t> carrierNet;
-    std::vector<int32_t> refReads;
-    for(uint32_t i = 0; i < reads.size(); ++i) {
-      int32_t rs = reads[i]->refStart;
-      int32_t re = rs + cigarRefLength(reads[i]->cigar);
-      if (!((rs <= mid) && (re > mid))) continue;
-      int32_t net = netIndelAt(clusters, refMin, reads[i], (int32_t) i, primLo, primHi);
-      if (std::abs(net) >= insThresh) {
-	carrierIdx.push_back((int32_t) i);
-	carrierNet.push_back(net);
-      }
-      else refReads.push_back((int32_t) i);
-    }
-
-    // Single-linkage clusters
-    int nn = (int) carrierNet.size();
-    std::vector<int> uf(nn);
-    for(int i = 0; i < nn; ++i) uf[i] = i;
-    for(int i = 0; i < nn; ++i)
-      for(int j = i + 1; j < nn; ++j) {
-        int32_t mx = std::max(std::abs(carrierNet[i]), std::abs(carrierNet[j]));
-        if (std::abs(carrierNet[i] - carrierNet[j]) <= (int32_t)(c.alleleDist * mx)) uf[ufFind(uf, i)] = ufFind(uf, j);
-      }
-    std::map<int, std::vector<int> > groups;
-    for(int i = 0; i < nn; ++i) groups[ufFind(uf, i)].push_back(i);
-
-    // Candidate alleles (drop singletons)
-    struct Cand {
-      std::vector<int32_t> rows;
-      int32_t indel;
-      bool isRef;
-    };
-    std::vector<Cand> cands;
-    for(std::map<int, std::vector<int> >::const_iterator g = groups.begin(); g != groups.end(); ++g) {
-      if ((int32_t) g->second.size() < c.minAlleleSupport) continue;
-      Cand cd; cd.isRef = false;
-      std::vector<int32_t> nets;
-      for(uint32_t t = 0; t < g->second.size(); ++t) {
-	cd.rows.push_back(carrierIdx[g->second[t]]);
-	nets.push_back(carrierNet[g->second[t]]);
-      }
-      std::sort(nets.begin(), nets.end());
-      cd.indel = nets[nets.size() / 2];
-      cands.push_back(cd);
-    }
-    if ((int32_t) refReads.size() >= c.minAlleleSupport) {
-      Cand cd;
-      cd.isRef = true;
-      cd.indel = 0;
-      cd.rows = refReads;
-      cands.push_back(cd);
-    }
 
     // Sort by support
-    std::sort(cands.begin(), cands.end(), [](Cand const& a, Cand const& b) { return a.rows.size() > b.rows.size(); });
+    std::vector<AlleleCand>& cands = primCands;
+    std::sort(cands.begin(), cands.end(), [](AlleleCand const& a, AlleleCand const& b) { return a.rows.size() > b.rows.size(); });
     if ((c.nAlleles > 0) && ((int32_t) cands.size() > c.nAlleles)) cands.resize(c.nAlleles);
 
     // Per-allele consensus
@@ -724,7 +811,7 @@ namespace bamstats {
       for(uint32_t t = 0; t < names.size(); ++t) std::cout << ' ' << names[t];
       std::cout << std::endl;
     }
-    std::cout << "Alleles: " << out.size() << " (primary indel locus " << primLo << "-" << primHi << ", " << primSupport << " carriers)" << std::endl;
+    std::cout << "Alleles: " << out.size() << " (primary indel near " << primTruePos << ", " << primCarriers << " carriers)" << std::endl;
   }
 
 }
