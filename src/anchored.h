@@ -574,9 +574,12 @@ namespace bamstats {
     const int32_t insThresh = c.minInsForClip;
     int32_t mid = (lo + hi) / 2;
 
-    // Classify reads
+    const int32_t W = c.insWindow;
+
+    // Classify spanning reads
     std::vector<int32_t> carrierIdx;
     std::vector<int32_t> carrierNet;
+    std::vector<char> carrierOpen;
     std::vector<int32_t> refReads;
     for(uint32_t i = 0; i < reads.size(); ++i) {
       int32_t rs = reads[i]->refStart;
@@ -584,35 +587,91 @@ namespace bamstats {
       if (!((rs <= mid) && (re > mid))) continue;
       int32_t net = netIndelAt(clusters, refMin, reads[i], (int32_t) i, lo, hi);
       if (std::abs(net) >= insThresh) {
+        bool open = false;
+        if (net > 0) {
+          if ((reads[i]->rightClip >= c.minClip) && (re >= lo - W) && (re <= hi + W)) open = true;
+          if ((reads[i]->leftClip  >= c.minClip) && (rs >= lo - W) && (rs <= hi + W)) open = true;
+        }
         carrierIdx.push_back((int32_t) i);
         carrierNet.push_back(net);
+        carrierOpen.push_back(open ? 1 : 0);
       }
       else refReads.push_back((int32_t) i);
     }
 
-    // Single-linkage clusters
+    // Single-linkage cluster by length
     int nn = (int) carrierNet.size();
+    std::vector<int> closed;
+    std::vector<int> open;
+    for(int i = 0; i < nn; ++i) {
+      if (carrierOpen[i]) open.push_back(i);
+      else closed.push_back(i);
+    }
     std::vector<int> uf(nn);
     for(int i = 0; i < nn; ++i) uf[i] = i;
-    for(int i = 0; i < nn; ++i)
-      for(int j = i + 1; j < nn; ++j) {
+    for(uint32_t x = 0; x < closed.size(); ++x)
+      for(uint32_t y = x + 1; y < closed.size(); ++y) {
+        int i = closed[x];
+	int j = closed[y];
         int32_t mx = std::max(std::abs(carrierNet[i]), std::abs(carrierNet[j]));
         if (std::abs(carrierNet[i] - carrierNet[j]) <= (int32_t)(c.alleleDist * mx)) uf[ufFind(uf, i)] = ufFind(uf, j);
       }
     std::map<int, std::vector<int> > groups;
-    for(int i = 0; i < nn; ++i) groups[ufFind(uf, i)].push_back(i);
+    for(uint32_t x = 0; x < closed.size(); ++x) groups[ufFind(uf, closed[x])].push_back(closed[x]);
 
-    // Emit groups and drop singletons
+    // Per closed group representative length (median)
+    struct Grp { std::vector<int> members; int32_t len; };
+    std::vector<Grp> grps;
     for(std::map<int, std::vector<int> >::const_iterator g = groups.begin(); g != groups.end(); ++g) {
-      if ((int32_t) g->second.size() < c.minAlleleSupport) continue;
-      AlleleCand cd; cd.isRef = false;
+      Grp gr; gr.members = g->second;
       std::vector<int32_t> nets;
-      for(uint32_t t = 0; t < g->second.size(); ++t) {
-        cd.rows.push_back(carrierIdx[g->second[t]]);
-        nets.push_back(carrierNet[g->second[t]]);
-      }
+      for(uint32_t t = 0; t < g->second.size(); ++t) nets.push_back(carrierNet[g->second[t]]);
       std::sort(nets.begin(), nets.end());
-      cd.indel = nets[nets.size() / 2];
+      gr.len = nets[nets.size() / 2];
+      grps.push_back(gr);
+    }
+
+    // Soft-clipped reads
+    std::vector<int> leftover;
+    for(uint32_t o = 0; o < open.size(); ++o) {
+      int oc = open[o];
+      int best = -1; int32_t bestLen = std::numeric_limits<int32_t>::max();
+      for(uint32_t gi = 0; gi < grps.size(); ++gi) {
+        if ((grps[gi].len >= carrierNet[oc]) && (grps[gi].len < bestLen)) {
+	  bestLen = grps[gi].len;
+	  best = (int) gi;
+	}
+      }
+      if (best >= 0) grps[best].members.push_back(oc);
+      else leftover.push_back(oc);
+    }
+    if (!leftover.empty()) {
+      std::vector<int> uf2(nn);
+      for(int i = 0; i < nn; ++i) uf2[i] = i;
+      for(uint32_t x = 0; x < leftover.size(); ++x)
+        for(uint32_t y = x + 1; y < leftover.size(); ++y) {
+          int i = leftover[x], j = leftover[y];
+          int32_t mx = std::max(std::abs(carrierNet[i]), std::abs(carrierNet[j]));
+          if (std::abs(carrierNet[i] - carrierNet[j]) <= (int32_t)(c.alleleDist * mx)) uf2[ufFind(uf2, i)] = ufFind(uf2, j);
+        }
+      std::map<int, std::vector<int> > lg;
+      for(uint32_t x = 0; x < leftover.size(); ++x) lg[ufFind(uf2, leftover[x])].push_back(leftover[x]);
+      for(std::map<int, std::vector<int> >::const_iterator g = lg.begin(); g != lg.end(); ++g) {
+        Grp gr; gr.members = g->second; gr.len = 0;
+        std::vector<int32_t> nets;
+        for(uint32_t t = 0; t < g->second.size(); ++t) nets.push_back(carrierNet[g->second[t]]);
+        std::sort(nets.begin(), nets.end());
+        gr.len = nets[nets.size() / 2];
+        grps.push_back(gr);
+      }
+    }
+
+    // Allele groups, drop singletons 
+    for(uint32_t gi = 0; gi < grps.size(); ++gi) {
+      if ((int32_t) grps[gi].members.size() < c.minAlleleSupport) continue;
+      AlleleCand cd; cd.isRef = false;
+      for(uint32_t t = 0; t < grps[gi].members.size(); ++t) cd.rows.push_back(carrierIdx[grps[gi].members[t]]);
+      cd.indel = grps[gi].len;
       cands.push_back(cd);
     }
     if ((int32_t) refReads.size() >= c.minAlleleSupport) {
