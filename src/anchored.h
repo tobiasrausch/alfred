@@ -240,13 +240,20 @@ namespace bamstats {
 	++b;
       }
       Cluster cl;
-      cl.anchorIdx = items[a].pos;
       cl.posLo = items[a].pos;
       cl.posHi = clusterMax;
       cl.ltarget = 0;
+      // Anchor the block
+      int32_t bestLen = -1;
+      int32_t bestPos = items[a].pos;
       for(size_t k = a; k < b; ++k) {
+	if ((int32_t) items[k].seq.size() > bestLen) {
+	  bestLen = (int32_t) items[k].seq.size();
+	  bestPos = items[k].pos;
+	}
 	if (items[k].seq.size() > cl.byRead[items[k].readIdx].size()) cl.byRead[items[k].readIdx] = items[k].seq;
       }
+      cl.anchorIdx = bestPos;
       for(std::map<int32_t, std::string>::const_iterator it = cl.byRead.begin(); it != cl.byRead.end(); ++it) {
 	if ((int32_t) it->second.size() > cl.ltarget) cl.ltarget = (int32_t) it->second.size();
       }
